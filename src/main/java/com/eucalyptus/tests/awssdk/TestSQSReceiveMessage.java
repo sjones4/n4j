@@ -5,6 +5,7 @@ import com.amazonaws.AmazonWebServiceClient;
 import com.amazonaws.Request;
 import com.amazonaws.handlers.AbstractRequestHandler;
 import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
@@ -54,9 +55,12 @@ public class TestSQSReceiveMessage {
 
     try {
       // first create a queue
-      String suffix = "-receive-message-test-1";
+      String suffix = "-receive-message-test";
       String queueName = prefix + suffix;
-      String queueUrl = sqs.createQueue(queueName).getQueueUrl();
+      CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+      createQueueRequest.setQueueName(queueName);
+      createQueueRequest.addAttributesEntry("VisibilityTimeout","5");
+      String queueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
       print("Creating queue");
       // first make sure we have a queue url with an account id and a queue name
       List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
@@ -321,7 +325,7 @@ public class TestSQSReceiveMessage {
 
   private Message receiveMessage(ReceiveMessageRequest receiveMessageRequest, String messageId) throws InterruptedException {
     long startTime = System.currentTimeMillis();
-    while ((System.currentTimeMillis() - startTime) < 90000L) {
+    while ((System.currentTimeMillis() - startTime) < 15000L) {
       ReceiveMessageResult receiveMessageResult = sqs.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message: receiveMessageResult.getMessages()) {

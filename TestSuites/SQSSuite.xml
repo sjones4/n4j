@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="SQS Test Suite">
+    <test name="SQS_Tests">
+        <classes>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSCreateQueue"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSSendMessage"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSReceiveMessage"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessage"/>
+        </classes>
+    </test>
+</suite>
