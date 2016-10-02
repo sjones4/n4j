@@ -2,10 +2,11 @@ package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.net.URL;
@@ -19,87 +20,117 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSDeleteQueue {
 
-  @Test
-  public void testDeleteQueue() throws Exception {
-    getCloudInfoAndSqs();
+  private String account;
+  private String otherAccount;
 
-    String prefix = UUID.randomUUID().toString() + "-" + System.currentTimeMillis() + "-";
-    String otherAccount = "account" + System.currentTimeMillis();
-    createAccount(otherAccount);
-    AmazonSQS otherSQS = getSqsClientWithNewAccount(otherAccount, "admin");
+  private AmazonSQS accountSQSClient;
+  private AmazonSQS otherAccountSQSClient;
+
+  @BeforeClass
+  public void init() throws Exception {
+    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
 
     try {
-      // first create a queue
-      String suffix = "-delete-queue-test";
-      String queueName = prefix + suffix;
-      CreateQueueRequest createQueueRequest = new CreateQueueRequest();
-      createQueueRequest.setQueueName(queueName);
-      createQueueRequest.addAttributesEntry("VisibilityTimeout","5");
-      String queueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
-      print("Creating queue");
-      // first make sure we have a queue url with an account id and a queue name
-      List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
-      assertThat(pathParts.size() == 2, "The queue URL path needs two 'suffix' values: account id, and queue name");
-      assertThat(pathParts.get(1).equals(queueName), "The queue URL path needs to end in the queue name");
-      String accountId = pathParts.get(0);
-      print("accountId="+accountId);
-
-      print("Creating queue in other account");
-      String otherAccountQueueUrl = otherSQS.createQueue(queueName).getQueueUrl();
-
-      print("Testing deleting queue in non-existant account, should fail");
+      getCloudInfoAndSqs();
+      account = "sqs-account-a-" + System.currentTimeMillis();
+      createAccount(account);
+      accountSQSClient = getSqsClientWithNewAccount(account, "admin");
+      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
+      createAccount(otherAccount);
+      otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
+    } catch (Exception e) {
       try {
-        sqs.deleteQueue(queueUrl.replace(accountId, "000000000000"));
-        assertThat(false, "Should fail deleting queue non-existent user");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 404, "Correctly fail deleting a queue from a non-existent user");
+        teardown();
+      } catch (Exception ie) {
       }
+      throw e;
+    }
+  }
 
-      print("Testing deleting queue on different account, should fail");
-      // Now try to receive message from an account with no access
-      try {
-        sqs.deleteQueue(otherAccountQueueUrl);
-        assertThat(false, "Should fail deleting queue on different account");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 403, "Correctly fail deleting queue on different account");
+  @AfterClass
+  public void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+    if (account != null) {
+      if (accountSQSClient != null) {
+        ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
+        if (listQueuesResult != null) {
+          listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
+        }
       }
-
-      print("Testing deleting non-existent queue, should fail");
-      try {
-        sqs.deleteQueue(queueUrl + "-bogus");
-        assertThat(false, "Should fail deleting non-existent queue");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 400, "Correctly fail deleting non-existent queue");
-      }
-
-      print("Testing deleting this queue");
-      sqs.deleteQueue(queueUrl);
-
-      print("Testing deleting queue with messages");
-      queueName = queueName + "-messages";
-      queueUrl = sqs.createQueue(queueName).getQueueUrl();
-      sqs.sendMessage(queueUrl,"1");
-      sqs.sendMessage(queueUrl,"2");
-      sqs.sendMessage(queueUrl,"3");
-      sqs.deleteQueue(queueUrl);
-      try {
-        sqs.deleteQueue(queueUrl);
-        assertThat(false, "Should fail deleting non-existent queue");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 400, "Correctly fail deleting non-existent queue");
-      }
-
-    } finally {
-      ListQueuesResult listQueuesResult = sqs.listQueues(prefix);
-      if (listQueuesResult != null) {
-        listQueuesResult.getQueueUrls().forEach(sqs::deleteQueue);
-      }
-      ListQueuesResult listQueuesResult2 = otherSQS.listQueues(prefix);
-      if (listQueuesResult2 != null) {
-        listQueuesResult2.getQueueUrls().forEach(otherSQS::deleteQueue);
+      deleteAccount(account);
+    }
+    if (otherAccount != null) {
+      if (otherAccountSQSClient != null) {
+        ListQueuesResult listQueuesResult = otherAccountSQSClient.listQueues();
+        if (listQueuesResult != null) {
+          listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
+        }
       }
       deleteAccount(otherAccount);
     }
+  }
+
+  @Test
+  public void testDeleteQueueOtherAccount() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteQueueOtherAccount");
+    String queueName = "queue_name_delete_other_account";
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    String otherAccountQueueUrl = otherAccountSQSClient.createQueue(queueName).getQueueUrl();
+    try {
+      accountSQSClient.deleteQueue(otherAccountQueueUrl);
+      assertThat(false, "Should fail deleting queue on different account");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 403, "Correctly fail deleting queue on different account");
+    }
+  }
+
+  @Test
+  public void testDeleteQueueNonExistentAccount() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteQueueNonExistentAccount");
+    String queueName = "queue_name_delete_nonexistent_account";
+
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
+    String accountId = pathParts.get(0);
+
+    try {
+      accountSQSClient.deleteQueue(queueUrl.replace(accountId, "000000000000"));
+      assertThat(false, "Should fail deleting queue non-existent user");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 404, "Correctly fail deleting a queue from a non-existent user");
+    }
+  }
+
+  @Test
+  public void testDeleteNonExistentQueue() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteNonExistentQueue");
+    String queueName = "queue_name_delete_nonexistent_queue";
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    try {
+      accountSQSClient.deleteQueue(queueUrl + "-bogus");
+      assertThat(false, "Should fail deleting non-existent queue");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail deleting non-existent queue");
+    }
+  }
+
+  @Test
+  public void testDeleteQueue() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteQueue");
+    String queueName = "queue_name_delete";
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    accountSQSClient.deleteQueue(queueUrl);
+  }
+
+  @Test
+  public void testDeleteQueueWithMessages() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteQueueWithMessages");
+    String queueName = "queue_name_delete_with_messages";
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    accountSQSClient.sendMessage(queueUrl,"1");
+    accountSQSClient.sendMessage(queueUrl,"2");
+    accountSQSClient.sendMessage(queueUrl,"3");
+    accountSQSClient.deleteQueue(queueUrl);
   }
 
 }
