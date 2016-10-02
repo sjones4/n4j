@@ -133,6 +133,10 @@ class N4j {
         getConfigProperties(CLC_IP, USER, PASSWORD);
         print("Getting sqs info from " + LOCAL_INI_FILE);
         SQS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "simplequeue-url");
+        // In case we don't put the sqs endpoint in there, use another one
+        if (SQS_ENDPOINT == null) {
+          SQS_ENDPOINT = S3_ENDPOINT.replace("s3.","simplequeue.");
+        }
         sqs = getSqsClient(ACCESS_KEY, SECRET_KEY, SQS_ENDPOINT);
     }
 
