@@ -4,11 +4,11 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -18,7 +18,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -443,13 +442,13 @@ public class TestSQSCreateQueue {
     testInfo(this.getClass().getSimpleName() + " - testChangeArnField");
     assertThat("Y:X:X:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",0,"Y")), "Test Field 0");
     assertThat("X:Y:X:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",1,"Y")), "Test Field 1");
-    assertThat("X:X:Y:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",2,"Y")), "Test Field 2");
+    assertThat("X:X:Y:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X", 2, "Y")), "Test Field 2");
     assertThat("X:X:X:Y:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",3,"Y")), "Test Field 3");
-    assertThat("X:X:X:X:Y:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",4,"Y")), "Test Field 4");
+    assertThat("X:X:X:X:Y:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X", 4, "Y")), "Test Field 4");
     assertThat("X:X:X:X:X:Y:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",5,"Y")), "Test Field 5");
     assertThat("X:X:X:X:X:X:Y:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",6,"Y")), "Test Field 6");
-    assertThat("X:X:X:X:X:X:X:Y:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",7,"Y")), "Test Field 7");
-    assertThat("X:X:X:X:X:X:X:X:Y".equals(changeArnField("X:X:X:X:X:X:X:X:X",8,"Y")), "Test Field 8");
+    assertThat("X:X:X:X:X:X:X:Y:X".equals(changeArnField("X:X:X:X:X:X:X:X:X", 7, "Y")), "Test Field 7");
+    assertThat("X:X:X:X:X:X:X:X:Y".equals(changeArnField("X:X:X:X:X:X:X:X:X", 8, "Y")), "Test Field 8");
   }
 
   private void helpTestSingleValueNumericAttribute(CreateQueueRequest createQueueRequest, String attributeName, int min, int max) {
@@ -516,7 +515,6 @@ public class TestSQSCreateQueue {
       delimiter = ",";
     }
     builder.append("}");
-    System.out.println(builder.toString());
     return builder.toString();
   }
 
