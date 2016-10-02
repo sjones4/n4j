@@ -1,22 +1,24 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
+import com.beust.jcommander.internal.Maps;
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -25,105 +27,316 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSCreateQueue {
 
-  @Test
-  public void testCreateQueue() throws Exception {
-    getCloudInfoAndSqs();
+  private int MAX_QUEUE_NAME_LENGTH_CHARS;
+  private int MAX_DELAY_SECONDS;
+  private int MAX_MAXIMUM_MESSAGE_SIZE;
+  private int MAX_MESSAGE_RETENTION_PERIOD;
+  private int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS;
+  private int MAX_VISIBILITY_TIMEOUT;
+  private int MAX_MAX_RECEIVE_COUNT;
+  private String region;
 
-    final int MAX_QUEUE_NAME_LENGTH_CHARS = getLocalConfigInt("MAX_QUEUE_NAME_LENGTH_CHARS");
-    final int MAX_DELAY_SECONDS = getLocalConfigInt("MAX_DELAY_SECONDS");
-    final int MAX_MAXIMUM_MESSAGE_SIZE = getLocalConfigInt("MAX_MAXIMUM_MESSAGE_SIZE");
-    final int MAX_MESSAGE_RETENTION_PERIOD = getLocalConfigInt("MAX_MESSAGE_RETENTION_PERIOD");
-    final int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS = getLocalConfigInt("MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS");
-    final int MAX_VISIBILITY_TIMEOUT = getLocalConfigInt("MAX_VISIBILITY_TIMEOUT");
-    final int MAX_MAX_RECEIVE_COUNT = getLocalConfigInt("MAX_MAX_RECEIVE_COUNT");
-    final String region = defaultIfNullOrJustWhitespace(getConfigProperty(LOCAL_EUCTL_FILE, "region.region_name"), "eucalyptus");
+  private String account;
+  private String otherAccount;
 
+  private AmazonSQS accountSQSClient;
+  private AmazonSQS otherAccountSQSClient;
+  
+  @BeforeClass
+  public void init() throws Exception {
+    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
 
-    String prefix = UUID.randomUUID().toString() + "-" + System.currentTimeMillis() + "-";
     try {
-      // first make sure no queues with this prefix, but we need to get the queue url so we create a new queue we will delete
-
-      String dummySuffix = "-dummy";
-      String firstQueueName = prefix + dummySuffix;
-      CreateQueueRequest createQueueRequest = new CreateQueueRequest();
-      createQueueRequest.setQueueName(firstQueueName);
-      String firstQueueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
-      print("Creating queue to get URL prefix and account id");
-      // first make sure we have a queue url with an account id and a queue name
-      List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(firstQueueUrl).getPath()));
-      assertThat(pathParts.size() == 2, "The queue URL path needs two 'suffix' values: account id, and queue name");
-      assertThat(pathParts.get(1).equals(firstQueueName), "The queue URL path needs to end in the queue name");
-      String accountId = pathParts.get(0);
-      print("accountId="+accountId);
-      print("Deleting queue " + firstQueueUrl);
-      sqs.deleteQueue(firstQueueUrl);
-
-      // now just in case this prefix matches one we already used, let's delete the queues that use it.  (very very unlikely)
-      ListQueuesResult listQueuesResult = sqs.listQueues(prefix);
-      if (listQueuesResult != null) {
-        for (String queueUrl : listQueuesResult.getQueueUrls()) {
-          sqs.deleteQueue(queueUrl);
-        }
+      getCloudInfoAndSqs();
+      MAX_QUEUE_NAME_LENGTH_CHARS = getLocalConfigInt("MAX_QUEUE_NAME_LENGTH_CHARS");
+      MAX_DELAY_SECONDS = getLocalConfigInt("MAX_DELAY_SECONDS");
+      MAX_MAXIMUM_MESSAGE_SIZE = getLocalConfigInt("MAX_MAXIMUM_MESSAGE_SIZE");
+      MAX_MESSAGE_RETENTION_PERIOD = getLocalConfigInt("MAX_MESSAGE_RETENTION_PERIOD");
+      MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS = getLocalConfigInt("MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS");
+      MAX_VISIBILITY_TIMEOUT = getLocalConfigInt("MAX_VISIBILITY_TIMEOUT");
+      MAX_MAX_RECEIVE_COUNT = getLocalConfigInt("MAX_MAX_RECEIVE_COUNT");
+      region = defaultIfNullOrJustWhitespace(getConfigProperty(LOCAL_EUCTL_FILE, "region.region_name"), "eucalyptus");
+      account = "sqs-account-a-" + System.currentTimeMillis();
+      createAccount(account);
+      accountSQSClient = getSqsClientWithNewAccount(account, "admin");
+      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
+      createAccount(otherAccount);
+      otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
+    } catch (Exception e) {
+      try {
+        teardown();
+      } catch (Exception ie) {
       }
-
-      Map<String, String> createdQueuesMap = Maps.newLinkedHashMap();
-      // first create a queue and check values of queue name
-      createQueueWithNoAttributesTest(prefix, "queue1", MAX_QUEUE_NAME_LENGTH_CHARS, createdQueuesMap);
-
-
-      // create several queues testing attributes
-      createQueueWithSingleAttributeTest(prefix, "queue2", "DelaySeconds", 0, MAX_DELAY_SECONDS, createdQueuesMap);
-      createQueueWithSingleAttributeTest(prefix, "queue3", "MaximumMessageSize", 1024, MAX_MAXIMUM_MESSAGE_SIZE, createdQueuesMap);
-      createQueueWithSingleAttributeTest(prefix, "queue4", "MessageRetentionPeriod", 60, MAX_MESSAGE_RETENTION_PERIOD, createdQueuesMap);
-      createQueueWithSingleAttributeTest(prefix, "queue5", "ReceiveMessageWaitTimeSeconds", 0, MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS, createdQueuesMap);
-      createQueueWithSingleAttributeTest(prefix, "queue6", "VisibilityTimeout", 0, MAX_VISIBILITY_TIMEOUT, createdQueuesMap);
-
-      // create queue testing redrive policy
-      createQueueWithRedrivePolicyTest(prefix, "queue7", 1, MAX_MAX_RECEIVE_COUNT, region, accountId, "queue1", createdQueuesMap);
-
-      // create queue testing policy
-      createQueueWithPolicyTest(prefix, "queue8", createdQueuesMap);
-
-      // List Queues (see if they match)
-      ListQueuesResult listQueuesResult2 = sqs.listQueues(prefix);
-      Set<String> queueUrls = Sets.newHashSet(listQueuesResult2.getQueueUrls());
-
-      assertThat(queueUrls.equals(Sets.newHashSet(createdQueuesMap.values())), "Queue urls match from list");
-      for (String queueUrl : queueUrls) {
-        sqs.deleteQueue(queueUrl);
-      }
-
-      // test list again (should return 0)
-      assertThat(sqs.listQueues(prefix).getQueueUrls().size() == 0, "Queue urls should be gone after delete");
-
-
-    } finally {
-      ListQueuesResult listQueuesResult = sqs.listQueues(prefix);
-      if (listQueuesResult != null) {
-        for (String queueUrl : listQueuesResult.getQueueUrls()) {
-          sqs.deleteQueue(queueUrl);
-        }
-      }
+      throw e;
     }
   }
 
-  private void createQueueWithPolicyTest(String prefix, String suffix, Map<String, String> createdQueuesMap) {
-    // Try to create a queue with a bad policy
-    String badPolicy = "{\"my\":\"policy\"}";
+  @AfterClass
+  public void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+    if (account != null) {
+      if (accountSQSClient != null) {
+        ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
+        if (listQueuesResult != null) {
+          listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
+        }
+      }
+      deleteAccount(account);
+    }
+    if (otherAccount != null) {
+      if (otherAccountSQSClient != null) {
+        ListQueuesResult listQueuesResult = otherAccountSQSClient.listQueues();
+        if (listQueuesResult != null) {
+          listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
+        }
+      }
+      deleteAccount(otherAccount);
+    }
+  }
 
-    String queueName = prefix + suffix;
-    print("Trying to create queue " + queueName + " with a bad Policy (should fail)");
-    CreateQueueRequest createQueueRequest1 = new CreateQueueRequest();
-    createQueueRequest1.setQueueName(queueName);
-    createQueueRequest1.setAttributes(ImmutableMap.of("Policy", badPolicy));
+  @Test
+  public void testQueueUrlSyntax() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testQueueUrlSyntax");
+
+    String queueName = "queue_url_syntax";
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    // first make sure we have a queue url with an account id and a queue name
+    List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
+    assertThat(pathParts.size() == 2, "The queue URL path needs two 'suffix' values: account id, and queue name");
+    assertThat(pathParts.get(1).equals(queueName), "The queue URL path needs to end in the queue name");
+  }
+
+  @Test
+  public void testQueueName() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testQueueName");
+    // fail due to bad characters
+    String badCharsQueueName = "@#%#$%#@$%#@$%";
     try {
-      sqs.createQueue(createQueueRequest1);
+      accountSQSClient.createQueue("@#%#$%#@$%#@$%");
+      assertThat(false, "Should fail creating a queue with bad chars " + badCharsQueueName);
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with bad chars " + badCharsQueueName);
+    }
+    // fail due to too many chars (may fail if property has changed)
+    String tooManyCharsQueueName = Strings.repeat("X", MAX_QUEUE_NAME_LENGTH_CHARS + 1);
+    try {
+      accountSQSClient.createQueue(tooManyCharsQueueName);
+      assertThat(false, "Should fail creating a queue with too many chars " + tooManyCharsQueueName);
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with bad chars " + tooManyCharsQueueName);
+    }
+
+    // try to create the queue, and check that a second call works (idempotency)
+    String queueName = "queue_name";
+    String queueUrlFirstAttempt = accountSQSClient.createQueue(queueName).getQueueUrl();
+    String queueUrlNextAttempt = accountSQSClient.createQueue(queueName).getQueueUrl();
+    assertThat(queueUrlFirstAttempt.equals(queueUrlNextAttempt), "Called 'createQueue' with the same name, no parameters, idempotent.  Get the same url back");
+  }
+
+  @Test
+  public void testDelaySeconds() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDelaySeconds");
+    String queueName = "queue_delay_seconds";
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    helpTestSingleValueNumericAttribute(createQueueRequest, "DelaySeconds", 0, MAX_DELAY_SECONDS);
+  }
+
+  @Test
+  public void testMessageRetentionPeriod() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - MessageRetentionPeriod");
+    String queueName = "queue_message_retention_period";
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    helpTestSingleValueNumericAttribute(createQueueRequest, "MessageRetentionPeriod", 60, MAX_MESSAGE_RETENTION_PERIOD);
+  }
+
+  @Test
+  public void testMaximumMessageSize() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testMaximumMessageSize");
+    String queueName = "queue_maximum_message_size";
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    helpTestSingleValueNumericAttribute(createQueueRequest, "MaximumMessageSize", 1024, MAX_MAXIMUM_MESSAGE_SIZE);
+  }
+  @Test
+  public void testReceiveMessageWaitTimeSeconds() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testReceiveMessageWaitTimeSeconds");
+    String queueName = "queue_receive_message_wait_time_seconds";
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    helpTestSingleValueNumericAttribute(createQueueRequest, "ReceiveMessageWaitTimeSeconds", 0, MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS);
+  }
+
+  @Test
+  public void testVisibilityTimeout() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testVisibilityTimeout");
+    String queueName = "queue_visibility_timeout";
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    helpTestSingleValueNumericAttribute(createQueueRequest, "VisibilityTimeout", 0, MAX_VISIBILITY_TIMEOUT);
+  }
+
+  @Test
+  public void testRedrivePolicy() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testRedrivePolicy");
+    String queueName = "queue_redrive_policy";
+
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    
+    // bad json
+    createQueueRequest.getAttributes().put("RedrivePolicy", "{bx!");
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with bad json");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute RedrivePolicy with bad json");
+    }
+
+    // non-object json
+    createQueueRequest.getAttributes().put("RedrivePolicy", "[1,2,3]");
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with non-object json");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute RedrivePolicy with non-object json");
+    }
+
+    // create legitimate queues so we can test various combinations
+    String existingQueueName = "queue_redrive_policy_existing";
+
+    String existingQueueArn = makeArn(accountSQSClient.createQueue(existingQueueName).getQueueUrl());
+    String otherAccountExistingQueueArn = makeArn(otherAccountSQSClient.createQueue(existingQueueName).getQueueUrl());
+
+    // missing 'maxReceiveCount'
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, null));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with no maxReceiveCount");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute RedrivePolicy with no maxReceiveCount");
+    }
+
+    // missing 'deadLetterTargetArn'
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(null, "1"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with no deadLetterTargetArn");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute RedrivePolicy with no deadLetterTargetArn");
+    }
+
+    // too many fields
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, "1", "Bob", "5"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with too many fields");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute RedrivePolicy with too many fields");
+    }
+
+    // too low max receive count
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, "0"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with maxReceiveCount that is too low");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with maxReceiveCount that is too low");
+    }
+
+    // too high max receive count
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, String.valueOf(1 + MAX_MAX_RECEIVE_COUNT)));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with maxReceiveCount that is too high");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with maxReceiveCount that is too high");
+    }
+
+    // not a number max receive count
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, "X"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with maxReceiveCount that is not a number");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with maxReceiveCount that is not a number");
+    }
+
+    // different region dead letter queue
+    createQueueRequest.getAttributes().put("RedrivePolicy", 
+      redrivePolicyJSON(changeArnField(existingQueueArn, ARN_REGION_FIELD, region + "bogus"), "1"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with deadLetterTargetArn in a different region");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with deadLetterTargetArn in a different region");
+    }
+
+    // different account dead letter queue
+    createQueueRequest.getAttributes().put("RedrivePolicy",
+      redrivePolicyJSON(otherAccountExistingQueueArn, "1"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with deadLetterTargetArn in a different account");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with deadLetterTargetArn in a different account");
+    }
+
+    // nonexistent account dead letter queue
+    createQueueRequest.getAttributes().put("RedrivePolicy",
+      redrivePolicyJSON(changeArnField(existingQueueArn, ARN_ACCOUNT_FIELD, "000000000000"), "1"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with deadLetterTargetArn in a nonexistent account");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with deadLetterTargetArn in a nonexistent account");
+    }
+
+    // nonexistent queue dead letter queue
+    createQueueRequest.getAttributes().put("RedrivePolicy",
+      redrivePolicyJSON(changeArnField(existingQueueArn, ARN_QUEUE_NAME_FIELD, "bogus"), "1"));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy with deadLetterTargetArn with a nonexistent queue");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with deadLetterTargetArn with a nonexistent queue");
+    }
+
+    // set proper value.  Test idempotency
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, "1"));
+    String queueUrlFirstAttempt = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
+    String queueUrlNextAttempt = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
+    assertThat(queueUrlFirstAttempt.equals(queueUrlNextAttempt), "Called 'createQueue' with the same name, same parameters, idempotent.  Get the same url back");
+
+    // test different value with idempotency.  should fail
+    createQueueRequest.getAttributes().put("RedrivePolicy", redrivePolicyJSON(existingQueueArn, String.valueOf(MAX_MAX_RECEIVE_COUNT)));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy, existing queue with different number");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute 'RedrivePolicy', existing queue with different number");
+    }
+  }
+
+  @Test
+  public void testPolicy() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testPolicy");
+    String queueName = "queue_policy";
+
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+
+    // Try to create a queue with a bad policy
+    createQueueRequest.getAttributes().put("Policy", "{\"my\":\"policy\"}");
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
       assertThat(false, "Should fail creating a queue with a bad Policy");
     } catch (AmazonServiceException e) {
       assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with a bad Policy");
     }
 
-    print("Trying to create queue " + queueName + " with a good Policy (should succeed)");
+    // Try to create a queue with a good policy
     String goodPolicy = "{\n" +
       "  \"Version\": \"2012-10-17\",\n" +
       "  \"Id\": \"Queue1_Policy_UUID\",\n" +
@@ -139,17 +352,12 @@ public class TestSQSCreateQueue {
       "    }\n" +
       "  ]\n" +
       "}\n";
-    CreateQueueRequest createQueueRequest2 = new CreateQueueRequest();
-    createQueueRequest2.setQueueName(queueName);
-    createQueueRequest2.setAttributes(ImmutableMap.of("Policy", goodPolicy));
-    String queueUrl = sqs.createQueue(createQueueRequest2).getQueueUrl();
 
-    // Try idempotent case
-    print("Trying to use idempotentcy in create queue " + queueName);
-    CreateQueueRequest createQueueRequest3 = new CreateQueueRequest();
-    createQueueRequest3.setQueueName(queueName);
-    createQueueRequest3.setAttributes(ImmutableMap.of("Policy", goodPolicy));
-    assertThat(queueUrl.equals(sqs.createQueue(createQueueRequest3).getQueueUrl()), "Create queue should be idempotent if no parameters have changed");
+    // set proper value.  Test idempotency
+    createQueueRequest.getAttributes().put("Policy", goodPolicy);
+    String queueUrlFirstAttempt = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
+    String queueUrlNextAttempt = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
+    assertThat(queueUrlFirstAttempt.equals(queueUrlNextAttempt), "Called 'createQueue' with the same name, same parameters, idempotent.  Get the same url back");
 
     String otherGoodPolicy = "{\n" +
       "  \"Version\": \"2012-10-17\",\n" +
@@ -166,120 +374,166 @@ public class TestSQSCreateQueue {
       "    }\n" +
       "  ]\n" +
       "}\n";
-    print("Trying to create queue " + queueName + " with different Policy (should fail) ");
-    CreateQueueRequest createQueueRequest4 = new CreateQueueRequest();
-    createQueueRequest4.setQueueName(queueName);
-    createQueueRequest4.setAttributes(ImmutableMap.of("Policy", otherGoodPolicy));
+    // test different value with idempotency.  should fail
+    createQueueRequest.getAttributes().put("Policy", otherGoodPolicy);
     try {
-      sqs.createQueue(createQueueRequest4);
-      assertThat(false, "Should fail creating a queue with with different Policy");
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute Policy, existing queue with different number");
     } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with different Policy");
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute 'Policy', existing queue with different number");
     }
-    createdQueuesMap.put(queueName, queueUrl);
-  }
+ }
 
-  private void failCreateQueueWithBadRedrivePolicyTest(String queueName, String redrivePolicy, String thatStr) {
-    print("Trying to create queue " + queueName + " with attribute RedrivePolicy that " + thatStr);
+  @Test
+  public void testBadAttributes() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testBadAttributes");
+    String queueName = "queue_bad_attributes";
+
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
-    createQueueRequest.setAttributes(ImmutableMap.of("RedrivePolicy", redrivePolicy));
+
+    // Try to create a queue with a read only attribute
+    createQueueRequest.getAttributes().put("ApproximateNumberOfMessages", "0");
     try {
-      sqs.createQueue(createQueueRequest);
-      assertThat(false, "Should fail creating a queue with attribute RedrivePolicy that " + thatStr);
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with a read only attribute");
     } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute RedrivePolicy that " + thatStr);
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with a read only attribute");
+    }
+
+    // Try to create a queue with a read only attribute
+    createQueueRequest.getAttributes().clear();
+    createQueueRequest.getAttributes().put("All", "0");
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with an 'All' attribute");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with an 'All' attribute");
+    }
+
+    // Try to create a queue with a read only attribute
+    createQueueRequest.getAttributes().clear();
+    createQueueRequest.getAttributes().put("SalineConduction", "0");
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with a bogus attribute");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with a bogus attribute");
     }
   }
 
-  private void createQueueWithRedrivePolicyTest(String prefix, String suffix, int minMaxReceiveCount,
-                                                int maxMaxReceiveCount, String region, String accountId, 
-                                                String existingQueueSuffix, Map<String, String> createdQueuesMap) {
-
-
-    // try to create a queue with a dead letter queue/redrive policy with bad json
-    String queueName = prefix + suffix;
-    failCreateQueueWithBadRedrivePolicyTest(queueName, "{bx!", "has bad json");
-
-    // try to create a queue with a dead letter queue/redrive policy with json that is not an object
-    failCreateQueueWithBadRedrivePolicyTest(queueName, "[1,2,3]", "is not an object");
-
-    String existingQueueName = prefix + existingQueueSuffix;
-    String legitRedriveQueueArn = "arn:aws:sqs:" + region + ":" + accountId + ":" + existingQueueName;
-
-    String jsonWithoutMaxReceiveCount = "{\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that doesn't contain a maxReceiveCount
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithoutMaxReceiveCount, "doesn't contain a maxReceiveCount");
-
-    String jsonWithoutDeadLetterTargetArn = "{\"maxReceiveCount\":\"" + minMaxReceiveCount + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that doesn't contain a maxReceiveCount
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithoutDeadLetterTargetArn, "doesn't contain a deadLetterTargetArn");
-
-    String jsonWithTooManyFields = "{\"bob\":\"5\",\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\",\"maxReceiveCount\":\"" + minMaxReceiveCount + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that contains too many fields
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithTooManyFields, "contains too many fields");
-
-    String jsonWithTooLowMaxReceiveCount = "{\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\",\"maxReceiveCount\":\"" + (minMaxReceiveCount - 1) + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that has too low a value for maxReceiveCount
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithTooLowMaxReceiveCount, "has too low a value for maxReceiveCount");
-
-    String jsonWithTooHighMaxReceiveCount = "{\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\",\"maxReceiveCount\":\"" + (maxMaxReceiveCount + 1) + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that has too high a value for maxReceiveCount
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithTooHighMaxReceiveCount, "has too high a value for maxReceiveCount");
-
-    String jsonWithNonNumericMaxReceiveCount = "{\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\",\"maxReceiveCount\":\"" + "X" + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that has a non-numeric value for maxReceiveCount
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithNonNumericMaxReceiveCount, "has a non-numeric value for maxReceiveCount");
-
-    // try to create a queue with a dead letter queue/redrive policy that has a redriveQueueArn in a different region
-    String wrongRegionRedriveQueueArn = "arn:aws:sqs:" + region + "bogus" + ":" + accountId + ":" + existingQueueName;
-    String jsonWithWrongRegionRedriveQueueArn = "{\"deadLetterTargetArn\":\"" + wrongRegionRedriveQueueArn + "\",\"maxReceiveCount\":\"" + minMaxReceiveCount  + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that has a redriveQueueArn in a different region
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithWrongRegionRedriveQueueArn, "has a redriveQueueArn in a different region");
-
-    // try to create a queue with a dead letter queue/redrive policy that has a redriveQueueArn in a different account
-    String wrongAccountRedriveQueueArn = "arn:aws:sqs:" + region + ":" + "000000000000" + ":" + existingQueueName;
-    String jsonWithWrongAccountRedriveQueueArn = "{\"deadLetterTargetArn\":\"" + wrongAccountRedriveQueueArn + "\",\"maxReceiveCount\":\"" + minMaxReceiveCount  + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that has a redriveQueueArn in a different account
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithWrongAccountRedriveQueueArn, "has a redriveQueueArn in a different account");
-
-    // try to create a queue with a dead letter queue/redrive policy that has a redriveQueueArn with a non-existant queue
-    String nonexistantQueueRedriveQueueArn = "arn:aws:sqs:" + region + ":" + accountId + ":" + queueName;
-    String jsonWithNonexistantQueueRedriveQueueArn = "{\"deadLetterTargetArn\":\"" + nonexistantQueueRedriveQueueArn + "\",\"maxReceiveCount\":\"" + minMaxReceiveCount  + "\"}";
-    // try to create a queue with a dead letter queue/redrive policy that has a redriveQueueArn in a different account
-    failCreateQueueWithBadRedrivePolicyTest(queueName, jsonWithNonexistantQueueRedriveQueueArn, "has a redriveQueueArn with a non-existant queue");
-
-    // Create a queue with correct values
-    String goodJson = "{\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\",\"maxReceiveCount\":\"" + minMaxReceiveCount  + "\"}";
-    print("Trying to create queue " + queueName + " with attribute RedrivePolicy that is correct (should succeed)");
-    CreateQueueRequest createQueueRequest1 = new CreateQueueRequest();
-    createQueueRequest1.setQueueName(queueName);
-    createQueueRequest1.setAttributes(ImmutableMap.of("RedrivePolicy", goodJson));
-    String queueUrl =  sqs.createQueue(createQueueRequest1).getQueueUrl();
-
-    // Try idempotent case
-    print("Trying to use idempotentcy in create queue " + queueName);
-    // 3) you can create the same queue if no arguments are different
-    CreateQueueRequest createQueueRequest2 = new CreateQueueRequest();
-    createQueueRequest2.setQueueName(queueName);
-    createQueueRequest2.setAttributes(ImmutableMap.of("RedrivePolicy", goodJson));
-    assertThat(queueUrl.equals(sqs.createQueue(createQueueRequest2).getQueueUrl()), "Create queue should be idempotent if no parameters have changed");
-
-    String otherGoodJson = "{\"deadLetterTargetArn\":\"" + legitRedriveQueueArn + "\",\"maxReceiveCount\":\"" + maxMaxReceiveCount  + "\"}";
-    print("Trying to create queue " + queueName + " with different attribute RedrivePolicy (should fail) ");
-    CreateQueueRequest createQueueRequest3 = new CreateQueueRequest();
-    createQueueRequest3.setQueueName(queueName);
-    createQueueRequest3.setAttributes(ImmutableMap.of("RedrivePolicy", otherGoodJson));
-    try {
-      sqs.createQueue(createQueueRequest3);
-      assertThat(false, "Should fail creating a queue with with different attribute RedrivePolicy");
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with different attribute RedrivePolicy");
-    }
-
-    createdQueuesMap.put(queueName, queueUrl);
+  @Test
+  public void testRedrivePolicyJSON() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testRedrivePolicyJSON");
+    assertThat("{}".equals(redrivePolicyJSON(null, null)), "no args");
+    assertThat("{\"maxReceiveCount\":\"5\"}".equals(redrivePolicyJSON(null, "5")), "max receive count");
+    assertThat("{\"deadLetterTargetArn\":\"arn:aws:sqs:eucalyptus:123456789012:queuename\"}".equals(redrivePolicyJSON("arn:aws:sqs:eucalyptus:123456789012:queuename", null)), "deadLetterTargetArn");
+    assertThat("{\"deadLetterTargetArn\":\"arn:aws:sqs:eucalyptus:123456789012:queuename\",\"maxReceiveCount\":\"5\"}".equals(redrivePolicyJSON("arn:aws:sqs:eucalyptus:123456789012:queuename", "5")), "both args");
+    assertThat("{\"deadLetterTargetArn\":\"arn:aws:sqs:eucalyptus:123456789012:queuename\",\"maxReceiveCount\":\"5\",\"A\":\"B\"}".equals(redrivePolicyJSON("arn:aws:sqs:eucalyptus:123456789012:queuename", "5","A","B")), "extra args");
   }
 
+  @Test
+  public void testMakeArn() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testMakeArn");
+    assertThat(new String("arn:aws:sqs:" + region + ":123456789012:queueName").equals(makeArn("https://sqs.myhostodmain.com/123456789012/queueName")), "test make arn");
+  }
+
+  @Test
+  public void testChangeArnField() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testChangeArnField");
+    assertThat("Y:X:X:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",0,"Y")), "Test Field 0");
+    assertThat("X:Y:X:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",1,"Y")), "Test Field 1");
+    assertThat("X:X:Y:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",2,"Y")), "Test Field 2");
+    assertThat("X:X:X:Y:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",3,"Y")), "Test Field 3");
+    assertThat("X:X:X:X:Y:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",4,"Y")), "Test Field 4");
+    assertThat("X:X:X:X:X:Y:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",5,"Y")), "Test Field 5");
+    assertThat("X:X:X:X:X:X:Y:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",6,"Y")), "Test Field 6");
+    assertThat("X:X:X:X:X:X:X:Y:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",7,"Y")), "Test Field 7");
+    assertThat("X:X:X:X:X:X:X:X:Y".equals(changeArnField("X:X:X:X:X:X:X:X:X",8,"Y")), "Test Field 8");
+  }
+
+  private void helpTestSingleValueNumericAttribute(CreateQueueRequest createQueueRequest, String attributeName, int min, int max) {
+    // too low
+    createQueueRequest.getAttributes().put(attributeName, String.valueOf(min - 1));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with " + attributeName + " value too small");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with " + attributeName + " value too small");
+    }
+
+    // too high
+    createQueueRequest.getAttributes().put(attributeName, String.valueOf(1 + max));
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with " + attributeName + " value too large");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with " + attributeName + " value too large");
+    }
+
+    // non-numeric
+    createQueueRequest.getAttributes().put(attributeName, "X");
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with " + attributeName + " value not a number");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with " + attributeName + " value not a number");
+    }
+    // set proper value.  Test idempotency
+    createQueueRequest.getAttributes().put(attributeName, String.valueOf(min));
+    String queueUrlFirstAttempt = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
+    String queueUrlNextAttempt = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
+    assertThat(queueUrlFirstAttempt.equals(queueUrlNextAttempt), "Called 'createQueue' with the same name, same parameters, idempotent.  Get the same url back");
+
+    // test different value with idempotency.  should fail
+    createQueueRequest.getAttributes().put(attributeName, String.valueOf(max));
+
+    try {
+      accountSQSClient.createQueue(createQueueRequest);
+      assertThat(false, "Should fail creating a queue with attribute '" + attributeName + "', existing queue with different number");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute '" + attributeName + "', existing queue with different number");
+    }
+  }
+
+  private String redrivePolicyJSON(String deadLetterTargetArn, String maxReceiveCount, String... extraArgs) {
+    Map<String, String> fieldMap = Maps.newLinkedHashMap();
+    if (deadLetterTargetArn != null) {
+      fieldMap.put("deadLetterTargetArn", deadLetterTargetArn);
+    }
+    if (maxReceiveCount != null) {
+      fieldMap.put("maxReceiveCount", maxReceiveCount);
+    }
+    if (extraArgs != null) {
+      for (int i = 0; i < extraArgs.length; i += 2) {
+        fieldMap.put(extraArgs[i], extraArgs[i + 1]);
+      }
+    }
+    String delimiter = "";
+    StringBuilder builder = new StringBuilder("{");
+    for (Map.Entry<String, String> entry : fieldMap.entrySet()) {
+      builder.append(String.format("%s\"%s\":\"%s\"", delimiter, entry.getKey(), entry.getValue()));
+      delimiter = ",";
+    }
+    builder.append("}");
+    System.out.println(builder.toString());
+    return builder.toString();
+  }
+
+  private String makeArn(String queueUrl) throws MalformedURLException {
+    List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
+    return "arn:aws:sqs:" + region + ":" + pathParts.get(0) + ":" + pathParts.get(1);
+  }
+
+  private String changeArnField(String oldArn, int position, String newValue) {
+    List<String> parts = Lists.newArrayList(Splitter.on(':').split(oldArn));
+    parts.set(position, newValue);
+    return Joiner.on(':').join(parts);
+  }
+
+  private static final int ARN_REGION_FIELD = 3;
+  private static final int ARN_ACCOUNT_FIELD = 4;
+  private static final int ARN_QUEUE_NAME_FIELD = 5;
 
   private String defaultIfNullOrJustWhitespace(String target, String defaultValue) {
     if (target == null) return defaultValue;
@@ -287,113 +541,9 @@ public class TestSQSCreateQueue {
     return target;
   }
 
-  private void createQueueWithNoAttributesTest(String prefix, String suffix, int maxLength, Map<String, String> createdQueuesMap) {
-    // first create a queue
-    String queueName = prefix + suffix;
-    print("Creating queue " + queueName);
-    String queueUrl = sqs.createQueue(queueName).getQueueUrl();
-    createdQueuesMap.put(queueName, queueUrl);
-
-    // now try to create a second queue, fail in many ways
-
-    print("Trying to create a queue with bad chars in the name(should fail)");
-    // 1) fail due to bad characters
-    String badCharsQueueName = "@#%#$%#@$%#@$%";
-    try {
-      sqs.createQueue("@#%#$%#@$%#@$%");
-      assertThat(false, "Should fail creating a queue with bad chars " + badCharsQueueName);
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with bad chars " + badCharsQueueName);
-    }
-
-    print("Trying to create a queue with too many chars in the name (should fail)");
-    // 2) fail due to too many chars (may fail if property has changed)
-    String tooManyCharsQueueName = Strings.repeat("X", maxLength + 1);
-    try {
-      sqs.createQueue(tooManyCharsQueueName);
-      assertThat(false, "Should fail creating a queue with too many chars " + tooManyCharsQueueName);
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with bad chars " + tooManyCharsQueueName);
-    }
-
-    print("Trying to use idempotentcy in create queue " + queueName);
-    // 3) you can create the same queue if no arguments are different
-    assertThat(queueUrl.equals(sqs.createQueue(queueName).getQueueUrl()), "Create queue should be idempotent if no parameters have changed");
-  }
-
   private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }
 
-  private void createQueueWithSingleAttributeTest(String prefix, String suffix, String attributeName, 
-                                                  int min, int max, Map<String, String> createdQueuesMap) throws Exception {
-    // Try the attribute with a value that is too low
-    String queueName = prefix + suffix;
-    print("Trying to create queue " + queueName + " with Attribute " + attributeName + " with too low value (should fail)");
-    CreateQueueRequest createQueueRequest1 = new CreateQueueRequest();
-    createQueueRequest1.setQueueName(queueName);
-    createQueueRequest1.setAttributes(ImmutableMap.of(attributeName, String.valueOf(min - 1)));
-    try {
-      sqs.createQueue(createQueueRequest1);
-      assertThat(false, "Should fail creating a queue with attribute '" + attributeName + "', value too small");
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute '" + attributeName + "', value too small");
-    }
-
-    // Try the attribute with a value that is too high
-    print("Trying to create queue " + queueName + " with Attribute " + attributeName + " with too high value (should fail)");
-    CreateQueueRequest createQueueRequest2 = new CreateQueueRequest();
-    createQueueRequest2.setQueueName(queueName);
-    createQueueRequest2.setAttributes(ImmutableMap.of(attributeName, String.valueOf(max + 1)));
-    try {
-      sqs.createQueue(createQueueRequest2);
-      assertThat(false, "Should fail creating a queue with attribute '" + attributeName + "', value too big");
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute '" + attributeName + "', value too big");
-    }
-
-    // Try the attribute with a value that is too high
-    print("Trying to create queue " + queueName + " with Attribute " + attributeName + " with value not a number (should fail)");
-    // Try the attribute with a value that is not a number
-    CreateQueueRequest createQueueRequest3 = new CreateQueueRequest();
-    createQueueRequest3.setQueueName(queueName);
-    createQueueRequest3.setAttributes(ImmutableMap.of(attributeName, "X"));
-    try {
-      sqs.createQueue(createQueueRequest3);
-      assertThat(false, "Should fail creating a queue with attribute '" + attributeName + "', value not a number");
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute '" + attributeName + "', value not a number");
-    }
-
-    // Try the attribute with a value that is too high
-    print("Trying to create queue " + queueName + " with Attribute " + attributeName + " with legal value (should succeed)");
-    // Try with a correct attribute
-    CreateQueueRequest createQueueRequest4 = new CreateQueueRequest();
-    createQueueRequest4.setQueueName(queueName);
-    createQueueRequest4.setAttributes(ImmutableMap.of(attributeName, String.valueOf(min)));
-    String queueUrl = sqs.createQueue(createQueueRequest4).getQueueUrl();
-    
-    createdQueuesMap.put(queueName, queueUrl);
-
-    print("Trying to create queue " + queueName + " with Attribute " + attributeName + " with different legal value (should fail)");
-    // Fail due to a different value with the same queue name
-    CreateQueueRequest createQueueRequest5 = new CreateQueueRequest();
-    createQueueRequest5.setQueueName(queueName);
-    createQueueRequest5.setAttributes(ImmutableMap.of(attributeName, String.valueOf(max)));
-    try {
-      sqs.createQueue(createQueueRequest5);
-      assertThat(false, "Should fail creating a queue with attribute '" + attributeName + "', existing queue with different number");
-    } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 400, "Correctly fail creating a queue with attribute '" + attributeName + "', existing queue with different number");
-    }
-
-    print("Trying to create queue " + queueName + " with Attribute " + attributeName + " with original legal value (should succeed, idempotent)");
-    // Try with a correct attribute
-    CreateQueueRequest createQueueRequest6 = new CreateQueueRequest();
-    createQueueRequest6.setQueueName(queueName);
-    createQueueRequest6.setAttributes(ImmutableMap.of(attributeName, String.valueOf(min)));
-    assertThat(queueUrl.equals(sqs.createQueue(createQueueRequest6).getQueueUrl()), "Create queue should be idempotent if no parameters have changed");
-
-  }
 }
