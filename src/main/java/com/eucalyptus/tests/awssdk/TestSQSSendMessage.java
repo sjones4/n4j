@@ -99,7 +99,7 @@ public class TestSQSSendMessage {
 
   @Test
   public void testSendMessageNonExistentAccount() throws Exception {
-    testInfo(this.getClass().getSimpleName() + " - testPurgeQueueNonExistentAccount");
+    testInfo(this.getClass().getSimpleName() + " - testSendMessageNonExistentAccount");
     String queueName = "queue_name_send_message_nonexistent_account";
 
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();

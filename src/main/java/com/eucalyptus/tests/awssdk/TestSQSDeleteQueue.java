@@ -11,7 +11,6 @@ import org.testng.annotations.Test;
 
 import java.net.URL;
 import java.util.List;
-import java.util.UUID;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
