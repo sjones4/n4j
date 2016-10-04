@@ -8,6 +8,8 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSReceiveMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteQueue"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSGetQueueUrl"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSListQueues"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSPurgeQueue"/>
         </classes>
     </test>
