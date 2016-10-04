@@ -6,13 +6,15 @@ import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.net.URL;
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -21,113 +23,173 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSDeleteMessage {
 
-  @Test
-  public void testDeleteMessages() throws Exception {
-    getCloudInfoAndSqs();
+  private String account;
+  private String otherAccount;
 
-    String prefix = UUID.randomUUID().toString() + "-" + System.currentTimeMillis() + "-";
-    String otherAccount = "account" + System.currentTimeMillis();
-    createAccount(otherAccount);
-    AmazonSQS otherSQS = getSqsClientWithNewAccount(otherAccount, "admin");
+  private AmazonSQS accountSQSClient;
+  private AmazonSQS otherAccountSQSClient;
+
+  @BeforeClass
+  public void init() throws Exception {
+    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
 
     try {
-      // first create a queue
-      String suffix = "-delete-message-test";
-      String queueName = prefix + suffix;
-      CreateQueueRequest createQueueRequest = new CreateQueueRequest();
-      createQueueRequest.setQueueName(queueName);
-      createQueueRequest.addAttributesEntry("VisibilityTimeout","5");
-      String queueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
-      print("Creating queue");
-      // first make sure we have a queue url with an account id and a queue name
-      List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
-      assertThat(pathParts.size() == 2, "The queue URL path needs two 'suffix' values: account id, and queue name");
-      assertThat(pathParts.get(1).equals(queueName), "The queue URL path needs to end in the queue name");
-      String accountId = pathParts.get(0);
-      print("accountId="+accountId);
-
-      print("Creating queue in other account");
-      String otherAccountQueueUrl = otherSQS.createQueue(queueName).getQueueUrl();
-      print("Testing simple send/receive");
-
-      // first send and receive a message and get a receipt handle
-      sqs.sendMessage(queueUrl, "hello");
-      String firstReceiptHandle = receiveMessageHandle(sqs, queueUrl);
-      assertThat(firstReceiptHandle != null, "Should receive a message after sending it");
-
-      print("Testing delete message on non-existant account, should fail");
+      getCloudInfoAndSqs();
+      account = "sqs-account-a-" + System.currentTimeMillis();
+      createAccount(account);
+      accountSQSClient = getSqsClientWithNewAccount(account, "admin");
+      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
+      createAccount(otherAccount);
+      otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
+    } catch (Exception e) {
       try {
-        sqs.deleteMessage(queueUrl.replace(accountId, "000000000000"), firstReceiptHandle);
-        assertThat(false, "Should fail deleting message on a queue from a non-existent user");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 404, "Correctly fail deleting a message on a queue from a non-existent user");
+        teardown();
+      } catch (Exception ie) {
       }
+      throw e;
+    }
+  }
 
-      print("Testing deleting message on different account, should fail");
-      try {
-        sqs.deleteMessage(otherAccountQueueUrl, firstReceiptHandle);
-        assertThat(false, "Should fail deleting a message on a queue from a different user");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 403, "Correctly fail deleting a message on a queue from a different user");
-      }
-
-      print("Testing deleting message to non-existent queue, should fail");
-      try {
-        sqs.deleteMessage(queueUrl + "-bogus", firstReceiptHandle);
-        assertThat(false, "Should fail deleting a message on non-existent queue");
-      } catch (AmazonServiceException e) {
-        assertThat(e.getStatusCode() == 400, "Correctly fail deleting a message on non-existent queue");
-      }
-
-      // Now mess with receipt handles
-      Collection<String> bogusReceiptHandles = Lists.newArrayList(
-        "bob", "a:b:c:d:e:f", "toot-toot", firstReceiptHandle + "-again",
-        firstReceiptHandle.replaceAll(accountId, "000000000000"),
-        firstReceiptHandle.replaceAll(accountId, otherAccount)
-      );
-      for (String bogusReceiptHandle: bogusReceiptHandles) {
-        try {
-          print("Trying to delete message with bogus receipt handle " + bogusReceiptHandle + ", should fail");
-          sqs.deleteMessage(queueUrl, bogusReceiptHandle);
-          assertThat(false, "Should fail deleting messages with bogus receipt handles");
-        } catch (AmazonServiceException e) {
-          assertThat(e.getStatusCode() == 404, "Correctly fail deleting messages with bogus receipt handles");
+  @AfterClass
+  public void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+    if (account != null) {
+      if (accountSQSClient != null) {
+        ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
+        if (listQueuesResult != null) {
+          listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-
-      // get a new receipt handle, then try to delete
-      String secondReceiptHandle = receiveMessageHandle(sqs, queueUrl);
-      print("Testing delete message with old receipt handle (should still be around)");
-      sqs.deleteMessage(queueUrl, firstReceiptHandle);
-      String thirdReceiptHandle = receiveMessageHandle(sqs, queueUrl);
-      assertThat(thirdReceiptHandle != null, "Old receipt handle should not delete message");
-      print("Testing delete message with newest receipt handle (should be gone -- might take a while to see)");
-      sqs.deleteMessage(queueUrl, thirdReceiptHandle);
-      String fourthReceiptHandle = receiveMessageHandle(sqs, queueUrl);
-      assertThat(fourthReceiptHandle == null, "Message should be gone");
-    } finally {
-      ListQueuesResult listQueuesResult = sqs.listQueues(prefix);
-      if (listQueuesResult != null) {
-        listQueuesResult.getQueueUrls().forEach(sqs::deleteQueue);
-      }
-      ListQueuesResult listQueuesResult2 = otherSQS.listQueues(prefix);
-      if (listQueuesResult2 != null) {
-        listQueuesResult2.getQueueUrls().forEach(otherSQS::deleteQueue);
+      deleteAccount(account);
+    }
+    if (otherAccount != null) {
+      if (otherAccountSQSClient != null) {
+        ListQueuesResult listQueuesResult = otherAccountSQSClient.listQueues();
+        if (listQueuesResult != null) {
+          listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
+        }
       }
       deleteAccount(otherAccount);
     }
   }
 
-  private String receiveMessageHandle(AmazonSQS sqs, String queueUrl) throws InterruptedException {
+  @Test
+  public void testDeleteMessageNonExistentAccount() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteMessageNonExistentAccount");
+    String queueName = "queue_name_delete_message_nonexistent_account";
+    String queueUrl = createQueueWithZeroDelayAndVisibilityTimeout(accountSQSClient, queueName);
+    List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
+    String accountId = pathParts.get(0);
+    String receiptHandle = sendMessageAndGetReceiptHandle(accountSQSClient, queueUrl);
+    try {
+      accountSQSClient.deleteMessage(queueUrl.replace(accountId, "000000000000"), receiptHandle);
+      assertThat(false, "Should fail deleting message on a queue from a non-existent user");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 404, "Correctly fail deleting a message on a queue from a non-existent user");
+    }
+  }
+
+  @Test
+  public void testDeleteMessageOtherAccount() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteMessageOtherAccount");
+    String queueName = "queue_name_delete_message_other_account";
+    String queueUrl = createQueueWithZeroDelayAndVisibilityTimeout(accountSQSClient, queueName);
+    String otherAccountQueueUrl = createQueueWithZeroDelayAndVisibilityTimeout(otherAccountSQSClient, queueName);
+    String receiptHandle = sendMessageAndGetReceiptHandle(accountSQSClient, queueUrl);
+    try {
+      accountSQSClient.deleteMessage(otherAccountQueueUrl, receiptHandle);
+      assertThat(false, "Should fail deleting a message on a queue from a different user");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 403, "Correctly fail deleting a message on a queue from a different user");
+    }
+  }
+
+  @Test
+  public void testDeleteMessageNonExistentQueue() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteMessageNonExistentQueue");
+    String queueName = "queue_name_delete_message_nonexistent_queue";
+    String queueUrl = createQueueWithZeroDelayAndVisibilityTimeout(accountSQSClient, queueName);
+    String receiptHandle = sendMessageAndGetReceiptHandle(accountSQSClient, queueUrl);
+    try {
+      accountSQSClient.deleteMessage(queueUrl + "-bogus", receiptHandle);
+      assertThat(false, "Should fail deleting a message on non-existent queue");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail deleting a message on non-existent queue");
+    }
+  }
+
+  @Test
+  public void testDeleteMessageBogusReceiptHandles() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteMessageBogusReceiptHandles");
+    String queueName = "queue_name_delete_message_bogus_rh";
+    String queueUrl = createQueueWithZeroDelayAndVisibilityTimeout(accountSQSClient, queueName);
+    List<String> pathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(queueUrl).getPath()));
+    String accountId = pathParts.get(0);
+    String otherAccountQueueUrl = createQueueWithZeroDelayAndVisibilityTimeout(otherAccountSQSClient, queueName);
+    List<String> otherPathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(otherAccountQueueUrl).getPath()));
+    String otherAccountId = otherPathParts.get(0);
+
+    String receiptHandle = sendMessageAndGetReceiptHandle(accountSQSClient, queueUrl);
+
+    Collection<String> bogusReceiptHandles = ImmutableList.of(
+      "bob", "a:b:c:d:e:f", "toot-toot", receiptHandle + "-again",
+      receiptHandle.replaceAll(accountId, "000000000000"),
+      receiptHandle.replaceAll(accountId, otherAccountId)
+    );
+    for (String bogusReceiptHandle: bogusReceiptHandles) {
+      try {
+        accountSQSClient.deleteMessage(queueUrl, bogusReceiptHandle);
+        assertThat(false, "Should fail deleting messages with bogus receipt handles");
+      } catch (AmazonServiceException e) {
+        assertThat(e.getStatusCode() == 404, "Correctly fail deleting messages with bogus receipt handles");
+      }
+    }
+  }
+
+  @Test
+  public void testDeleteSubsequentReceiptHandles() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteSubsequentReceiptHandles");
+    String queueName = "queue_name_delete_message_subsequent_rh";
+    String queueUrl = createQueueWithZeroDelayAndVisibilityTimeout(accountSQSClient, queueName);
+
+    String receiptHandle1 = sendMessageAndGetReceiptHandle(accountSQSClient, queueUrl);
+    String receiptHandle2 = getReceiptHandle(accountSQSClient, queueUrl, false);
+    assertThat(receiptHandle2 != null, "Haven't deleted message yet");
+    accountSQSClient.deleteMessage(queueUrl, receiptHandle1);
+    // message should still exist
+    String receiptHandle3 = getReceiptHandle(accountSQSClient, queueUrl, false);
+    assertThat(receiptHandle3 != null, "Old receipt handle should not delete message");
+    accountSQSClient.deleteMessage(queueUrl, receiptHandle3);
+    // message should be done now
+    String receiptHandle4 = getReceiptHandle(accountSQSClient, queueUrl, false);
+    assertThat(receiptHandle4 == null, "Message should be gone");
+  }
+
+  private String createQueueWithZeroDelayAndVisibilityTimeout(AmazonSQS sqs, String queueName) {
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.setQueueName(queueName);
+    createQueueRequest.getAttributes().put("DelaySeconds","0");
+    createQueueRequest.getAttributes().put("VisibilityTimeout", "0");
+    return sqs.createQueue(createQueueRequest).getQueueUrl();
+  }
+
+  private String sendMessageAndGetReceiptHandle(AmazonSQS sqs, String queueUrl) throws InterruptedException {
+    sqs.sendMessage(queueUrl, "bob");
+    return getReceiptHandle(sqs, queueUrl, true);
+  }
+
+  private String getReceiptHandle(AmazonSQS sqs, String queueUrl, boolean failIfNone) throws InterruptedException {
     long startTime = System.currentTimeMillis();
-    while ((System.currentTimeMillis() - startTime) < 15000L) {
+    while ((System.currentTimeMillis() - startTime) < 5000L) {
       ReceiveMessageResult receiveMessageResult = sqs.receiveMessage(queueUrl);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null && receiveMessageResult.getMessages().size() > 0) {
         return receiveMessageResult.getMessages().get(0).getReceiptHandle();
       }
       Thread.sleep(1000L);
     }
+    if (failIfNone) {
+      throw new InterruptedException("timeout");
+    }
     return null;
   }
-
 }
