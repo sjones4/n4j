@@ -76,7 +76,7 @@ public class TestSQSDelaySeconds {
 
   @Test
   public void testMessageDelay() throws Exception {
-    testInfo(this.getClass().getSimpleName() + " - testDeleteQueue");
+    testInfo(this.getClass().getSimpleName() + " - testMessageDelay");
     String queueName = "queue_name_message_delay";
     // send messages out with a bit of spacing between delays
     // give yourself a little error time (5 seconds may be too little?)
