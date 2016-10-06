@@ -132,4 +132,18 @@ public class TestSQSDeleteQueue {
     accountSQSClient.deleteQueue(queueUrl);
   }
 
+  @Test
+  public void testDeleteAlreadyDeletedQueue() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testDeleteAlreadyDeletedQueue");
+    String queueName = "queue_name_delete_already_deleted_queue";
+    String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
+    accountSQSClient.deleteQueue(queueUrl);
+    try {
+      accountSQSClient.deleteQueue(queueUrl);
+      assertThat(false, "Should fail deleting already deleted queue");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 400, "Correctly fail deleting already deleted queue");
+    }
+  }
+
 }
