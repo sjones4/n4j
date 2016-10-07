@@ -11,10 +11,12 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSSendMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSReadOnlyAttributes"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSReceiveMessage"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSDeadLetterQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSGetQueueUrl"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSListQueues"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSListDeadLetterSourceQueues"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSMessageExpirationPeriod"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSPurgeQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSVisibilityTimeout"/>
