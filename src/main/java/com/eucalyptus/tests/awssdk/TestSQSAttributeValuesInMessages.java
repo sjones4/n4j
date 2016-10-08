@@ -112,7 +112,6 @@ public class TestSQSAttributeValuesInMessages {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {
-          System.out.println(message.getMessageId() + " " + messageId);
           if (message.getMessageId().equals(messageId)) {
             numReceives++;
             if (numReceives == 1) {
