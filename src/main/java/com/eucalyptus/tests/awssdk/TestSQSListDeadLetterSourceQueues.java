@@ -141,7 +141,6 @@ public class TestSQSListDeadLetterSourceQueues {
 
     Random random = new Random();
     for (int trials = 0; trials < NUM_TRIALS; trials++) {
-      System.out.println(trials);
       for (int i = 0; i < NUM_QUEUES; i++) {
         deadLetterSourceQueues.get(i).clear();
         accountSQSClient.setQueueAttributes(queueUrls.get(i), ImmutableMap.of("RedrivePolicy", ""));

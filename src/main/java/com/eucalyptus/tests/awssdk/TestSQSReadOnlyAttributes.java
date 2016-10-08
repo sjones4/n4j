@@ -111,7 +111,7 @@ public class TestSQSReadOnlyAttributes {
     }
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 3, 5, 0), "Should have 5 visible messages, 3 delayed messages");
-    while(!undelayedMessageIds.isEmpty()) {
+    long start = System.currentTimeMillis(); while(!undelayedMessageIds.isEmpty() && System.currentTimeMillis() - start < 120000L) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(queueUrl);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message m : receiveMessageResult.getMessages()) {

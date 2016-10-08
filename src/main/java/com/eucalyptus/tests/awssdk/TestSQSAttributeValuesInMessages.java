@@ -104,14 +104,15 @@ public class TestSQSAttributeValuesInMessages {
     Thread.sleep(30000L);
     int numReceives = 0;
     Message lastMessage = null;
-    long localFirstReceiveTimeSecs = 0;
-    while (numReceives < 50) {
+    long localFirstReceiveTimeSecs = 0; long start = System.currentTimeMillis();
+    while (numReceives < 50 && System.currentTimeMillis() - start < 120000L) {
       ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
       receiveMessageRequest.setQueueUrl(queueUrl);
       receiveMessageRequest.setAttributeNames(Collections.singletonList("All"));
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {
+          System.out.println(message.getMessageId() + " " + messageId);
           if (message.getMessageId().equals(messageId)) {
             numReceives++;
             if (numReceives == 1) {
