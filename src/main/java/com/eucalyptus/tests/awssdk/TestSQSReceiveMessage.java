@@ -364,8 +364,41 @@ public class TestSQSReceiveMessage {
     throw new InterruptedException("timeout");
   }
 
+  @Test
+  public void testReceiveMaxNumberOfMessages() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testMaxNumberOfMessages");
+    String queueName = "queue_name_receive_message_max_number_of_messages";
+    CreateQueueRequest createQueueRequest = new CreateQueueRequest();
+    createQueueRequest.getAttributes().put("DelaySeconds", "0");
+    createQueueRequest.getAttributes().put("VisibilityTimeout", "0"); // get message back immediately
+    createQueueRequest.setQueueName(queueName);
+    String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
 
+    // send a bunch of messages
+    for (int i = 0; i < 2 * MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES; i++) {
+      accountSQSClient.sendMessage(queueUrl, "hello");
+    }
 
+    int NUM_TRIALS_PER_REQUEST = 10;
+    // make sure at most 1 message returned if no value set for MaxNumberOfMessages
+    ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+    receiveMessageRequest.setQueueUrl(queueUrl);
+
+    for (int i=0; i< NUM_TRIALS_PER_REQUEST; i++) {
+      ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
+      assertThat(receiveMessageResult == null || receiveMessageResult.getMessages() == null
+      || receiveMessageResult.getMessages().size() <= 1, "Receive at most 1 message if no MaxNumberOfMessages set");
+    }
+
+    for (int maxNumberOfMessages = 1; maxNumberOfMessages <= MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES; maxNumberOfMessages++) {
+      receiveMessageRequest.setMaxNumberOfMessages(maxNumberOfMessages);
+      for (int i=0; i< NUM_TRIALS_PER_REQUEST; i++) {
+        ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
+        assertThat(receiveMessageResult == null || receiveMessageResult.getMessages() == null
+          || receiveMessageResult.getMessages().size() <= maxNumberOfMessages, "Receive at most " + maxNumberOfMessages + " message if no MaxNumberOfMessages set");
+      }
+    }
+  }
   private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
