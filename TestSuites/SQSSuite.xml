@@ -7,6 +7,7 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributeValuesInMessages"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDelaySeconds"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSChangeMessageVisibility"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSChangeMessageVisibilityBatch"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSCreateQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSSendMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSSendMessageBatch"/>
@@ -14,6 +15,7 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSReceiveMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeadLetterQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessage"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessageBatch"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSGetQueueUrl"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSListQueues"/>

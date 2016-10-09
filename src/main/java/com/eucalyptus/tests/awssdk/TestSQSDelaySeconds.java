@@ -13,6 +13,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
@@ -29,6 +30,7 @@ public class TestSQSDelaySeconds {
 
   private AmazonSQS accountSQSClient;
   private AmazonSQS otherAccountSQSClient;
+  private int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
 
   @BeforeClass
   public void init() throws Exception {
@@ -36,6 +38,7 @@ public class TestSQSDelaySeconds {
 
     try {
       getCloudInfoAndSqs();
+      MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES = getLocalConfigInt("MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES");
       account = "sqs-account-a-" + System.currentTimeMillis();
       createAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
@@ -123,6 +126,7 @@ public class TestSQSDelaySeconds {
 
     ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
     receiveMessageRequest.setAttributeNames(Collections.singleton("All"));
+    receiveMessageRequest.setMaxNumberOfMessages(MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES);
     receiveMessageRequest.setQueueUrl(queueUrl);
     for (int i=0; i < totalTime; i++) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
@@ -165,6 +169,10 @@ public class TestSQSDelaySeconds {
         Math.abs(Math.abs(localSendTime - remoteSendTime) - Math.abs(localReceiveTime - remoteReceiveTime)) < errorSecs,
         "Message " + messageId + " should have clock skew ranges near each other");
     }
+  }
+  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+    String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
+    return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }
 
 }
