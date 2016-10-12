@@ -123,6 +123,21 @@ public class TestSQSChangeMessageVisibility {
   }
 
   @Test
+  public void testChangeMessageVisibilityReceiptHandleOtherAccount() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testChangeMessageVisibilityNonExistentQueue");
+    String queueName = "queue_name_change_message_visibility_other_account_receipt_handle";
+    String queueUrl = createQueueWithZeroDelayAndVisibilityTimeout(accountSQSClient, queueName);
+    String otherAccountQueueUrl = createQueueWithZeroDelayAndVisibilityTimeout(otherAccountSQSClient, queueName);
+    String otherAccountReceiptHandle = sendMessageAndGetReceiptHandle(otherAccountSQSClient, otherAccountQueueUrl);
+    try {
+      accountSQSClient.changeMessageVisibility(queueUrl, otherAccountReceiptHandle, 0);
+      assertThat(false, "Should fail changing message visibility on receipt handle from another account");
+    } catch (AmazonServiceException e) {
+      assertThat(e.getStatusCode() == 404, "Correctly fail changing message visibility on receipt handle from another account");
+    }
+  }
+
+  @Test
   public void testChangeMessageVisibilityBogusReceiptHandles() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testChangeMessageVisibilityBogusReceiptHandles");
     String queueName = "queue_name_change_message_visibility_bogus_rh";
