@@ -145,9 +145,6 @@ class N4j {
             throw new Exception("Please run getCloudInfoAndSQS() first");
         }
         AWSCredentials creds = getUserCreds(account, user);
-      print("creds.getAWSAccessKeyId()="+creds.getAWSAccessKeyId());
-      print("creds.getAWSSecretKey()="+creds.getAWSSecretKey());
-      print("SQS_ENDPOINT="+SQS_ENDPOINT);
         return getSqsClient(creds.getAWSAccessKeyId(), creds.getAWSSecretKey(), SQS_ENDPOINT);
     }
 
@@ -1241,6 +1238,24 @@ class N4j {
                 .withUserName(userName);
         youAre.putUserPolicy(putUserPolicyRequest);
         print("Created policy: " + policyName);
+    }
+
+    public static void deleteIAMPolicy(final String accountName, String userName, String policyName) {
+        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
+        youAre.setEndpoint(IAM_ENDPOINT);
+
+        youAre.addRequestHandler(new AbstractRequestHandler() {
+            public void beforeRequest(final Request<?> request) {
+                request.addParameter("DelegateAccount", accountName);
+            }
+        });
+
+        DeleteUserPolicyRequest deleteUserPolicyRequest = new DeleteUserPolicyRequest()
+          .withPolicyName(policyName)
+          .withUserName(userName);
+        youAre.deleteUserPolicy(deleteUserPolicyRequest);
+        print("Delete policy: " + policyName);
     }
 
     public static AWSCredentials getUserCreds(final String accountName, String userName) {

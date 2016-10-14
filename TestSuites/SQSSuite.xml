@@ -18,6 +18,7 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessageBatch"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteQueue"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSGetQueueUrl"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSIAMPolicies"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSPermissions"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSListQueues"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSListDeadLetterSourceQueues"/>
