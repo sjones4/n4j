@@ -86,7 +86,7 @@ public class TestSQSGetQueueUrl {
       accountSQSClient.getQueueUrl(getQueueUrlRequest);
       assertThat(false, "Should fail getting queue url on different account");
     } catch (AmazonServiceException e) {
-      assertThat(e.getStatusCode() == 403, "Correctly fail getting queue url on different account");
+      assertThat(e.getStatusCode() == 400, "Correctly fail getting queue url on different account");
     }
   }
 
