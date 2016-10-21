@@ -15,6 +15,7 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSReadOnlyAttributes"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSReceiveMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeadLetterQueue"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSStatusCodesForNonexistentQueues"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessageBatch"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteQueue"/>
