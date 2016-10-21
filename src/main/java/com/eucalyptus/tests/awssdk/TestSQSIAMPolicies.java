@@ -214,7 +214,7 @@ public class TestSQSIAMPolicies {
 
     // try to delete the queue as a user
     try {
-      accountUserSQSClient.deleteQueue(queueName);
+      accountUserSQSClient.deleteQueue(queueUrl);
       assertThat(false, "Should not be able to delete queue without permission");
     } catch (AmazonServiceException e) {
       assertThat(e.getStatusCode() == 403, "Correctly fail deleting a queue without permission");
