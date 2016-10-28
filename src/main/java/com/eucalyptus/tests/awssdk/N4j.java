@@ -449,8 +449,8 @@ class N4j {
         return as;
     }
 
-      private static AmazonSQS getSqsClient(String accessKey, String secretKey,
-                                                         String endpoint) {
+      static AmazonSQS getSqsClient(String accessKey, String secretKey,
+                                    String endpoint) {
         AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
         final AmazonSQS sqs = new AmazonSQSClient(creds);
         sqs.setEndpoint(endpoint);
