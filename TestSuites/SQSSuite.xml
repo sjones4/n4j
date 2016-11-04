@@ -15,6 +15,7 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSReadOnlyAttributes"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSReceiveMessage"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeadLetterQueue"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSSenderId"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSStatusCodesForNonexistentQueues"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSLongPolling"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSCloudWatchMetrics"/>

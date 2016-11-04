@@ -1,6 +1,12 @@
 package com.eucalyptus.tests.awssdk;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
+import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
+import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.amazonaws.services.sqs.model.Message;
@@ -28,6 +34,8 @@ public class TestSQSAttributeValuesInMessages {
   private String otherAccount;
 
   private AmazonSQS accountSQSClient;
+  private AmazonIdentityManagement accountIAMClient;
+
   private AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
@@ -38,6 +46,15 @@ public class TestSQSAttributeValuesInMessages {
       getCloudInfoAndSqs();
       account = "sqs-account-a-" + System.currentTimeMillis();
       createAccount(account);
+      AWSCredentials creds = getUserCreds(account, "admin");
+      accountSQSClient = new AmazonSQSClient(
+        new BasicAWSCredentials(creds.getAWSAccessKeyId(), creds.getAWSSecretKey())
+      );
+      accountSQSClient.setEndpoint(SQS_ENDPOINT);
+      accountIAMClient = new AmazonIdentityManagementClient(
+        new BasicAWSCredentials(creds.getAWSAccessKeyId(), creds.getAWSSecretKey())
+      );
+      accountIAMClient.setEndpoint(IAM_ENDPOINT);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
       otherAccount = "sqs-account-b-" + System.currentTimeMillis();
       createAccount(otherAccount);
@@ -123,7 +140,7 @@ public class TestSQSAttributeValuesInMessages {
       }
     }
     assertThat(Integer.parseInt(lastMessage.getAttributes().get("ApproximateReceiveCount")) == numReceives, "numReceives should match");
-    assertThat(lastMessage.getAttributes().get("SenderId").equals(accountId), "sender id should match");
+    assertThat(lastMessage.getAttributes().get("SenderId").equals(accountIAMClient.getUser().getUser().getUserId()), "sender id should match");
     // clock skew should be within range
 
     long remoteSendTimestampSecs = Long.parseLong(lastMessage.getAttributes().get("SentTimestamp"));
