@@ -28,7 +28,7 @@ public class GetBucketInfo {
         System.out.println("\n\nBucket:"+bucketName);
         System.out.println("Version-Status:" + s3Client.getBucketVersioningConfiguration(bucketName).getStatus());
         System.out.println("---ACL---");
-        for (Grant grant: s3Client.getBucketAcl(bucketName).getGrants()) {
+        for (Grant grant: s3Client.getBucketAcl(bucketName).getGrantsAsList()) {
             System.out.println("Grant: " + grant.getGrantee() + ":" + grant.getPermission());
         }
         System.out.println("---LIFECYCLE CONFIGURATION---");
@@ -41,10 +41,10 @@ public class GetBucketInfo {
                 System.out.println(" status = " + rule.getStatus());
                 System.out.println(" expirationInDays = " + rule.getExpirationInDays());
                 System.out.println(" expirationDate = " + rule.getExpirationDate());
-                if (rule.getTransition() != null) {
-                    System.out.println(" transition.days = " + rule.getTransition().getDays());
-                    System.out.println(" transition.date = " + rule.getTransition().getDate());
-                    System.out.println(" transition.storageClass = " + rule.getTransition().getStorageClass());
+                for (BucketLifecycleConfiguration.Transition transition: rule.getTransitions()) {
+                    System.out.println(" transition.days = " + transition.getDays());
+                    System.out.println(" transition.date = " + transition.getDate());
+                    System.out.println(" transition.storageClass = " + transition.getStorageClassAsString());
                 }
             }
         }

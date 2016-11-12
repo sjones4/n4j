@@ -40,16 +40,16 @@ import com.amazonaws.services.s3.model.TagSet;
  * <p>
  * This class contains tests for basic operations on S3 buckets.
  * </p>
- * 
+ *
  * <p>
  * {@link #versioningConfiguration()} fails against Walrus due to <a href="https://eucalyptus.atlassian.net/browse/EUCA-7635">EUCA-7635</a>
  * </p>
- * 
+ *
  * <p>
  * {@link #unimplementedOps()} passes only against Walrus as the APIs are not implemented by Walrus
- * 
+ *
  * @author Swathi Gangisetty
- * 
+ *
  */
 public class S3BucketTests {
 
@@ -119,7 +119,7 @@ public class S3BucketTests {
 
   /**
    * Tests for the following S3 APIs
-   * 
+   *
    * <li>createBucket</li> <li>deleteBucket</li> <li>listBuckets</li> <li>doesBucketExist</li> <li>getBucketLocation</li> <li>
    * getBucketLoggingConfiguration</li> <li>getBucketVersioningConfiguration</li>
    */
@@ -241,9 +241,9 @@ public class S3BucketTests {
 
       print(account + ": Getting ACL for bucket " + bucketName);
       AccessControlList acl = s3.getBucketAcl(bucketName);
-      assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + acl.getGrants().size(), acl.getGrants().size() == 3);
+      assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + acl.getGrantsAsList().size(), acl.getGrantsAsList().size() == 3);
 
-      Iterator<Grant> iterator = acl.getGrants().iterator();
+      Iterator<Grant> iterator = acl.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         if (grant.getGrantee() instanceof CanonicalGrantee) {
@@ -279,10 +279,10 @@ public class S3BucketTests {
 
   /**
    * Test for changing versioning configuration of a bucket and verifying it.
-   * 
+   *
    * Test failed against Walrus. Versioning configuration cannot be turned OFF once its ENABLED/SUSPENDED on a bucket. While S3 throws an exception
    * for such a request, Walrus does not. The versioning configuration remains unchanged but no error is received.</p>
-   * 
+   *
    * @see <a href="https://eucalyptus.atlassian.net/browse/EUCA-7635">EUCA-7635</a>
    */
   @Test

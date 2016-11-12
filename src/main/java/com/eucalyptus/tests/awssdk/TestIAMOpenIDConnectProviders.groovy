@@ -3,8 +3,8 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement
 import com.amazonaws.services.identitymanagement.model.AddClientIDToOpenIDConnectProviderRequest
 import com.amazonaws.services.identitymanagement.model.CreateAccessKeyRequest
@@ -37,14 +37,14 @@ import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
  *
  * Related AWS doc:
  *   http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
- *   
+ *
  */
 class TestIAMOpenIDConnectProviders {
 
   public TestIAMOpenIDConnectProviders( ) {
     minimalInit()
     this.host = CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
   private final String host
 
@@ -363,7 +363,7 @@ class TestIAMOpenIDConnectProviders {
               N4j.print "Deleting access key ${accessKeyId} for user ${userName}"
               deleteAccessKey( new DeleteAccessKeyRequest( userName: userName, accessKeyId: accessKeyId ) )
             }
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
       }
@@ -541,5 +541,5 @@ class TestIAMOpenIDConnectProviders {
         }
       }
     }
-  }  
+  }
 }

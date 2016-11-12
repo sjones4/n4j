@@ -29,7 +29,7 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.handlers.AbstractRequestHandler;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest;
@@ -122,7 +122,7 @@ public class TestSTSGetImpersonationToken {
 
   private YouAreClient getYouAreClient( final String asAccount ) {
     final YouAreClient euare = new YouAreClient( credentials( ) );
-    euare.addRequestHandler( new AbstractRequestHandler(){
+    euare.addRequestHandler( new RequestHandler2(){
       public void beforeRequest(final Request<?> request) {
         request.addParameter( "DelegateAccount", asAccount );
       }

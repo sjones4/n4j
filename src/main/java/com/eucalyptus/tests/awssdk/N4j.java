@@ -6,8 +6,8 @@ import com.amazonaws.Request;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.handlers.AbstractRequestHandler;
-import com.amazonaws.internal.StaticCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
 import com.amazonaws.services.autoscaling.model.*;
@@ -147,7 +147,7 @@ class N4j {
 
         print("S3 Discovery Complete");
     }
-    
+
 	public static AmazonS3 initS3ClientWithNewAccount(String account, String user) throws Exception {
 
 		// Initialize everything for the first time
@@ -197,7 +197,7 @@ class N4j {
         ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
         print("Cloud Discovery Complete");
     }
-    
+
 
     public static void testInfo(String testName) {
         print("*****TEST NAME: " + testName);
@@ -392,7 +392,7 @@ class N4j {
     public static YouAre getYouAreClient(String accessKey, String secretKey,
                                                         String endpoint) {
         AWSCredentialsProvider awsCredentialsProvider =
-                new StaticCredentialsProvider( new BasicAWSCredentials(accessKey, secretKey));
+                new AWSStaticCredentialsProvider( new BasicAWSCredentials(accessKey, secretKey));
         final YouAre youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(endpoint);
         return youAre;
@@ -1113,11 +1113,11 @@ class N4j {
     }
 
     public static void createIAMPolicy(final String accountName, String userName, String policyName, String policyDocument) {
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
@@ -1143,11 +1143,11 @@ class N4j {
     }
 
     public static AWSCredentials getUserCreds(final String accountName, String userName) {
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
@@ -1190,11 +1190,11 @@ class N4j {
     }
 
     public static void createUser(final String accountName, String userName){
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
@@ -1213,11 +1213,11 @@ class N4j {
     public static Map<String, String> getUserKeys(final String accountName, String userName){
         Map<String, String> keys = new HashMap<>();
 
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }

@@ -4,10 +4,10 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.ec2.AmazonEC2
@@ -78,7 +78,7 @@ class TestSTSAssumeRoleWithWebIdentity {
   public TestSTSAssumeRoleWithWebIdentity( ) {
     getCloudInfo()
     this.host = CLC_IP
-    this.adminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.adminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
 
     // create a new user with all IAM permissions
     N4j.createAccount(testAcct)
@@ -87,7 +87,7 @@ class TestSTSAssumeRoleWithWebIdentity {
     AWSCredentials userCreds = N4j.getUserCreds(testAcct, testUser)
     def userAK = userCreds.AWSAccessKeyId
     def userSK = userCreds.AWSSecretKey
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( userAK, userSK ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( userAK, userSK ) )
   }
 
   /**
