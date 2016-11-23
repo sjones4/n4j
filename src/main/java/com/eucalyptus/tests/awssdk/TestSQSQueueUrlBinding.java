@@ -3,7 +3,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.AmazonWebServiceClient;
 import com.amazonaws.Request;
-import com.amazonaws.handlers.AbstractRequestHandler;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.AddPermissionRequest;
 import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequest;
@@ -740,7 +740,7 @@ public class TestSQSQueueUrlBinding {
     public abstract Object doOperation();
 
     public Object doWrappedOperation() throws AmazonServiceException {
-      AbstractRequestHandler addQueueUrl = new AbstractRequestHandler() {
+      RequestHandler2 addQueueUrl = new RequestHandler2() {
         public void beforeRequest(final Request<?> request) {
           request.addParameter("QueueUrl", queueUrl);
         }
