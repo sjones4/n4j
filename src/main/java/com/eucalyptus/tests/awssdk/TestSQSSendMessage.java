@@ -3,7 +3,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.AmazonWebServiceClient;
 import com.amazonaws.Request;
-import com.amazonaws.handlers.AbstractRequestHandler;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
@@ -274,7 +274,7 @@ public class TestSQSSendMessage {
     // test duplicate keys
     // send a message attribute twice (i.e. same key, different value.  Since the SDK uses a map, we need
     // to send the parameters directly.
-    AbstractRequestHandler sendTwoAttributesWithSameName = new AbstractRequestHandler() {
+    RequestHandler2 sendTwoAttributesWithSameName = new RequestHandler2() {
       public void beforeRequest(final Request<?> request) {
         request.addParameter("MessageAttribute.1.Name", "MA1");
         request.addParameter("MessageAttribute.1.Value.DataType", "String");
