@@ -92,7 +92,7 @@ class TestBillingUsage {
                 viewUsage(new ViewUsageRequest(
                         services: 'Ec2',
                         usageTypes: 'all',
-                        operation: 'all',
+                        operations: 'all',
                         reportGranularity: 'Hours')
                 ).with {
                     N4j.print("View usage data: ${it}")
