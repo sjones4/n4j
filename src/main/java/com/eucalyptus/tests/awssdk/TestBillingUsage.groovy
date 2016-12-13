@@ -7,11 +7,11 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.github.sjones4.youcan.youbill.YouBill
 import com.github.sjones4.youcan.youbill.YouBillClient
-import com.github.sjones4.youcan.youbill.YouEc2Reports
-import com.github.sjones4.youcan.youbill.YouEc2ReportsClient
-import com.github.sjones4.youcan.youbill.model.ViewInstanceUsageReportRequest
+import com.github.sjones4.youcan.youec2reports.YouEc2Reports
+import com.github.sjones4.youcan.youec2reports.YouEc2ReportsClient
+import com.github.sjones4.youcan.youec2reports.model.ViewInstanceUsageReportRequest
 import com.github.sjones4.youcan.youbill.model.ViewMonthlyUsageRequest
-import com.github.sjones4.youcan.youbill.model.ViewReservedInstanceUtilizationReportRequest
+import com.github.sjones4.youcan.youec2reports.model.ViewReservedInstanceUtilizationReportRequest
 import com.github.sjones4.youcan.youbill.model.ViewUsageRequest
 import org.testng.annotations.Test
 
