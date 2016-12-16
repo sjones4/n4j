@@ -5,6 +5,7 @@
         <classes>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributes"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributeValuesInMessages"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSAdminFunctions"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDelaySeconds"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSChangeMessageVisibility"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSChangeMessageVisibilityBatch"/>
