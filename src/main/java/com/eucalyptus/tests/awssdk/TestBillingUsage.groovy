@@ -9,10 +9,14 @@ import com.github.sjones4.youcan.youbill.YouBill
 import com.github.sjones4.youcan.youbill.YouBillClient
 import com.github.sjones4.youcan.youec2reports.YouEc2Reports
 import com.github.sjones4.youcan.youec2reports.YouEc2ReportsClient
+import com.github.sjones4.youcan.youec2reports.model.InstanceUsageFilter
+import com.github.sjones4.youcan.youec2reports.model.InstanceUsageFilters
+import com.github.sjones4.youcan.youec2reports.model.InstanceUsageGroup
 import com.github.sjones4.youcan.youec2reports.model.ViewInstanceUsageReportRequest
 import com.github.sjones4.youcan.youbill.model.ViewMonthlyUsageRequest
 import com.github.sjones4.youcan.youec2reports.model.ViewReservedInstanceUtilizationReportRequest
 import com.github.sjones4.youcan.youbill.model.ViewUsageRequest
+import com.google.common.collect.Lists
 import org.testng.annotations.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
@@ -108,10 +112,39 @@ class TestBillingUsage {
                     N4j.print("data: ${getData()}")
                 }
             }
-
+            
             getYouEc2ReportsClient( credentials ).with {
                 N4j.print('Calling ec2reports::viewInstanceUsageReport')
-                viewInstanceUsageReport(new ViewInstanceUsageReportRequest())
+                viewInstanceUsageReport(new ViewInstanceUsageReportRequest(
+                        granularity: 'Daily',
+                        timeRangeStart: (new Date(System.currentTimeMillis()-30*24*60*60*1000)),
+                        timeRangeEnd: new Date(System.currentTimeMillis()),
+                        groupBy: new InstanceUsageGroup(
+                                type: 'Tag',
+                                key: 'User'
+                        ),
+                        filters: new InstanceUsageFilters(
+                                member: Lists.newArrayList(
+                                        new InstanceUsageFilter(
+                                                type: 'InstanceType',
+                                                key: 'm1.small'
+                                        ),
+                                        new InstanceUsageFilter(
+                                                type: 'Tag',
+                                                key: 'User',
+                                                value: 'EUCA'
+                                        ),
+                                        new InstanceUsageFilter(
+                                                type: 'Platforms',
+                                                key: 'Linux/Unix'
+                                        ),
+                                        new InstanceUsageFilter(
+                                                type: 'Platforms',
+                                                key: 'Windows'
+                                        )
+                                )
+                        )
+                ))
                 .with {
                     N4j.print("View instance usage report: ${it}")
                     N4j.print("usage report: ${ getUsageReport()}")
