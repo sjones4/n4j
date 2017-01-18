@@ -134,7 +134,6 @@ class TestIAMManagedPolicyPermissions {
         }
         print( "Created managed policy with arn ${imagePolicyArn}" )
 
-
         String groupName = "${NAME_PREFIX}group"
         String roleName = "${NAME_PREFIX}role"
         print( "Creating group for policy attachment testing ${groupName}" )
@@ -173,6 +172,9 @@ class TestIAMManagedPolicyPermissions {
             userName: testUser,
             policyArn: secGroupPolicyArn
         ) )
+
+        print( "Sleeping 5 seconds so policies are applied" )
+        sleep( 5 )
 
         // test user/group attached policy
         getEc2Client( testAcctUserCredentials ).with {
@@ -227,6 +229,194 @@ class TestIAMManagedPolicyPermissions {
             print( "Got security groups: ${securityGroups}" )
             assertThat( !securityGroups.isEmpty( ), 'Expected security groups' )
           }
+        }
+      }
+
+      print( 'Test complete' )
+    } finally {
+      // Attempt to clean up anything we created
+      cleanupTasks.reverseEach { Runnable cleanupTask ->
+        try {
+          cleanupTask.run()
+        } catch ( NoSuchEntityException e ) {
+          print( 'Entity not found during cleanup.' )
+        } catch ( AmazonServiceException e ) {
+          print( "Service error during cleanup; code: ${e.errorCode}, message: ${e.message}" )
+        } catch ( Exception e ) {
+          e.printStackTrace()
+        }
+      }
+    }
+  }
+
+  @Test
+  void iamManagedPolicyArnConditionKeyTest( ) {
+    testInfo( "${getClass( ).simpleName}PolicyArnConditionKey" )
+
+    final List<Runnable> cleanupTasks = [] as List<Runnable>
+    try {
+      getIamClient( ).with { iam ->
+        String policyName = "${NAME_PREFIX}-policy-arn-test"
+        print( "Creating managed policy ${policyName}" )
+        String policyArn = createPolicy( new CreatePolicyRequest(
+            policyName: policyName,
+            path: '/',
+            description: "Policy arn condition key test policy ${policyName}",
+            policyDocument: '''\
+            {
+              "Version": "2012-10-17",
+              "Statement":[
+                  {
+                    "Effect": "Allow",
+                    "Action": "ec2:Describe*",
+                    "Resource": "*"
+                  }
+              ]
+            }
+            '''.stripIndent( )
+        ) ).with {
+          assertThat( policy != null, "Expected policy" )
+          print( "Created policy with details ${policy}" )
+          policy.with {
+            assertThat( arn != null, "Expected policy arn")
+            arn
+          }
+        }
+        print( "Created managed policy with arn ${policyArn}" )
+
+        String policyName2 = "${NAME_PREFIX}-policy-arn-test-2"
+        print( "Creating managed policy ${policyName}" )
+        String policyArn2 = createPolicy( new CreatePolicyRequest(
+            policyName: policyName2,
+            path: '/',
+            description: "Policy arn condition key test policy ${policyName2}",
+            policyDocument: '''\
+            {
+              "Version": "2012-10-17",
+              "Statement":[
+                  {
+                    "Effect": "Allow",
+                    "Action": "ec2:Describe*",
+                    "Resource": "*"
+                  }
+              ]
+            }
+            '''.stripIndent( )
+        ) ).with {
+          assertThat( policy != null, "Expected policy" )
+          print( "Created policy with details ${policy}" )
+          policy.with {
+            assertThat( arn != null, "Expected policy arn")
+            arn
+          }
+        }
+        print( "Created managed policy with arn ${policyArn2}" )
+
+        print( "Setting policy for user ${testUser}" )
+        putUserPolicy( new PutUserPolicyRequest(
+            userName: testUser,
+            policyName: 'attachment-for-policy-arn',
+            policyDocument: """\
+            {
+              "Version": "2012-10-17",
+              "Statement":[
+                  {
+                    "Effect": "Allow",
+                    "Action": [ "iam:Attach*", "iam:Detach*" ],
+                    "Resource": "*",
+                    "Condition": {
+                      "ArnEquals": {
+                        "iam:PolicyArn": "${policyArn}"
+                      }
+                    }
+                  }
+              ]
+            }
+            """.stripIndent( )
+        ) )
+
+        String groupName = "${NAME_PREFIX}arn-group"
+        String roleName = "${NAME_PREFIX}arn-role"
+        print( "Creating group for policy arn condition key testing ${groupName}" )
+        createGroup( new CreateGroupRequest(
+            groupName: groupName
+        ))
+        print( "Creating role for policy arn condition key testing ${roleName}" )
+        createRole( new CreateRoleRequest(
+            roleName: roleName,
+            assumeRolePolicyDocument: '''\
+            {"Statement":[{"Effect":"Allow","Principal":{"Service":["ec2.amazonaws.com"]},"Action":["sts:AssumeRole"]}]}
+            '''.stripIndent()
+        ))
+
+        getIamClient( testAcctUserCredentials ).with{
+          print( "Attaching policy ${policyArn} to group ${groupName}" )
+          attachGroupPolicy( new AttachGroupPolicyRequest(
+              groupName: groupName,
+              policyArn: policyArn
+          ) )
+
+          print( "Attaching policy ${policyArn} to role ${roleName}" )
+          attachRolePolicy( new AttachRolePolicyRequest(
+              roleName: roleName,
+              policyArn: policyArn
+          ) )
+
+          print( "Attaching policy ${policyArn} to user ${testUser}" )
+          attachUserPolicy( new AttachUserPolicyRequest(
+              userName: testUser,
+              policyArn: policyArn
+          ) )
+
+          print( "Detaching policy ${policyArn} from group ${groupName}" )
+          detachGroupPolicy( new DetachGroupPolicyRequest(
+              groupName: groupName,
+              policyArn: policyArn
+          ) )
+
+          print( "Detaching policy ${policyArn} from role ${roleName}" )
+          detachRolePolicy( new DetachRolePolicyRequest(
+              roleName: roleName,
+              policyArn: policyArn
+          ) )
+
+          print( "Detaching policy ${policyArn} from user ${testUser}" )
+          detachUserPolicy( new DetachUserPolicyRequest(
+              userName: testUser,
+              policyArn: policyArn
+          ) )
+
+          print( "Attaching policy ${policyArn2} to group ${groupName}" )
+          try {
+            attachGroupPolicy(new AttachGroupPolicyRequest(
+                groupName: groupName,
+                policyArn: policyArn2
+            ))
+          } catch (AmazonServiceException e) {
+            print( "Expected attach policy error for policy with arn not matching condition: ${e}" )
+          }
+
+          print( "Attaching policy ${policyArn2} to role ${roleName}" )
+          try {
+            attachRolePolicy( new AttachRolePolicyRequest(
+                roleName: roleName,
+                policyArn: policyArn2
+            ) )
+          } catch (AmazonServiceException e) {
+            print( "Expected attach policy error for policy with arn not matching condition: ${e}" )
+          }
+
+          print( "Attaching policy ${policyArn2} to user ${testUser}" )
+          try {
+            attachUserPolicy( new AttachUserPolicyRequest(
+                userName: testUser,
+                policyArn: policyArn2
+            ) )
+          } catch (AmazonServiceException e) {
+            print( "Expected attach policy error for policy with arn not matching condition: ${e}" )
+          }
+
+          void
         }
       }
 
