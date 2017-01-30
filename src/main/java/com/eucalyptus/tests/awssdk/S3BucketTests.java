@@ -1,12 +1,19 @@
 package com.eucalyptus.tests.awssdk;
 
+import static com.eucalyptus.tests.awssdk.N4j.S3_ENDPOINT;
 import static com.eucalyptus.tests.awssdk.N4j.assertThat;
 import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
+import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -30,11 +37,14 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.GroupGrantee;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SetBucketLoggingConfigurationRequest;
 import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.TagSet;
+import com.google.common.io.ByteStreams;
 
 /**
  * <p>
@@ -64,6 +74,7 @@ public class S3BucketTests {
   @BeforeClass
   public void init() throws Exception {
     print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+    System.setProperty("sun.net.http.allowRestrictedHeaders", "true"); // enable host header override for cname test
     try {
       account = this.getClass().getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
@@ -402,6 +413,48 @@ public class S3BucketTests {
     } catch (AmazonS3Exception e) {
       assertTrue("Expected StatusCode 400 found: " + e.getStatusCode(), e.getStatusCode() == 400);
       assertTrue("Expected StatusCode MalformedXML found: " + e.getErrorCode(), e.getErrorCode().equals("MalformedXML"));
+    }
+  }
+
+  @Test
+  public void testBucketVhostAndCname( ) throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testBucketVhostAndCname");
+
+    print(account + ": Putting hello.txt object for public read");
+    s3.putObject( new PutObjectRequest(
+        bucketName,
+        "hello.txt",
+        new ByteArrayInputStream( "hello".getBytes( StandardCharsets.UTF_8 ) ),
+        new ObjectMetadata( )
+    ).withCannedAcl( CannedAccessControlList.PublicRead ) );
+
+    cleanupTasks.add( () -> {
+      print(account + ": Deleting hello.txt object");
+      s3.deleteObject(bucketName, "hello.txt");
+    } );
+
+    // vhost
+    {
+      String urlText = S3_ENDPOINT.replace( "http://", "http://" + bucketName + "." ) + "hello.txt";
+      print( account + ": Accessing object @ " + urlText );
+      URL url = new URL( urlText );
+      String content =  new String( ByteStreams.toByteArray( (InputStream) url.getContent( ) ) );
+      print( account + ": got " + content );
+      assertEquals( "Content", "hello", content );
+    }
+
+    // cname
+    {
+      String urlText = S3_ENDPOINT + "hello.txt";
+      URL url = new URL( urlText );
+      String hostHeader = bucketName + ":" + url.getPort( );
+      print( account + ": Accessing object using host header " + hostHeader );
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setDoOutput( true );
+      conn.setRequestProperty( "Host", hostHeader );
+      String content = new String( ByteStreams.toByteArray( (InputStream) conn.getContent( ) ) );
+      print( account + ": got " + content );
+      assertEquals( "Content", "hello", content );
     }
   }
 
