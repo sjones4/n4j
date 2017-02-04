@@ -24,14 +24,25 @@ import static com.eucalyptus.tests.awssdk.N4j.*
  */
 class TestIAMManagedPolicyManagement {
 
-  private final AWSCredentialsProvider testAcctAdminCredentials
+  private final AmazonIdentityManagement testAccountAdminIamClient
   private final String testAcct
+  private final testEucalyptusSpecificFunctionality
+
+  // Alternative for testing against aws/iam
+//  TestIAMManagedPolicyManagement( ) {
+//    this.testAccountAdminIamClient = new AmazonIdentityManagementClient( new BasicAWSCredentials( 'AKI...', '...' ) )
+//    this.testAcct = null
+//    this.testEucalyptusSpecificFunctionality = false
+//    N4j.NAME_PREFIX = eucaUUID() + "-"
+//  }
 
   TestIAMManagedPolicyManagement( ) {
     getCloudInfo( )
     this.testAcct= "${NAME_PREFIX}man-pol-test-acct"
     createAccount(testAcct)
-    this.testAcctAdminCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
+    AWSCredentialsProvider testAcctAdminCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
+    this.testAccountAdminIamClient = getIamClient( testAcctAdminCredentials )
+    this.testEucalyptusSpecificFunctionality = true
   }
 
   @AfterClass
@@ -39,10 +50,8 @@ class TestIAMManagedPolicyManagement {
     deleteAccount( testAcct )
   }
 
-  private AmazonIdentityManagement getIamClient(
-      AWSCredentialsProvider credentialsProvider = testAcctAdminCredentials
-  ) {
-    AWSCredentials creds = credentialsProvider.getCredentials( );
+  private AmazonIdentityManagement getIamClient( AWSCredentialsProvider credentialsProvider ) {
+    AWSCredentials creds = credentialsProvider.getCredentials( )
     getYouAreClient( creds.AWSAccessKeyId, creds.AWSSecretKey, IAM_ENDPOINT )
   }
 
@@ -52,7 +61,7 @@ class TestIAMManagedPolicyManagement {
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
-      getIamClient( ).with {  iam ->
+      testAccountAdminIamClient.with {  iam ->
         String policyName = "${NAME_PREFIX}policy"
         print( "Creating managed policy ${policyName}" )
         String arn = createPolicy( new CreatePolicyRequest(
@@ -108,6 +117,7 @@ class TestIAMManagedPolicyManagement {
             assertThat( '/' == path, "Unexpected policy path ${path}" )
             assertThat( defaultVersionId != null, "Expected policy defaultVersionId")
             assertThat( attachmentCount != null, "Expected policy attachmentCount")
+            assertThat( attachmentCount == 0, "Expected policy attachmentCount 0, but was ${attachmentCount}")
             assertThat( description == it.description, "Unexpected policy description ${it.description}")
             assertThat( createDate != null, "Expected policy createDate")
             assertThat( updateDate != null, "Expected policy updateDate")
@@ -219,6 +229,10 @@ class TestIAMManagedPolicyManagement {
         )).with {
           group?.groupId
         }
+        cleanupTasks.add{
+          print( "Deleting group ${groupName}/${groupId}" )
+          deleteGroup( new DeleteGroupRequest( groupName: groupName ) )
+        }
         print( "Creating role for policy attachment testing ${roleName}" )
         String roleId = createRole( new CreateRoleRequest(
             roleName: roleName,
@@ -228,11 +242,19 @@ class TestIAMManagedPolicyManagement {
         )).with {
           role?.roleId
         }
+        cleanupTasks.add{
+          print( "Deleting role ${roleName}/${roleId}" )
+          deleteRole( new DeleteRoleRequest( roleName: roleName ) )
+        }
         print( "Creating user for policy attachment testing ${userName}" )
         String userId = createUser( new CreateUserRequest(
             userName: userName
         )).with {
           user?.userId
+        }
+        cleanupTasks.add{
+          print( "Deleting user ${userName}/${userId}" )
+          deleteUser( new DeleteUserRequest( userName: userName ) )
         }
 
         String invalidArn = arn.replace( policyName, invalidPolicyName )
@@ -309,6 +331,14 @@ class TestIAMManagedPolicyManagement {
           assertThat( policyUsers != null, "Expected policy users" )
           assertThat( policyUsers.isEmpty(), "Expected 0 users, but was: ${policyUsers.size( )}" )
         }
+        print( "Getting policy to check attachment count is 1" )
+        getPolicy( new GetPolicyRequest( policyArn: arn ) ).with {
+          assertThat( policy != null, 'Expected policy' )
+          policy.with {
+            assertThat( attachmentCount != null, 'Expected policy attachment count' )
+            assertThat( attachmentCount == 1, "Expected policy attachment count 1, but was: ${attachmentCount}" )
+          }
+        }
         print( "Deleting policy ${arn} should fail due to attached group" )
         try {
           iam.deletePolicy( new DeletePolicyRequest( policyArn: arn ) )
@@ -351,6 +381,14 @@ class TestIAMManagedPolicyManagement {
           print( "Detach invalid policy error for group: ${e}" )
           assertThat(e.statusCode == 404, "Expected status code 404, but was: ${e.statusCode}")
           assertThat(e.errorCode == 'NoSuchEntity', "Expected error code NoSuchEntity, but was: ${e.errorCode}")
+        }
+        print( "Getting policy to check attachment count is 0" )
+        getPolicy( new GetPolicyRequest( policyArn: arn ) ).with {
+          assertThat( policy != null, 'Expected policy' )
+          policy.with {
+            assertThat( attachmentCount != null, 'Expected policy attachment count' )
+            assertThat( attachmentCount == 0, "Expected policy attachment count 0, but was: ${attachmentCount}" )
+          }
         }
 
         print( "Attaching policy ${arn} to role ${roleName}" )
@@ -563,28 +601,33 @@ class TestIAMManagedPolicyManagement {
           assertThat(e.errorCode == 'NoSuchEntity', "Expected error code NoSuchEntity, but was: ${e.errorCode}")
         }
 
-        print( "Attaching policy ${arn} to user ${userName} to test administrative detach" )
-        attachUserPolicy( new AttachUserPolicyRequest(
-            userName: userName,
-            policyArn: arn
-        ) )
+        if ( testEucalyptusSpecificFunctionality ) {
+          print( "Attaching policy ${arn} to user ${userName} to use for testing administrative detach" )
+          attachUserPolicy( new AttachUserPolicyRequest(
+              userName: userName,
+              policyArn: arn
+          ) )
 
-        print( "Detaching policy ${arn} from user ${userName} as administrator" )
-        youAre.detachUserPolicy( new DetachUserPolicyRequest(
-            userName: userName,
-            policyArn: arn
-        ).with {
-          putCustomQueryParameter( 'DelegateAccount', testAcct )
-          it
-        } )
+          print( "Detaching policy ${arn} from user ${userName} as administrator" )
+          youAre.detachUserPolicy( new DetachUserPolicyRequest(
+              userName: userName,
+              policyArn: arn
+          ).with {
+            putCustomQueryParameter( 'DelegateAccount', testAcct )
+            it
+          } )
 
-        print( "Deleting policy ${arn} as administrator" )
-        youAre.deletePolicy( new DeletePolicyRequest(
-            policyArn: arn
-        ).with {
-          putCustomQueryParameter( 'DelegateAccount', testAcct )
-          it
-        } )
+          print( "Deleting policy ${arn} as administrator" )
+          youAre.deletePolicy( new DeletePolicyRequest(
+              policyArn: arn
+          ).with {
+            putCustomQueryParameter( 'DelegateAccount', testAcct )
+            it
+          } )
+        } else { // non-euca alternative
+          print( "Deleting policy ${arn}" )
+          iam.deletePolicy( new DeletePolicyRequest( policyArn: arn ) )
+        }
 
         print( 'Getting account summary' )
         getAccountSummary( ).with {
@@ -606,13 +649,164 @@ class TestIAMManagedPolicyManagement {
           }
         }
 
-        /* TODO: test version actions when implemented
-        'com.eucalyptus.auth.euare.CreatePolicyVersionType',
-        'com.eucalyptus.auth.euare.DeletePolicyVersionType',
-        'com.eucalyptus.auth.euare.GetPolicyVersionType',
-        'com.eucalyptus.auth.euare.ListPolicyVersionsType',
-        'com.eucalyptus.auth.euare.SetDefaultPolicyVersionType'
-        */
+        // Test creating policy versions up to limit, deletion and listing
+        String versionsPolicyName = "${NAME_PREFIX}policy-versions"
+        print( "Creating managed policy ${versionsPolicyName}" )
+        String versionsArn = createPolicy( new CreatePolicyRequest(
+            policyName: versionsPolicyName,
+            description: "Policy management test policy ${versionsPolicyName}",
+            policyDocument: '''\
+            {
+              "Version": "2012-10-17",
+              "Statement":[
+                  {
+                    "Effect": "Allow",
+                    "Action": "*",
+                    "Resource": "*"
+                  }
+              ]
+            }
+            '''.stripIndent( )
+        ) ).with {
+          assertThat( policy != null, "Expected policy" )
+          print( "Created policy with details ${policy}" )
+          policy.with { policy ->
+            assertThat( policy.arn != null, "Expected policy arn")
+            cleanupTasks.add{
+              print( "Deleting managed policy ${versionsPolicyName}" )
+              iam.deletePolicy( new DeletePolicyRequest(
+                  policyArn: policy.arn
+              ) )
+            }
+            assertThat( '/' == path, "Unexpected policy path ${path}" )
+            policy.arn
+          }
+        }
+        print( "Created policy with arn ${versionsArn}" )
+
+        print( "Creating 4 policy versions" )
+        ( 1..4 ).each{ sid ->
+          createPolicyVersion( new CreatePolicyVersionRequest(
+              policyArn: versionsArn,
+              policyDocument: """\
+              {
+                "Version": "2012-10-17",
+                "Statement": { "Sid": "sid${sid}", "Effect": "Allow", "Action": "ec2:*", "Resource": "*" }
+              }
+              """.stripIndent( )
+          ) )
+        }
+        print( "Creating 6th policy version to test limit" )
+        try {
+          createPolicyVersion( new CreatePolicyVersionRequest(
+              policyArn: versionsArn,
+              policyDocument: """\
+              { "Version": "2012-10-17", "Statement": { "Effect": "Allow", "Action": "ec2:*", "Resource": "*" } }
+            """.stripIndent( )
+          ) )
+          assertThat( false, 'Expected creation of policy version beyond limit to fail' )
+        } catch (AmazonServiceException e) {
+          print( "Expected failure for creating policy version beyond limit: ${e}" )
+          assertThat(e.statusCode == 409, "Expected status code 409, but was: ${e.statusCode}")
+          assertThat(e.errorCode == 'LimitExceeded', "Expected error code LimitExceeded, but was: ${e.errorCode}")
+        }
+
+        print( "Deleting policy versions v3,v4" )
+        deletePolicyVersion( new DeletePolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v3'
+        ) )
+        deletePolicyVersion( new DeletePolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v4'
+        ) )
+
+        print( "Listing policy versions for ${versionsArn}" )
+        listPolicyVersions( new ListPolicyVersionsRequest( policyArn: versionsArn ) ).with {
+          assertThat( versions != null, 'Expected versions' )
+          assertThat( versions.size() == 3, "Expected 3 versions, but was: ${versions.size()}")
+          versions.each { version ->
+            assertThat( version.document == null, 'Unexpected document' )
+            assertThat( version.versionId != null, 'Expected versions id' )
+            assertThat( version.createDate != null, 'Expected create date' )
+            assertThat( version.isDefaultVersion != null, 'Expected default version flag' )
+            if ( 'v1' == version.versionId ) {
+              assertThat( version.isDefaultVersion, 'Expected default version for v1' )
+            } else {
+              assertThat(!version.isDefaultVersion, "Expected not default version for ${version.versionId}" )
+            }
+          }
+        }
+
+        print( "Setting default policy version for ${versionsArn}" )
+        setDefaultPolicyVersion( new SetDefaultPolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v5'
+        ) )
+        print( "Listing policy versions for ${versionsArn} to check v5 is default" )
+        listPolicyVersions( new ListPolicyVersionsRequest( policyArn: versionsArn ) ).with {
+          assertThat( versions != null, 'Expected versions' )
+          versions.each { version ->
+            assertThat( version.versionId != null, 'Expected versions id' )
+            if ( 'v5' == version.versionId ) {
+              assertThat( version.isDefaultVersion, 'Expected default version for v5' )
+            } else {
+              assertThat(!version.isDefaultVersion, "Expected not default version for ${version.versionId}" )
+            }
+          }
+        }
+        print( "Getting policy ${versionsArn} to check default" )
+        getPolicy( new GetPolicyRequest(
+            policyArn: versionsArn,
+        ) ).with {
+          assertThat( policy != null, 'Expected policy' )
+          assertThat( policy.defaultVersionId != null, 'Expected policy default version id' )
+          assertThat( policy.defaultVersionId == 'v5',
+              "Expected policy default version id v5, but was: ${policy.defaultVersionId}" )
+        }
+
+        print( "Deleting default policy version for ${versionsArn}" )
+        try {
+          deletePolicyVersion( new DeletePolicyVersionRequest(
+              policyArn: versionsArn,
+              versionId: 'v5'
+          ) )
+          assertThat( false, 'Expected deletion of default policy version to fail' )
+        } catch (AmazonServiceException e) {
+          print( "Expected failure for deleting default policy version: ${e}" )
+          assertThat(e.statusCode == 409, "Expected status code 409, but was: ${e.statusCode}")
+          assertThat(e.errorCode == 'DeleteConflict', "Expected error code DeleteConflict, but was: ${e.errorCode}")
+        }
+
+        print( "Getting policy version v5 for ${versionsArn}" )
+        getPolicyVersion( new GetPolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v5'
+        ) ).with {
+          print( "Got policy version: ${policyVersion}" )
+          assertThat( policyVersion != null, 'Expected policy version' )
+          policyVersion.with {
+            assertThat( document != null, 'Expected document' )
+            assertThat( versionId != null, 'Expected versions id' )
+            assertThat( createDate != null, 'Expected create date' )
+            assertThat( isDefaultVersion != null, 'Expected default version flag' )
+          }
+        }
+
+        print( "Setting default policy version to v1 for ${versionsArn}" )
+        setDefaultPolicyVersion( new SetDefaultPolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v1'
+        ) )
+        print( "Deleting policy versions v2,v5" )
+        deletePolicyVersion( new DeletePolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v2'
+        ) )
+        deletePolicyVersion( new DeletePolicyVersionRequest(
+            policyArn: versionsArn,
+            versionId: 'v5'
+        ) )
       }
 
       print( 'Test complete' )

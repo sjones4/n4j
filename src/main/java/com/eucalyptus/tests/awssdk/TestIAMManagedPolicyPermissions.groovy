@@ -191,6 +191,99 @@ class TestIAMManagedPolicyPermissions {
           }
         }
 
+        // test creating new policy version without setting default does not change permissions
+        print( "Creating new version for managed policy ${secGroupPolicyName}" )
+        createPolicyVersion( new CreatePolicyVersionRequest(
+            policyArn: secGroupPolicyArn,
+            policyDocument: '''\
+            {
+              "Version": "2012-10-17",
+              "Statement":[
+                  {
+                    "Effect": "Allow",
+                    "Action": "ec2:Nothing",
+                    "Resource": "*"
+                  }
+              ]
+            }
+            '''.stripIndent( )
+        ) ).with {
+          cleanupTasks.add{
+            print( "Deleting version ${policyVersion.versionId} for managed policy ${secGroupPolicyName}" )
+            deletePolicyVersion( new DeletePolicyVersionRequest(
+                policyArn: secGroupPolicyArn,
+                versionId: policyVersion.versionId
+            ) )
+          }
+        }
+        print( "Sleeping 5 seconds so policies are applied" )
+        sleep( 5 )
+        getEc2Client( testAcctUserCredentials ).with {
+          print( "Describing groups with test account user credentials to test user attached policy" )
+          describeSecurityGroups( new DescribeSecurityGroupsRequest( ) ).with {
+            print( "Got security groups: ${securityGroups}" )
+            assertThat( !securityGroups.isEmpty( ), 'Expected security groups' )
+          }
+        }
+
+        // test creating new default policy version changes permissions
+        print( "Creating new default version for managed policy ${secGroupPolicyName}" )
+        createPolicyVersion( new CreatePolicyVersionRequest(
+            policyArn: secGroupPolicyArn,
+            policyDocument: '''\
+            {
+              "Version": "2012-10-17",
+              "Statement":[
+                  {
+                    "Effect": "Allow",
+                    "Action": "ec2:Nothing",
+                    "Resource": "*"
+                  }
+              ]
+            }
+            '''.stripIndent( ),
+            setAsDefault: true, // default version so will be enforced
+        ) ).with {
+          cleanupTasks.add{
+            print( "Deleting version ${policyVersion.versionId} for managed policy ${secGroupPolicyName}" )
+            deletePolicyVersion( new DeletePolicyVersionRequest(
+                policyArn: secGroupPolicyArn,
+                versionId: policyVersion.versionId
+            ) )
+          }
+        }
+        print( "Sleeping 5 seconds so policies are applied" )
+        sleep( 5 )
+        getEc2Client( testAcctUserCredentials ).with {
+          print( "Describing groups with test account user credentials to test user attached policy" )
+          try {
+            describeSecurityGroups( new DescribeSecurityGroupsRequest( ) ).with {
+              print( "Got security groups: ${securityGroups}" )
+              assertThat( securityGroups.isEmpty( ), 'Expected no security groups' )
+            }
+          } catch (AmazonServiceException e) {
+              print( "Describe security groups error when not permitted: ${e}" )
+              assertThat(e.statusCode == 403, "Expected status code 403, but was: ${e.statusCode}")
+          }
+          void
+        }
+
+        // test switching back to original version restores original permissions
+        print( "Switching to original policy version for managed policy ${secGroupPolicyName}" )
+        setDefaultPolicyVersion( new SetDefaultPolicyVersionRequest(
+            policyArn: secGroupPolicyArn,
+            versionId: 'v1'
+        ) )
+        print( "Sleeping 5 seconds so policies are applied" )
+        sleep( 5 )
+        getEc2Client( testAcctUserCredentials ).with {
+          print( "Describing groups with test account user credentials to test user attached policy" )
+          describeSecurityGroups( new DescribeSecurityGroupsRequest( ) ).with {
+            print( "Got security groups: ${securityGroups}" )
+            assertThat( !securityGroups.isEmpty( ), 'Expected security groups' )
+          }
+        }
+
         // test role attached policy
         final AWSCredentialsProvider roleCredentialsProvider = new AWSCredentialsProvider() {
           AWSCredentials awsCredentials = null
