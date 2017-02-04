@@ -52,6 +52,7 @@ import static org.testng.Assert.*
  *
  * Related eucalyptus issues:
  *   https://eucalyptus.atlassian.net/browse/EUCA-651
+ *   https://eucalyptus.atlassian.net/browse/EUCA-13195
  *
  * Relevant aws documentation:
  *   http://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html
@@ -280,6 +281,18 @@ class S3BucketPolicyTests {
         print( "Got expected object access error: ${e}" )
         assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
       }
+    }
+  }
+
+  @Test
+  void testLargePolicy( ) {
+    testInfo( "${getClass().simpleName}.testLargePolicy" )
+    createBucket( bucketName )
+
+    String largePolicy = """{"Version":"2012-10-17","Statement":[{"Sid": "${'a'*16_000}", "Effect":"Allow","Principal":{"AWS":"${requestorAccountNumber}"},"Action":"s3:GetObject","Resource":"arn:aws:s3:::${bucketName}/foo"}]}"""
+    s3.with {
+      print( "Setting bucket ${bucketName} large policy ${largePolicy}" )
+      setBucketPolicy( bucketName, largePolicy )
     }
   }
 
