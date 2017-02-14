@@ -1,6 +1,7 @@
 package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
@@ -8,6 +9,8 @@ import com.amazonaws.services.ec2.model.*
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
+import com.github.sjones4.youcan.youprop.YouPropClient
+import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 import org.testng.annotations.AfterClass
 import org.testng.annotations.Test
 
@@ -19,6 +22,7 @@ import static N4j.*
  * This is verification for the feature:
  *
  *   https://eucalyptus.atlassian.net/browse/EUCA-12995
+ *   https://eucalyptus.atlassian.net/browse/EUCA-13010
  */
 class TestEC2LongIdentifiers {
 
@@ -34,7 +38,6 @@ class TestEC2LongIdentifiers {
     this.testAcctCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
 
   }
-
 
   @AfterClass
   void tearDownAfterClass() throws Exception {
@@ -57,6 +60,12 @@ class TestEC2LongIdentifiers {
     final AWSSecurityTokenService sts = new AWSSecurityTokenServiceClient( credentials )
     sts.setEndpoint( cloudUri( '/services/Tokens' ) )
     sts
+  }
+
+  private YouPropClient getYouPropClient( ) {
+    final YouPropClient prop = new YouPropClient( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    prop.setEndpoint( cloudUri( '/services/Properties' ) )
+    prop
   }
 
   private void assertThat( boolean condition,
@@ -229,6 +238,66 @@ class TestEC2LongIdentifiers {
             }
           }
         }
+
+        getYouPropClient( ).with {
+          print( "Disabing account long identifier settings" )
+          modifyPropertyValue( new ModifyPropertyValueRequest(
+              name: 'cloud.long_identifier_account_settings_used',
+              value: 'false'
+          ) )
+          cleanupTasks.add{
+            print( "Enabling account long identifier settings" )
+            modifyPropertyValue( new ModifyPropertyValueRequest(
+                name: 'cloud.long_identifier_account_settings_used',
+                value: 'true'
+            ) )
+          }
+        }
+
+        print( "Sleeping to allow property value to be applied" )
+        sleep( 12 )
+
+        print( 'Creating volume to check identifier format' )
+        String shortVolumeId = createVolume( new CreateVolumeRequest( size: 1, availabilityZone: availabilityZone ) ).with {
+          volume?.volumeId
+        }
+        print( "Created volume with id: ${shortVolumeId}" )
+        cleanupTasks.add{
+          print( "Deleting volume ${shortVolumeId}" )
+          ec2.deleteVolume( new DeleteVolumeRequest( volumeId: shortVolumeId ) )
+        }
+        assertThat( shortVolumeId != null, 'Expected volume identifier')
+        assertThat( shortVolumeId.length( ) == 12, "Expected identifier length 12, but was: ${volumeId.length( )}" )
+
+        getYouPropClient( ).with {
+          print( "Enabling long identifiers for volumes" )
+          modifyPropertyValue( new ModifyPropertyValueRequest(
+              name: 'cloud.long_identifier_prefixes',
+              value: 'vol'
+          ) )
+          cleanupTasks.add{
+            print( "Disabling long identifiers for volumes" )
+            modifyPropertyValue( new ModifyPropertyValueRequest(
+                name: 'cloud.long_identifier_prefixes',
+                value: ''
+            ) )
+          }
+        }
+
+        print( "Sleeping to allow property value to be applied" )
+        sleep( 12 )
+
+        print( 'Creating volume to check identifier format' )
+        String longVolumeId = createVolume( new CreateVolumeRequest( size: 1, availabilityZone: availabilityZone ) ).with {
+          volume?.volumeId
+        }
+        print( "Created volume with id: ${longVolumeId}" )
+        cleanupTasks.add{
+          print( "Deleting volume ${longVolumeId}" )
+          ec2.deleteVolume( new DeleteVolumeRequest( volumeId: longVolumeId ) )
+        }
+        assertThat( longVolumeId != null, 'Expected volume identifier')
+        assertThat( longVolumeId.length( ) == 21, "Expected identifier length 21, but was: ${volumeId.length( )}" )
       }
 
       print( "Test complete" )
