@@ -1329,13 +1329,13 @@
 				<ServiceName>ec2</ServiceName>
 				<Http>true</Http>
 				<Https>true</Https>
-				<Hostname>EC2_URL</Hostname>
+				<Hostname>http://ec2.b-36.autoqa.qa1.eucalyptus-systems.com:8773/</Hostname>
 			</Endpoint>
 			<Endpoint>
 				<ServiceName>s3</ServiceName>
 				<Http>true</Http>
 				<Https>true</Https>
-				<Hostname>WALRUS_URL</Hostname>
+				<Hostname>http://s3.b-36.autoqa.qa1.eucalyptus-systems.com:8773/</Hostname>
 			</Endpoint>
 		</Region>
 	</Regions>
