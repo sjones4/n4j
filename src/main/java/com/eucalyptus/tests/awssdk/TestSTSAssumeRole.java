@@ -60,6 +60,7 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  * <ul>
  * <li>https://eucalyptus.atlassian.net/browse/EUCA-5250</li>
  * <li>https://eucalyptus.atlassian.net/browse/EUCA-12318</li>
+ * <li>https://eucalyptus.atlassian.net/browse/EUCA-13007</li>
  * </ul>
  */
 public class TestSTSAssumeRole {
@@ -79,7 +80,8 @@ public class TestSTSAssumeRole {
             // create non-admin user in non-euca account then get credentials and connection for user
             createAccount(account);
             createUser(account, user);
-            createIAMPolicy(account, user, NAME_PREFIX + "policy", null);
+            createIAMPolicy( account, user, NAME_PREFIX + "policy",
+                "{\"Statement\":[{\"Effect\":\"Allow\",\"Resource\":\"*\",\"Action\":[\"iam:*\"]}]}" );
 
             // get youAre connection for new user
             AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider(getUserCreds(account,user));
@@ -170,6 +172,39 @@ public class TestSTSAssumeRole {
             print("Got role arn : " + roleArn);
             print("Got role id  : " + roleId);
 
+            { // check errors for role not found
+                final AWSSecurityTokenService sts = new AWSSecurityTokenServiceClient( awsCredentialsProvider );
+                sts.setEndpoint( TOKENS_ENDPOINT );
+
+                print("Ensuring access denied error for role that does not exist in same account");
+                try {
+                    sts.assumeRole( new AssumeRoleRequest()
+                        .withRoleArn( roleArn + "Invalid" )
+                        .withRoleSessionName("test-sts-assume-role")
+                    );
+                    assertThat(false, "Expected error due to invalid role arn (same account)");
+                } catch (AmazonServiceException e) {
+                    print("Received expected exception: " + e);
+                    assertThat( "AccessDenied".equals( e.getErrorCode( ) ), "Expected AccessDenied error code" );
+                    assertThat( "Not authorized to perform sts:AssumeRole".equals( e.getErrorMessage( ) ),
+                        "Expected 'Not authorized to perform sts:AssumeRole' error message" );
+                }
+
+                print("Ensuring access denied error for role that does not exist in other account");
+                try {
+                    sts.assumeRole( new AssumeRoleRequest()
+                        .withRoleArn( roleArn.replace( accountId, "012345678901" ) )
+                        .withRoleSessionName("test-sts-assume-role")
+                    );
+                    assertThat(false, "Expected error due to invalid role arn (other account)");
+                } catch (AmazonServiceException e) {
+                    print("Received expected exception: " + e);
+                    assertThat( "AccessDenied".equals( e.getErrorCode( ) ), "Expected AccessDenied error code" );
+                    assertThat( "Not authorized to perform sts:AssumeRole".equals( e.getErrorMessage( ) ),
+                        "Expected 'Not authorized to perform sts:AssumeRole' error message" );
+                }
+            }
+
             /* Describe images using role with no permissions
              * In 3.X this would just return nothing
              * In 4.0 should get error. see EUCA-8513
@@ -205,11 +240,26 @@ public class TestSTSAssumeRole {
             } );
 
             // Describe images using role
-            {
+            try {
                 final DescribeImagesResult imagesResult = getImagesUsingRole(account, user, roleName, roleArn, "222222222222");
                 assertThat(imagesResult.getImages().size() > 0, "Image not found when using role");
                 final String imageId = imagesResult.getImages().get(0).getImageId();
                 print("Found image: " + imageId);
+            } catch ( AmazonServiceException e ) {
+                // TODO this catch block can be removed once this test no longer needs to pass against versions < 5.0
+                print( "WARNING" );
+                print( "WARNING: Unexpected exception assuming role with valid external id, assuming pre-5.0 behaviour: " + e);
+                print( "WARNING" );
+                print( "Authorizing actions on all services for user " + user );
+                createIAMPolicy( account, user, NAME_PREFIX + "policy", null );
+                print( "Sleeping to allow policy change to propagate" );
+                N4j.sleep( 5 );
+                {
+                    final DescribeImagesResult imagesResult = getImagesUsingRole(account, user, roleName, roleArn, "222222222222");
+                    assertThat(imagesResult.getImages().size() > 0, "Image not found when using role");
+                    final String imageId = imagesResult.getImages().get(0).getImageId();
+                    print("Found image: " + imageId);
+                }
             }
 
             // Describe images using role with incorrect external id
@@ -219,8 +269,10 @@ public class TestSTSAssumeRole {
                 assertThat(false, "Expected error due to incorrect external id when assuming role (test must not be run as cloud admin)");
             } catch (AmazonServiceException e) {
                 print("Received expected exception: " + e);
+                assertThat( "AccessDenied".equals( e.getErrorCode( ) ), "Expected AccessDenied error code" );
+                assertThat( "Not authorized to perform sts:AssumeRole".equals( e.getErrorMessage( ) ),
+                    "Expected 'Not authorized to perform sts:AssumeRole' error message" );
             }
-
 
             // Get caller identity using user credentials
             {
