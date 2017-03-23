@@ -2,9 +2,9 @@ package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.handlers.AbstractRequestHandler
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
 import com.amazonaws.services.identitymanagement.model.CreateAccessKeyRequest
@@ -42,7 +42,7 @@ class TestEC2VPCDefaultVPC {
   public TestEC2VPCDefaultVPC(){
     minimalInit()
     this.host=CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri( String servicePath ) {
@@ -72,7 +72,7 @@ class TestEC2VPCDefaultVPC {
   private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials,
                                         final String asAccount ) {
     final YouAreClient euare = new YouAreClient( credentials )
-    euare.addRequestHandler( new AbstractRequestHandler(){
+    euare.addRequestHandler( new RequestHandler2(){
       public void beforeRequest(final Request<?> request) {
         request.addParameter( "DelegateAccount", asAccount )
       }
@@ -133,7 +133,7 @@ class TestEC2VPCDefaultVPC {
       AWSCredentialsProvider adminCredentials = getYouAreClient( credentials, accountName ).with {
         createAccessKey( new CreateAccessKeyRequest( userName: "admin" ) ).with {
           accessKey?.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
       }

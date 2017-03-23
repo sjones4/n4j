@@ -22,8 +22,8 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.DescribeImagesRequest;
@@ -84,7 +84,7 @@ public class TestSTSAssumeRole {
                 "{\"Statement\":[{\"Effect\":\"Allow\",\"Resource\":\"*\",\"Action\":[\"iam:*\"]}]}" );
 
             // get youAre connection for new user
-            AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider(getUserCreds(account,user));
+            AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider(getUserCreds(account,user));
             final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
             youAre.setEndpoint(IAM_ENDPOINT);
 
@@ -323,7 +323,7 @@ public class TestSTSAssumeRole {
                                                                   final String roleArn,
                                                                   final String externalId,
                                                                   final String sessionName ) {
-        return getCredentialsProviderForRole( new StaticCredentialsProvider( creds ), roleArn, externalId, sessionName );
+        return getCredentialsProviderForRole( new AWSStaticCredentialsProvider( creds ), roleArn, externalId, sessionName );
     }
 
     private AWSCredentialsProvider getCredentialsProviderForRole( final AWSCredentialsProvider creds,

@@ -3,12 +3,11 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonWebServiceRequest
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.handlers.RequestHandler
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-import com.amazonaws.util.TimingInfo
 
 import org.testng.annotations.Test;
 
@@ -35,7 +34,7 @@ class TestEC2VPCAttributeManagement {
 
   public TestEC2VPCAttributeManagement(){
     minimalInit()
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private AmazonEC2Client getEC2Client( final AWSCredentialsProvider credentials ) {
@@ -181,7 +180,7 @@ class TestEC2VPCAttributeManagement {
         //
         print( "Verifying initial attributes for network interface ${networkInterfaceId}" )
         final String[] attributeHolder = { 'description' }
-        addRequestHandler( new RequestHandler( ) {
+        addRequestHandler( new RequestHandler2( ) {
           @Override
           void beforeRequest( final Request<?> request ) {
             AmazonWebServiceRequest originalRequest = request.getOriginalRequest();
@@ -190,9 +189,6 @@ class TestEC2VPCAttributeManagement {
               request.addParameter( "Attribute", attributeHolder[0] )
             }
           }
-
-          @Override void afterResponse(final Request<?> request, final Object response, final TimingInfo timingInfo) { }
-          @Override void afterError(final Request<?> request, final Exception e) { }
         } )
         attributeHolder[0] = 'description'
         String expectedNetworkInterfaceId = networkInterfaceId

@@ -4,10 +4,12 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.regions.Region
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
@@ -75,6 +77,30 @@ import java.security.spec.RSAPrivateKeySpec
  */
 class TestSTSAssumeRoleWithWebIdentity {
 
+  public TestSTSAssumeRoleWithWebIdentity( ) {
+    getCloudInfo()
+    this.host = CLC_IP
+    this.adminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+
+    // create a new user with all IAM permissions
+    N4j.createAccount(testAcct)
+    N4j.createUser(testAcct,testUser)
+    N4j.createIAMPolicy(testAcct,testUser, "allow-all",null)
+    AWSCredentials userCreds = N4j.getUserCreds(testAcct, testUser)
+    def userAK = userCreds.AWSAccessKeyId
+    def userSK = userCreds.AWSSecretKey
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( userAK, userSK ) )
+  }
+
+  /**
+   * Called after all the tests in a class
+   *
+   * @throws java.lang.Exception
+   */
+  @AfterClass
+  public void tearDownAfterClass() throws Exception {
+    N4j.deleteAccount(testAcct)
+  }
   private final String host
   private final String path
   private final String domainAndPort

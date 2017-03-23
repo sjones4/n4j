@@ -22,10 +22,10 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.Request;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.handlers.AbstractRequestHandler;
-import com.amazonaws.internal.StaticCredentialsProvider;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
@@ -250,11 +250,11 @@ public class TestCannedRoles {
             createAccount(resourceAccount);
 
             print("Creating credentials for " + resourceAccount);
-            AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+            AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
             final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
             youAre.setEndpoint(IAM_ENDPOINT);
 
-            youAre.addRequestHandler(new AbstractRequestHandler() {
+            youAre.addRequestHandler(new RequestHandler2() {
                 public void beforeRequest(final Request<?> request) {
                     request.addParameter("DelegateAccount", resourceAccount);
                 }
