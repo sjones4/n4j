@@ -2,8 +2,8 @@ package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.ec2.AmazonEC2
@@ -47,7 +47,7 @@ class TestELBIAMResource {
   public TestELBIAMResource() {
     minimalInit()
     this.host = CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri( String servicePath ) {
@@ -159,7 +159,7 @@ class TestELBIAMResource {
         print( "Creating access key for USER ${userName}" )
         userCredentials = createAccessKey( new CreateAccessKeyRequest( userName: userName ) ).with {
           accessKey?.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
         cleanupTasks.add{

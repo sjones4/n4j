@@ -2,9 +2,9 @@ package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.handlers.AbstractRequestHandler
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 import com.amazonaws.services.cloudformation.model.CreateStackRequest
 import com.amazonaws.services.cloudformation.model.DeleteStackRequest
@@ -50,7 +50,7 @@ class TestCFAdministration {
   public TestCFAdministration( ) {
     minimalInit()
     this.host = CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri( String servicePath ) {
@@ -107,7 +107,7 @@ class TestCFAdministration {
         }
 
         YouAre adminIam = getYouAreClient( credentials )
-        adminIam.addRequestHandler( new AbstractRequestHandler(){
+        adminIam.addRequestHandler( new RequestHandler2(){
           public void beforeRequest(final Request<?> request) {
             request.addParameter( "DelegateAccount", accountName )
           }
@@ -116,7 +116,7 @@ class TestCFAdministration {
           print( "Creating access key for admin account: ${accountName}" )
           cfAccountCredentials = createAccessKey( new CreateAccessKeyRequest( userName: 'admin' ) ).with {
             accessKey?.with {
-              new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+              new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
 
@@ -133,7 +133,7 @@ class TestCFAdministration {
           print( "Creating access key for admin USER: ${userName}" )
           cfUserCredentials = createAccessKey( new CreateAccessKeyRequest( userName: userName ) ).with {
             accessKey?.with {
-              new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+              new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
 

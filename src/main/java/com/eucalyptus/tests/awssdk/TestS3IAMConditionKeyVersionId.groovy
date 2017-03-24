@@ -4,9 +4,9 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.handlers.AbstractRequestHandler
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.identitymanagement.model.*
@@ -48,7 +48,7 @@ class TestS3IAMConditionKeyVersionId {
   TestS3IAMConditionKeyVersionId( ) {
     minimalInit()
     this.host = CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri( String host, String servicePath ) {
@@ -115,7 +115,7 @@ class TestS3IAMConditionKeyVersionId {
         // Get credentials for admin account
         print("Creating access key for test account admin USER: ${accountName}")
         YouAre adminIam = getYouAreClient( credentials )
-        adminIam.addRequestHandler(new AbstractRequestHandler() {
+        adminIam.addRequestHandler(new RequestHandler2() {
           public void beforeRequest(final Request<?> request) {
             request.addParameter("DelegateAccount", accountName)
           }
@@ -123,7 +123,7 @@ class TestS3IAMConditionKeyVersionId {
         adminCredentials = adminIam.with {
           createAccessKey(new CreateAccessKeyRequest(userName: "admin")).with {
             accessKey?.with {
-              new StaticCredentialsProvider(new BasicAWSCredentials(accessKeyId, secretAccessKey))
+              new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKeyId, secretAccessKey))
             }
           }
         }
@@ -238,7 +238,7 @@ class TestS3IAMConditionKeyVersionId {
             userName: userName
         ) ).with {
           accessKey.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
 
