@@ -1241,15 +1241,16 @@ class N4j {
     }
 
     public static void deleteIAMPolicy(final String accountName, String userName, String policyName) {
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
         });
+
 
         DeleteUserPolicyRequest deleteUserPolicyRequest = new DeleteUserPolicyRequest()
           .withPolicyName(policyName)
