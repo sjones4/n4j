@@ -4,10 +4,12 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.regions.Region
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
@@ -75,6 +77,17 @@ import java.security.spec.RSAPrivateKeySpec
  */
 class TestSTSAssumeRoleWithWebIdentity {
 
+
+  /**
+  * Called after all the tests in a class
+  *
+  * @throws java.lang.Exception
+  **/
+  @AfterClass
+  public void tearDownAfterClass() throws Exception {
+      N4j.deleteAccount(testAcct)
+  }
+
   private final String host
   private final String path
   private final String domainAndPort
@@ -141,7 +154,7 @@ class TestSTSAssumeRoleWithWebIdentity {
   public TestSTSAssumeRoleWithWebIdentity( ) {
     getCloudInfo( )
 
-    this.adminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.adminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
     testAcct= "${NAME_PREFIX}test-acct"
     testUser= "${NAME_PREFIX}test-user"
 
@@ -149,7 +162,7 @@ class TestSTSAssumeRoleWithWebIdentity {
     N4j.createAccount(testAcct)
     N4j.createUser(testAcct,testUser)
     N4j.createIAMPolicy(testAcct,testUser, "allow-all",null)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
 
     // configurable / detected values
     host = CLC_IP
@@ -159,16 +172,6 @@ class TestSTSAssumeRoleWithWebIdentity {
         domainAndPort.substring(0, domainAndPort.indexOf(':')) :
         domainAndPort
     thumbprint = sniffThumbprint("https://${domainAndPort}")
-  }
-
-  /**
-   * Called after all the tests in a class
-   *
-   * @throws java.lang.Exception
-   */
-  @AfterClass
-  public void tearDownAfterClass() throws Exception {
-    N4j.deleteAccount(testAcct)
   }
 
   private String cloudUri(String servicePath) {

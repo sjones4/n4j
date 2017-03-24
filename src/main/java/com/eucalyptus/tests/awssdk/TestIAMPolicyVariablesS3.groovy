@@ -5,10 +5,10 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
 import com.amazonaws.handlers.RequestHandler2
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.model.*
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
@@ -50,7 +50,7 @@ class TestIAMPolicyVariablesS3 {
   TestIAMPolicyVariablesS3( ) {
     minimalInit()
     this.host=CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri(String host, String servicePath ) {
@@ -117,7 +117,7 @@ class TestIAMPolicyVariablesS3 {
           })
           createAccessKey(new CreateAccessKeyRequest(userName: "admin")).with {
             accessKey?.with {
-              new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+              new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
         }
@@ -291,7 +291,7 @@ class TestIAMPolicyVariablesS3 {
             userName: userName
         ) ).with {
           accessKey.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
 

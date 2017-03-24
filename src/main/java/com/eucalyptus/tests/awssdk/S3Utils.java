@@ -23,7 +23,7 @@ public class S3Utils {
 
   /**
    * Perform GET object acl and verify with input cannedACL
-   * 
+   *
    * @param s3Client
    * @param s3AccountOwner
    * @param bucket
@@ -39,11 +39,11 @@ public class S3Utils {
     AccessControlList aclResult = s3Client.getObjectAcl(bucket, key);
     assertTrue("Expected owner of the ACL to be " + objectOwnerId + ", but found " + aclResult.getOwner().getId(),
         objectOwnerId.equals(aclResult.getOwner().getId()));
-    Iterator<Grant> iterator = aclResult.getGrants().iterator();
+    Iterator<Grant> iterator = aclResult.getGrantsAsList().iterator();
 
     switch (cannedACL) {
       case AuthenticatedRead:
-        assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 2);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -65,8 +65,8 @@ public class S3Utils {
 
       case BucketOwnerFullControl:
         if (objectOwnerId.equals(bucketOwnerId)) {
-          assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + aclResult.getGrants().size(), aclResult
-              .getGrants().size() == 1);
+          assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + aclResult.getGrantsAsList().size(), aclResult
+              .getGrantsAsList().size() == 1);
           while (iterator.hasNext()) {
             Grant grant = iterator.next();
             assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -76,8 +76,8 @@ public class S3Utils {
                 .getPermission().equals(Permission.FullControl));
           }
         } else {
-          assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrants().size(), aclResult
-              .getGrants().size() == 2);
+          assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrantsAsList().size(), aclResult
+              .getGrantsAsList().size() == 2);
           while (iterator.hasNext()) {
             Grant grant = iterator.next();
             assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -92,8 +92,8 @@ public class S3Utils {
 
       case BucketOwnerRead:
         if (objectOwnerId.equals(bucketOwnerId)) {
-          assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + aclResult.getGrants().size(), aclResult
-              .getGrants().size() == 1);
+          assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + aclResult.getGrantsAsList().size(), aclResult
+              .getGrantsAsList().size() == 1);
           while (iterator.hasNext()) {
             Grant grant = iterator.next();
             assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -103,8 +103,8 @@ public class S3Utils {
                 .getPermission().equals(Permission.FullControl));
           }
         } else {
-          assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrants().size(), aclResult
-              .getGrants().size() == 2);
+          assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrantsAsList().size(), aclResult
+              .getGrantsAsList().size() == 2);
           while (iterator.hasNext()) {
             Grant grant = iterator.next();
             assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -123,7 +123,7 @@ public class S3Utils {
         break;
 
       case LogDeliveryWrite:
-        assertTrue("Mismatch in number of ACLs associated with the object. Expected 3 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the object. Expected 3 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 3);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -145,7 +145,7 @@ public class S3Utils {
         break;
 
       case Private:
-        assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 1);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -158,7 +158,7 @@ public class S3Utils {
         break;
 
       case PublicRead:
-        assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 2);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -179,7 +179,7 @@ public class S3Utils {
         break;
 
       case PublicReadWrite:
-        assertTrue("Mismatch in number of ACLs associated with the object. Expected 3 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the object. Expected 3 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 3);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -207,7 +207,7 @@ public class S3Utils {
 
   /**
    * Perform GET object acl and verify with input acl
-   * 
+   *
    * @param s3Client
    * @param s3AccountOwner
    * @param bucket
@@ -223,17 +223,17 @@ public class S3Utils {
     AccessControlList aclResult = s3Client.getObjectAcl(bucket, key);
     assertTrue("Expected owner of the ACL to be " + objectOwnerId + ", but found " + aclResult.getOwner().getId(),
         objectOwnerId.equals(aclResult.getOwner().getId()));
-    assertTrue("Mismatch in number of ACLs associated with the object. Expected " + acl.getGrants().size() + " but got "
-        + aclResult.getGrants().size(), aclResult.getGrants().size() == acl.getGrants().size());
+    assertTrue("Mismatch in number of ACLs associated with the object. Expected " + acl.getGrantsAsList().size() + " but got "
+        + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList().size() == acl.getGrantsAsList().size());
 
-    for (Grant grant : acl.getGrants()) {
-      assertTrue("Mismatch between grants, result set does not contain " + grant, aclResult.getGrants().contains(grant));
+    for (Grant grant : acl.getGrantsAsList()) {
+      assertTrue("Mismatch between grants, result set does not contain " + grant, aclResult.getGrantsAsList().contains(grant));
     }
   }
 
   /**
    * Perform GET bucket acl and verify with input cannedACL
-   * 
+   *
    * @param s3Client
    * @param s3AccountOwner
    * @param bucket
@@ -245,11 +245,11 @@ public class S3Utils {
     AccessControlList aclResult = s3Client.getBucketAcl(bucket);
     assertTrue("Expected owner of the ACL to be " + bucketOwnerId + ", but found " + aclResult.getOwner().getId(), aclResult.getOwner().getId()
         .equals(bucketOwnerId));
-    Iterator<Grant> iterator = aclResult.getGrants().iterator();
+    Iterator<Grant> iterator = aclResult.getGrantsAsList().iterator();
 
     switch (cannedACL) {
       case AuthenticatedRead:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 2 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 2 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 2);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -270,7 +270,7 @@ public class S3Utils {
         break;
 
       case BucketOwnerFullControl:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 1 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 1 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 1);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -283,7 +283,7 @@ public class S3Utils {
         break;
 
       case BucketOwnerRead:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 1 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 1 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 1);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -296,7 +296,7 @@ public class S3Utils {
         break;
 
       case LogDeliveryWrite:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 3);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -318,7 +318,7 @@ public class S3Utils {
         break;
 
       case Private:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 1 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 1 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 1);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -331,7 +331,7 @@ public class S3Utils {
         break;
 
       case PublicRead:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 2 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 2 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 2);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -352,7 +352,7 @@ public class S3Utils {
         break;
 
       case PublicReadWrite:
-        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + aclResult.getGrants().size(), aclResult.getGrants()
+        assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList()
             .size() == 3);
         while (iterator.hasNext()) {
           Grant grant = iterator.next();
@@ -381,7 +381,7 @@ public class S3Utils {
 
   /**
    * Perform GET bucket acl and verify with input acl
-   * 
+   *
    * @param s3Client
    * @param s3AccountOwner
    * @param bucket
@@ -393,11 +393,11 @@ public class S3Utils {
     AccessControlList aclResult = s3Client.getBucketAcl(bucket);
     assertTrue("Expected owner of the ACL to be " + bucketOwnerId + ", but found " + aclResult.getOwner().getId(), aclResult.getOwner().getId()
         .equals(bucketOwnerId));
-    assertTrue("Mismatch in number of ACLs associated with the object. Expected " + acl.getGrants().size() + " but got "
-        + aclResult.getGrants().size(), aclResult.getGrants().size() == acl.getGrants().size());
+    assertTrue("Mismatch in number of ACLs associated with the object. Expected " + acl.getGrantsAsList().size() + " but got "
+        + aclResult.getGrantsAsList().size(), aclResult.getGrantsAsList().size() == acl.getGrantsAsList().size());
 
-    for (Grant grant : acl.getGrants()) {
-      assertTrue("Mismatch between grants, result set does not contain " + grant, aclResult.getGrants().contains(grant));
+    for (Grant grant : acl.getGrantsAsList()) {
+      assertTrue("Mismatch between grants, result set does not contain " + grant, aclResult.getGrantsAsList().contains(grant));
     }
   }
 

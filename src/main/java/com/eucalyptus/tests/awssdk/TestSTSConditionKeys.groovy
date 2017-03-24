@@ -3,9 +3,9 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
@@ -39,6 +39,7 @@ import java.text.SimpleDateFormat
  */
 class TestSTSConditionKeys {
 
+
   private String account
   private AWSCredentialsProvider credentials
 
@@ -47,7 +48,7 @@ class TestSTSConditionKeys {
     N4j.getCloudInfo()
     this.account = this.getClass().simpleName.toLowerCase()
     N4j.createAccount(account)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(account,'admin') )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(account,'admin') )
   }
 
   @AfterClass
@@ -155,7 +156,7 @@ class TestSTSConditionKeys {
               N4j.print "Deleting access key ${accessKeyId} for user ${userName}"
               deleteAccessKey( new DeleteAccessKeyRequest( userName: userName, accessKeyId: accessKeyId ) )
             }
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
       }
@@ -304,5 +305,5 @@ class TestSTSConditionKeys {
         }
       }
     }
-  }  
+  }
 }
