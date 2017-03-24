@@ -53,7 +53,7 @@ class TestIAMOpenIDConnectProviders {
     this.host = CLC_IP
     this.testAcct= "${NAME_PREFIX}oidc-test-acct"
     N4j.createAccount(testAcct)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
   }
 
   @AfterClass

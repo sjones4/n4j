@@ -48,7 +48,7 @@ class TestSTSConditionKeys {
     N4j.getCloudInfo()
     this.account = this.getClass().simpleName.toLowerCase()
     N4j.createAccount(account)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(account,'admin') )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(account,'admin') )
   }
 
   @AfterClass

@@ -77,30 +77,17 @@ import java.security.spec.RSAPrivateKeySpec
  */
 class TestSTSAssumeRoleWithWebIdentity {
 
-  public TestSTSAssumeRoleWithWebIdentity( ) {
-    getCloudInfo()
-    this.host = CLC_IP
-    this.adminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-
-    // create a new user with all IAM permissions
-    N4j.createAccount(testAcct)
-    N4j.createUser(testAcct,testUser)
-    N4j.createIAMPolicy(testAcct,testUser, "allow-all",null)
-    AWSCredentials userCreds = N4j.getUserCreds(testAcct, testUser)
-    def userAK = userCreds.AWSAccessKeyId
-    def userSK = userCreds.AWSSecretKey
-    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( userAK, userSK ) )
-  }
 
   /**
-   * Called after all the tests in a class
-   *
-   * @throws java.lang.Exception
-   */
+  * Called after all the tests in a class
+  *
+  * @throws java.lang.Exception
+  **/
   @AfterClass
   public void tearDownAfterClass() throws Exception {
-    N4j.deleteAccount(testAcct)
+      N4j.deleteAccount(testAcct)
   }
+
   private final String host
   private final String path
   private final String domainAndPort
@@ -167,7 +154,7 @@ class TestSTSAssumeRoleWithWebIdentity {
   public TestSTSAssumeRoleWithWebIdentity( ) {
     getCloudInfo( )
 
-    this.adminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.adminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
     testAcct= "${NAME_PREFIX}test-acct"
     testUser= "${NAME_PREFIX}test-user"
 
@@ -175,7 +162,7 @@ class TestSTSAssumeRoleWithWebIdentity {
     N4j.createAccount(testAcct)
     N4j.createUser(testAcct,testUser)
     N4j.createIAMPolicy(testAcct,testUser, "allow-all",null)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
 
     // configurable / detected values
     host = CLC_IP
@@ -185,16 +172,6 @@ class TestSTSAssumeRoleWithWebIdentity {
         domainAndPort.substring(0, domainAndPort.indexOf(':')) :
         domainAndPort
     thumbprint = sniffThumbprint("https://${domainAndPort}")
-  }
-
-  /**
-   * Called after all the tests in a class
-   *
-   * @throws java.lang.Exception
-   */
-  @AfterClass
-  public void tearDownAfterClass() throws Exception {
-    N4j.deleteAccount(testAcct)
   }
 
   private String cloudUri(String servicePath) {
