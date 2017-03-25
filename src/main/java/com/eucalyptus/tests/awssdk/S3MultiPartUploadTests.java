@@ -121,9 +121,9 @@ import com.google.common.collect.Lists;
 /**
  * These tests are basic Multipart Upload tests. The documentation for the SDK and MPU are available here -
  * http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMPDotJavaAPI.html
- * 
+ *
  * These tests currently leverage the Low-Level Java API only for more fine-grained control and debugging.
- * 
+ *
  */
 public class S3MultiPartUploadTests {
 
@@ -853,6 +853,7 @@ public class S3MultiPartUploadTests {
         }
       });
 
+
       S3Utils.verifyObjectACL(s3, ownerName, bucketName, key, acl, ownerId);
     } catch (AmazonServiceException ase) {
       printException(ase);
@@ -979,7 +980,7 @@ public class S3MultiPartUploadTests {
        */
 //      assertTrue("Expected copied object size to be " + completeMpuResult.getETag()+ " but got " + copyResult.getETag(), completeMpuResult.getETag()
 //          .equals(copyResult.getETag()));
-      
+
       // Get the objects to verify
       final File originalFile = new File(eucaUUID());
       print(account + ": Downloading original object " + key + " to file " + originalFile.getName());

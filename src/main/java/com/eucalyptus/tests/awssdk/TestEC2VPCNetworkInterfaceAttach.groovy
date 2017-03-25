@@ -2,8 +2,8 @@ package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
@@ -32,7 +32,7 @@ class TestEC2VPCNetworkInterfaceAttach {
 
   public TestEC2VPCNetworkInterfaceAttach( ) {
     minimalInit( )
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
