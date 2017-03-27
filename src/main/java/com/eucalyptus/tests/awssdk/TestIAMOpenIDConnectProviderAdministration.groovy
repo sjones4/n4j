@@ -4,9 +4,9 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.handlers.AbstractRequestHandler
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
@@ -26,10 +26,11 @@ import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
  */
 class TestIAMOpenIDConnectProviderAdministration {
 
+
   public TestIAMOpenIDConnectProviderAdministration( ) {
     minimalInit()
     this.host = CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
   private final String host
 
@@ -96,14 +97,14 @@ class TestIAMOpenIDConnectProviderAdministration {
         ) )
 
         N4j.print( "Creating access key for admin user" )
-        addRequestHandler( new AbstractRequestHandler(){
+        addRequestHandler( new RequestHandler2(){
           public void beforeRequest(final Request<?> request) {
             request.addParameter( "DelegateAccount", accountName )
           }
         } )
         createAccessKey( new CreateAccessKeyRequest( userName: 'admin' ) ).with {
           accessKey?.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
       }
@@ -157,7 +158,7 @@ class TestIAMOpenIDConnectProviderAdministration {
 
       // Test administrative list/delete
       getIamClient( ).with {
-        addRequestHandler( new AbstractRequestHandler(){
+        addRequestHandler( new RequestHandler2(){
           public void beforeRequest(final Request<?> request) {
             request.addParameter( "DelegateAccount", accountName )
           }

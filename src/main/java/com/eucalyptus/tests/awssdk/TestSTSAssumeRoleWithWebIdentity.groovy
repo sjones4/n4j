@@ -4,10 +4,12 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.AnonymousAWSCredentials
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.regions.Region
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
@@ -66,6 +68,7 @@ import java.security.spec.RSAPrivateKeySpec
  *   https://eucalyptus.atlassian.net/browse/EUCA-12564
  *   https://eucalyptus.atlassian.net/browse/EUCA-12566
  *   https://eucalyptus.atlassian.net/browse/EUCA-12717
+ *   https://eucalyptus.atlassian.net/browse/EUCA-13007
  *
  * Related AWS doc:
  *   http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html
@@ -73,6 +76,17 @@ import java.security.spec.RSAPrivateKeySpec
  *   http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements.html#condition-keys-wif
  */
 class TestSTSAssumeRoleWithWebIdentity {
+
+
+  /**
+  * Called after all the tests in a class
+  *
+  * @throws java.lang.Exception
+  **/
+  @AfterClass
+  public void tearDownAfterClass() throws Exception {
+      N4j.deleteAccount(testAcct)
+  }
 
   private final String host
   private final String path
@@ -140,7 +154,7 @@ class TestSTSAssumeRoleWithWebIdentity {
   public TestSTSAssumeRoleWithWebIdentity( ) {
     getCloudInfo( )
 
-    this.adminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.adminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
     testAcct= "${NAME_PREFIX}test-acct"
     testUser= "${NAME_PREFIX}test-user"
 
@@ -148,7 +162,7 @@ class TestSTSAssumeRoleWithWebIdentity {
     N4j.createAccount(testAcct)
     N4j.createUser(testAcct,testUser)
     N4j.createIAMPolicy(testAcct,testUser, "allow-all",null)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
 
     // configurable / detected values
     host = CLC_IP
@@ -158,16 +172,6 @@ class TestSTSAssumeRoleWithWebIdentity {
         domainAndPort.substring(0, domainAndPort.indexOf(':')) :
         domainAndPort
     thumbprint = sniffThumbprint("https://${domainAndPort}")
-  }
-
-  /**
-   * Called after all the tests in a class
-   *
-   * @throws java.lang.Exception
-   */
-  @AfterClass
-  public void tearDownAfterClass() throws Exception {
-    N4j.deleteAccount(testAcct)
   }
 
   private String cloudUri(String servicePath) {
@@ -541,7 +545,6 @@ class TestSTSAssumeRoleWithWebIdentity {
         [
                 [durationSeconds: 899],
                 [durationSeconds: 3601],
-                [roleArn: 'arn:aws:iam:::role/r'],
                 [roleSessionName: 'a'],
                 [roleSessionName: 'a' * 65],
                 [webIdentityToken: '1'],
@@ -590,7 +593,18 @@ class TestSTSAssumeRoleWithWebIdentity {
           N4j.assertThat( e.statusCode == 403, "Expected status code 403, but was: ${e.statusCode}")
           N4j.assertThat( e.errorCode == 'AccessDenied', "Expected error code AccessDenied, but was: ${e.errorCode}")
         }
-
+        try {
+          Map<String, Object> parameters = [:]
+          parameters << validParameters
+          parameters << [roleArn: "${roleArn}Invalid"]
+          N4j.print "Testing assume role with web identity using invalid role arn, parameters: ${parameters}"
+          assumeRoleWithWebIdentity( new AssumeRoleWithWebIdentityRequest( parameters ) )
+          N4j.assertThat( false, 'Expected assume role with web identity failure due to invalid role arn' )
+        } catch (AmazonServiceException e) {
+          N4j.print e.toString( )
+          N4j.assertThat( e.statusCode == 403, "Expected status code 403, but was: ${e.statusCode}")
+          N4j.assertThat( e.errorCode == 'AccessDenied', "Expected error code AccessDenied, but was: ${e.errorCode}")
+        }
         try {
           Map<String, Object> parameters = [:]
           parameters << validParameters

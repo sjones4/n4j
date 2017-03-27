@@ -3,9 +3,9 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.handlers.RequestHandler2
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
@@ -38,7 +38,7 @@ class TestIAMPolicyVariables {
   TestIAMPolicyVariables( ) {
     minimalInit()
     this.host=CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri( String host, String servicePath ) {
@@ -84,7 +84,7 @@ class TestIAMPolicyVariables {
           })
           createAccessKey(new CreateAccessKeyRequest(userName: "admin")).with {
             accessKey?.with {
-              new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+              new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
         }
@@ -140,7 +140,7 @@ class TestIAMPolicyVariables {
             userName: userName
         ) ).with {
           accessKey.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
 

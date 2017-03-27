@@ -34,20 +34,20 @@ import com.amazonaws.services.s3.model.Permission;
  * class contains tests for creating buckets with canned ACLs. After a bucket is successfully created, the bucket ACL is fetched and verified against
  * the canned ACL definition.
  * </p>
- * 
+ *
  * <p>
  * As of 9/19/2013 all tests passed against S3. All tests fail against Walrus due to <a
  * href="https://eucalyptus.atlassian.net/browse/EUCA-7747">EUCA-7747</a>
  * </p>
- * 
+ *
  * <p>
  * {@link #createBucket_CannedACL_BucketOwnerRead()}, {@link #setBucket_CannedACL_BucketOwnerRead()} and {@link #setBucket_CannedACLs()} fail against
  * Walrus due to <a href="https://eucalyptus.atlassian.net/browse/EUCA-7625">EUCA-7625</a>
  * </p>
- * 
+ *
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ACLOverview.html">S3 Access Control Lists</a>
  * @author Swathi Gangisetty
- * 
+ *
  */
 public class S3BucketACLTests {
 
@@ -106,9 +106,9 @@ public class S3BucketACLTests {
 
   /**
    * </p>Test for <code>authenticated-read</code> canned ACL</p>
-   * 
+   *
    * </p>Canned ACL applies to bucket and object</p>
-   * 
+   *
    * </p>Owner gets FULL_CONTROL. The AuthenticatedUsers group gets READ access.</p>
    */
   @Test
@@ -127,9 +127,9 @@ public class S3BucketACLTests {
 
   /**
    * </p>Test for <code>authenticated-read</code> canned ACL</p>
-   * 
+   *
    * </p>Canned ACL applies to bucket and object</p>
-   * 
+   *
    * </p>Owner gets FULL_CONTROL. The AuthenticatedUsers group gets READ access.</p>
    */
   @Test
@@ -152,11 +152,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>bucket-owner-full-control</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to object
    * </p>
-   * 
+   *
    * <p>
    * Both the object owner and the bucket owner get FULL_CONTROL over the object. If you specify this canned ACL when creating a bucket, Amazon S3
    * ignores it.
@@ -180,11 +180,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>bucket-owner-full-control</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to object
    * </p>
-   * 
+   *
    * <p>
    * Both the object owner and the bucket owner get FULL_CONTROL over the object. If you specify this canned ACL when creating a bucket, Amazon S3
    * ignores it.
@@ -210,15 +210,15 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>bucket-owner-read</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to object
    * </p>
-   * 
+   *
    * <p>
    * Object owner gets FULL_CONTROL. Bucket owner gets READ access. If you specify this canned ACL when creating a bucket, Amazon S3 ignores it.
    * </p>
-   * 
+   *
    * <p>
    * Test failed against Walrus. ACL contained no grants. Jira ticket for the issue - <a
    * href="https://eucalyptus.atlassian.net/browse/EUCA-7625">EUCA-7625</a>
@@ -242,15 +242,15 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>bucket-owner-read</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to object
    * </p>
-   * 
+   *
    * <p>
    * Object owner gets FULL_CONTROL. Bucket owner gets READ access. If you specify this canned ACL when creating a bucket, Amazon S3 ignores it.
    * </p>
-   * 
+   *
    * <p>
    * Test failed against Walrus. ACL contained no grants. Jira ticket for the issue - <a
    * href="https://eucalyptus.atlassian.net/browse/EUCA-7625">EUCA-7625</a>
@@ -276,11 +276,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>log-delivery-write</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket
    * </p>
-   * 
+   *
    * <p>
    * The LogDelivery group gets WRITE and READ_ACP permissions on the bucket.
    * </p>
@@ -303,11 +303,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>log-delivery-write</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket
    * </p>
-   * 
+   *
    * <p>
    * The LogDelivery group gets WRITE and READ_ACP permissions on the bucket.
    * </p>
@@ -332,11 +332,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>private</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket and object
    * </p>
-   * 
+   *
    * <p>
    * Owner gets FULL_CONTROL. No one else has access rights (default).
    * </p>
@@ -359,11 +359,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>private</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket and object
    * </p>
-   * 
+   *
    * <p>
    * Owner gets FULL_CONTROL. No one else has access rights (default).
    * </p>
@@ -388,11 +388,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>public-read</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket and object
    * </p>
-   * 
+   *
    * <p>
    * Owner gets FULL_CONTROL. The AllUsers group gets READ access.
    * </p>
@@ -415,11 +415,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>public-read</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket and object
    * </p>
-   * 
+   *
    * <p>
    * Owner gets FULL_CONTROL. The AllUsers group gets READ access.
    * </p>
@@ -444,11 +444,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket and object
    * </p>
-   * 
+   *
    * <p>
    * Owner gets FULL_CONTROL. The AllUsers group gets READ and WRITE access.
    * </p>
@@ -471,11 +471,11 @@ public class S3BucketACLTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL
    * </p>
-   * 
+   *
    * <p>
    * Canned ACL applies to bucket and object
    * </p>
-   * 
+   *
    * <p>
    * Owner gets FULL_CONTROL. The AllUsers group gets READ and WRITE access.
    * </p>
@@ -500,7 +500,7 @@ public class S3BucketACLTests {
    * <p>
    * Test for cycling through all canned ACLs, setting them one by one for the same bucket and verifying that the appropriate permissions are set.
    * </p>
-   * 
+   *
    * <p>
    * Test failed against Walrus. Bucket ACL contained no grants after setting canned ACL BucketOwnerRead. Jira ticket for the issue - <a
    * href="https://eucalyptus.atlassian.net/browse/EUCA-7625">EUCA-7625</a>
@@ -558,11 +558,11 @@ public class S3BucketACLTests {
     testInfo(this.getClass().getSimpleName() + " - createBucket_ACL_Headers");
     try {
       AccessControlList acl = new AccessControlList();
-      acl.getGrants().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.ReadAcp));
-      acl.getGrants().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Write));
-      acl.getGrants().add(new Grant(GroupGrantee.LogDelivery, Permission.Write));
-      acl.getGrants().add(new Grant(GroupGrantee.AllUsers, Permission.FullControl));
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerId), Permission.FullControl));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.ReadAcp));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Write));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.LogDelivery, Permission.Write));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.AllUsers, Permission.FullControl));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerId), Permission.FullControl));
       createBucketWithACL(bucketName, acl);
       S3Utils.verifyBucketACL(s3, ownerName, bucketName, acl, ownerId);
     } catch (AmazonServiceException ase) {
@@ -596,9 +596,9 @@ public class S3BucketACLTests {
 
       AccessControlList acl = new AccessControlList();
       acl.setOwner(owner);
-      acl.getGrants().add(new Grant(GroupGrantee.LogDelivery, Permission.FullControl));
-      acl.getGrants().add(new Grant(GroupGrantee.AllUsers, Permission.WriteAcp));
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerId), Permission.FullControl));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.LogDelivery, Permission.FullControl));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.AllUsers, Permission.WriteAcp));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerId), Permission.FullControl));
       print(account + ": Setting ACL " + acl + " for bucket " + bucketName);
       s3.setBucketAcl(bucketName, acl);
       S3Utils.verifyBucketACL(s3, ownerName, bucketName, acl, ownerId);
