@@ -103,10 +103,13 @@ class TestIAMPolicyVariables {
           ) )
         }
         N4j.print( "Creating user ${userName}" )
-        createUser( new CreateUserRequest(
+        String userId = createUser( new CreateUserRequest(
             userName: userName,
             path: '/'
-        ) )
+        ) ).with {
+          user?.userId
+        }
+        N4j.print( "Created user with id ${userId}" )
 
         String policyName = "${namePrefix}policy1"
         N4j.print( "Creating user policy ${policyName}" )
@@ -132,6 +135,37 @@ class TestIAMPolicyVariables {
           deleteUserPolicy( new DeleteUserPolicyRequest(
               userName: userName,
               policyName: policyName
+          ) )
+        }
+
+        String policyName2 = "${namePrefix}policy2"
+        N4j.print( "Creating user policy ${policyName}" )
+        putUserPolicy( new PutUserPolicyRequest(
+            userName: userName,
+            policyName: policyName2,
+            policyDocument: """\
+              {
+                "Version": "2012-10-17",
+                "Statement": {
+                  "Action": "iam:ListUsers",
+                  "Effect": "Allow",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:username": "${userName}",
+                      "aws:userid": "${userId}",
+                      "aws:PrincipalType": "User"
+                    }
+                  }
+                }
+              }
+              """.stripIndent( )
+        ) )
+        cleanupTasks.add{
+          N4j.print( "Deleting user policy ${policyName2}" )
+          deleteUserPolicy( new DeleteUserPolicyRequest(
+              userName: userName,
+              policyName: policyName2
           ) )
         }
 
@@ -203,6 +237,12 @@ class TestIAMPolicyVariables {
           N4j.assertThat( false, "Expected login profile creation to fail for admin user due to permissions" )
         } catch ( AmazonServiceException e ) {
           N4j.print( "Expected error creating login profile without permission: ${e}" )
+        }
+
+        N4j.print( "Listing users to verify policy variables as condition key" )
+        listUsers( ).with {
+          N4j.print( "Listed ${users.size()} users" )
+          N4j.assertThat( !users.isEmpty( ), "Expected users" )
         }
 
         void
