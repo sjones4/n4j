@@ -39,6 +39,7 @@ import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
+import org.testng.SkipException;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -571,6 +572,14 @@ class N4j {
         assert condition : message;
     }
 
+    /**
+     * Skip a test without failure if an assumption is false
+     */
+    public static void assumeThat(boolean condition, String message) {
+        // testng does not have an equivalent of junits Assume.*
+        if (!condition) throw new SkipException( message );
+    }
+
     public static void print(String text) {
         logger.info(text);
     }
@@ -673,6 +682,13 @@ class N4j {
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
      */
     public static void waitForInstances(final long timeout) {
+        waitForInstances(ec2,timeout);
+    }
+
+    /**
+     * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
+     */
+    public static void waitForInstances(final AmazonEC2 ec2, final long timeout) {
         final long startTime = System.currentTimeMillis();
         withWhile:
         while (true) {
@@ -696,6 +712,37 @@ class N4j {
                 }
             }
             break;
+        }
+    }
+
+    /**
+     * Wait for volumes to be attached / detached
+     */
+    public static void waitForVolumeAttachments(final long timeout) {
+        waitForVolumeAttachments(ec2, timeout);
+    }
+
+    /**
+     * Wait for volumes to be attached / detached
+     */
+    public static void waitForVolumeAttachments(final AmazonEC2 ec2, final long timeout) {
+        final long startTime = System.currentTimeMillis();
+        while (true) {
+            if ((System.currentTimeMillis() - startTime) > timeout) {
+                throw new IllegalStateException("Volume attachment wait timed out");
+            }
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            DescribeVolumesResult result = ec2.describeVolumes(
+                new DescribeVolumesRequest( )
+                    .withFilters( new Filter( "attachment.status", Arrays.asList( "attaching", "detaching" ) ) )
+            );
+            if ( result.getVolumes( ).isEmpty( ) ) {
+                break;
+            }
         }
     }
 
