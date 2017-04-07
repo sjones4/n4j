@@ -585,15 +585,20 @@ public class S3ObjectACLTests {
 
       AccessControlList acl = new AccessControlList();
       acl.getGrantsAsList().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Write));
-      putObjectWithACL(bucketName, key, acl);
       acl.getGrantsAsList().add(ownerGrant);
+      putObjectWithACL(bucketName, key, acl);
+      S3Utils.verifyObjectACL(s3, ownerName, bucketName, key, acl, ownerId);
+
+      acl = new AccessControlList();
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Write));
+      putObjectWithACL(bucketName, key, acl);
       S3Utils.verifyObjectACL(s3, ownerName, bucketName, key, acl, ownerId);
 
       acl = new AccessControlList();
       acl.getGrantsAsList().add(new Grant(GroupGrantee.LogDelivery, Permission.FullControl));
       acl.getGrantsAsList().add(new Grant(GroupGrantee.AllUsers, Permission.ReadAcp));
-      putObjectWithACL(bucketName, key, acl);
       acl.getGrantsAsList().add(ownerGrant);
+      putObjectWithACL(bucketName, key, acl);
       S3Utils.verifyObjectACL(s3, ownerName, bucketName, key, acl, ownerId);
     } catch (AmazonServiceException ase) {
       printException(ase);
