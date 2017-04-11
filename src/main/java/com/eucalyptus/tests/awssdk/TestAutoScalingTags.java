@@ -22,6 +22,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.services.autoscaling.model.*;
 import com.amazonaws.services.ec2.model.DescribeTagsRequest;
 import com.amazonaws.services.ec2.model.Filter;
+import com.google.common.collect.Lists;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -34,9 +35,10 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
 /**
  * This application tests tags for auto scaling.
  * <p/>
- * This is verification for the story:
+ * This is verification for the stories:
  * <p/>
  * https://eucalyptus.atlassian.net/browse/EUCA-4758
+ * https://eucalyptus.atlassian.net/browse/EUCA-13336
  */
 public class TestAutoScalingTags {
 
@@ -201,25 +203,20 @@ public class TestAutoScalingTags {
 
             // Create via API for group 2
             print("Creating tags up to limit for group: " + groupName2);
-            as.createOrUpdateTags(new CreateOrUpdateTagsRequest().withTags(
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag01").withValue("1"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag02").withValue("2"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag03").withValue("3"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag04").withValue("4"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag05").withValue("5"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag06").withValue("6"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag07").withValue("7"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag08").withValue("8"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag09").withValue("9"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag10").withValue("10")
-            ));
+            List<Tag> tags = Lists.newArrayList( );
+            for ( int n=1; n<=10; n++ ) {
+                tags.add( new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag"+n).withValue(String.valueOf( n )) );
+            }
+            as.createOrUpdateTags(new CreateOrUpdateTagsRequest().withTags( tags ) );
 
             // Create over limit to test exception
             print("Creating tag over limit for group: " + groupName2);
             try {
-                as.createOrUpdateTags(new CreateOrUpdateTagsRequest().withTags(
-                        new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag1").withValue("1")
-                ));
+                tags = Lists.newArrayList( );
+                for ( int n=11; n<=51; n++ ) {
+                    tags.add( new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag"+n).withValue(String.valueOf( n )) );
+                }
+                as.createOrUpdateTags(new CreateOrUpdateTagsRequest().withTags( tags ) );
                 assertThat(false, "Expected creation to fail over limit");
             } catch (LimitExceededException e) {
                 print("Caught expected exception: " + e);
@@ -228,15 +225,15 @@ public class TestAutoScalingTags {
             // Update via API for group 2
             print("Updating all tags for group: " + groupName2);
             as.createOrUpdateTags(new CreateOrUpdateTagsRequest().withTags(
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag01").withValue("100"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag02").withValue("200"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag03").withValue("300"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag04").withValue("400"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag05").withValue("500"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag06").withValue("600"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag07").withValue("700"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag08").withValue("800"),
-                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag09").withValue("900"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag1").withValue("100"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag2").withValue("200"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag3").withValue("300"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag4").withValue("400"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag5").withValue("500"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag6").withValue("600"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag7").withValue("700"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag8").withValue("800"),
+                    new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag9").withValue("900"),
                     new Tag().withResourceType("auto-scaling-group").withResourceId(groupName2).withKey("tag10").withValue("1000").withPropagateAtLaunch(true)
             ));
 
@@ -253,16 +250,16 @@ public class TestAutoScalingTags {
                 assertThat(group.getTags() != null, "Expected tags");
                 print("Found tags: " + group.getTags());
                 assertThat(group.getTags().size() == 10, "Expected ten tags but found " + group.getTags().size());
-                assertTag(group.getTags().get(0), "tag01", "100", false);
-                assertTag(group.getTags().get(1), "tag02", "200", false);
-                assertTag(group.getTags().get(2), "tag03", "300", false);
-                assertTag(group.getTags().get(3), "tag04", "400", false);
-                assertTag(group.getTags().get(4), "tag05", "500", false);
-                assertTag(group.getTags().get(5), "tag06", "600", false);
-                assertTag(group.getTags().get(6), "tag07", "700", false);
-                assertTag(group.getTags().get(7), "tag08", "800", false);
-                assertTag(group.getTags().get(8), "tag09", "900", false);
-                assertTag(group.getTags().get(9), "tag10", "1000", true);
+                assertTag(group.getTags().get(0), "tag1", "100", false);
+                assertTag(group.getTags().get(1), "tag10", "1000", true);
+                assertTag(group.getTags().get(2), "tag2", "200", false);
+                assertTag(group.getTags().get(3), "tag3", "300", false);
+                assertTag(group.getTags().get(4), "tag4", "400", false);
+                assertTag(group.getTags().get(5), "tag5", "500", false);
+                assertTag(group.getTags().get(6), "tag6", "600", false);
+                assertTag(group.getTags().get(7), "tag7", "700", false);
+                assertTag(group.getTags().get(8), "tag8", "800", false);
+                assertTag(group.getTags().get(9), "tag9", "900", false);
             }
 
             // Launch instance
