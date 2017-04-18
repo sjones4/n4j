@@ -3,9 +3,9 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.Request
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.handlers.RequestHandler2
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
@@ -38,7 +38,7 @@ class TestIAMPolicyVariables {
   TestIAMPolicyVariables( ) {
     minimalInit()
     this.host=CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private String cloudUri( String host, String servicePath ) {
@@ -84,7 +84,7 @@ class TestIAMPolicyVariables {
           })
           createAccessKey(new CreateAccessKeyRequest(userName: "admin")).with {
             accessKey?.with {
-              new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+              new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
         }
@@ -103,10 +103,13 @@ class TestIAMPolicyVariables {
           ) )
         }
         N4j.print( "Creating user ${userName}" )
-        createUser( new CreateUserRequest(
+        String userId = createUser( new CreateUserRequest(
             userName: userName,
             path: '/'
-        ) )
+        ) ).with {
+          user?.userId
+        }
+        N4j.print( "Created user with id ${userId}" )
 
         String policyName = "${namePrefix}policy1"
         N4j.print( "Creating user policy ${policyName}" )
@@ -135,12 +138,43 @@ class TestIAMPolicyVariables {
           ) )
         }
 
+        String policyName2 = "${namePrefix}policy2"
+        N4j.print( "Creating user policy ${policyName}" )
+        putUserPolicy( new PutUserPolicyRequest(
+            userName: userName,
+            policyName: policyName2,
+            policyDocument: """\
+              {
+                "Version": "2012-10-17",
+                "Statement": {
+                  "Action": "iam:ListUsers",
+                  "Effect": "Allow",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:username": "${userName}",
+                      "aws:userid": "${userId}",
+                      "aws:PrincipalType": "User"
+                    }
+                  }
+                }
+              }
+              """.stripIndent( )
+        ) )
+        cleanupTasks.add{
+          N4j.print( "Deleting user policy ${policyName2}" )
+          deleteUserPolicy( new DeleteUserPolicyRequest(
+              userName: userName,
+              policyName: policyName2
+          ) )
+        }
+
         N4j.print( "Creating access key for user ${userName}" )
         AWSCredentialsProvider userCredentials = createAccessKey( new CreateAccessKeyRequest(
             userName: userName
         ) ).with {
           accessKey.with {
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
 
@@ -203,6 +237,12 @@ class TestIAMPolicyVariables {
           N4j.assertThat( false, "Expected login profile creation to fail for admin user due to permissions" )
         } catch ( AmazonServiceException e ) {
           N4j.print( "Expected error creating login profile without permission: ${e}" )
+        }
+
+        N4j.print( "Listing users to verify policy variables as condition key" )
+        listUsers( ).with {
+          N4j.print( "Listed ${users.size()} users" )
+          N4j.assertThat( !users.isEmpty( ), "Expected users" )
         }
 
         void

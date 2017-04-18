@@ -5,9 +5,10 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.handlers.AbstractRequestHandler;
-import com.amazonaws.internal.StaticCredentialsProvider;
+import com.amazonaws.handlers.RequestHandler2;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
 import com.amazonaws.services.autoscaling.model.*;
@@ -30,12 +31,15 @@ import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersRe
 import com.amazonaws.services.identitymanagement.model.*;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.github.sjones4.youcan.youare.YouAre;
 import com.github.sjones4.youcan.youare.YouAreClient;
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
+import org.testng.SkipException;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -44,6 +48,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 class N4j {
     static String CLC_IP = System.getProperty("clcip");
@@ -52,6 +58,9 @@ class N4j {
     static String endpointFile = System.getProperty("endpoints");
     static String LOCAL_INI_FILE = System.getProperty("inifile", "euca-admin.ini");
     static String REMOTE_INI_FILE ="/root/.euca/euca-admin.ini";
+    static String LOCAL_EUCTL_FILE = System.getProperty("euctlfile", "euctl.ini");
+    static String REMOTE_EUCTL_FILE ="/root/euctl.ini";
+
     static Logger logger = Logger.getLogger(N4j.class.getCanonicalName());
     static String EC2_ENDPOINT = null;
     static String AS_ENDPOINT = null;
@@ -59,6 +68,7 @@ class N4j {
     static String IAM_ENDPOINT = null;
     static String CW_ENDPOINT = null;
     static String S3_ENDPOINT = null;
+    static String SQS_ENDPOINT = null;
     static String TOKENS_ENDPOINT = null;
     static String SECRET_KEY = null;
     static String ACCESS_KEY = null;
@@ -70,6 +80,7 @@ class N4j {
     static AmazonElasticLoadBalancing elb;
     static AmazonCloudWatch cw;
     static AmazonS3 s3;
+    static AmazonSQS sqs;
     static YouAre youAre;
     static String IMAGE_ID = null;
     static String KERNEL_ID = null;
@@ -119,6 +130,26 @@ class N4j {
         NAME_PREFIX = eucaUUID() + "-";
         print("Using resource prefix for test: " + NAME_PREFIX);
         print("Cloud Discovery Complete");
+    }
+
+    public static void getCloudInfoAndSqs() throws Exception {
+        getCloudInfo();
+        getConfigProperties(CLC_IP, USER, PASSWORD);
+        print("Getting sqs info from " + LOCAL_INI_FILE);
+        SQS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "simplequeue-url");
+        // In case we don't put the sqs endpoint in there, use another one
+        if (SQS_ENDPOINT == null) {
+          SQS_ENDPOINT = S3_ENDPOINT.replace("s3.","simplequeue.");
+        }
+        sqs = getSqsClient(ACCESS_KEY, SECRET_KEY, SQS_ENDPOINT);
+    }
+
+    public static AmazonSQS getSqsClientWithNewAccount(String account, String user) throws Exception {
+        if (SQS_ENDPOINT == null) {
+            throw new Exception("Please run getCloudInfoAndSQS() first");
+        }
+        AWSCredentials creds = getUserCreds(account, user);
+        return getSqsClient(creds.getAWSAccessKeyId(), creds.getAWSSecretKey(), SQS_ENDPOINT);
     }
 
     // Quick way to initialize just the S3 client without initializing other clients in getCloudInfo().
@@ -269,6 +300,51 @@ class N4j {
         getRemoteFile(clcip, user, password, REMOTE_INI_FILE, "euca-admin.ini");
     }
 
+    public static void getConfigProperties(String clcip, String user, String password) {
+        print("CLC IP: " + clcip);
+
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(user, clcip, 22);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            print("Establishing Connection...");
+            session.connect();
+            print("Connection established.");
+
+
+            print("Creating config properties: " + REMOTE_EUCTL_FILE);
+            String command = "eval `clcadmin-assume-system-credentials`; " +
+                "euctl > " + REMOTE_EUCTL_FILE;
+            Channel channel=session.openChannel("exec");
+            ((ChannelExec)channel).setCommand(command);
+            channel.connect();
+            InputStream in=channel.getInputStream();
+            byte[] tmp=new byte[1024];
+            while(true){
+                while(in.available()>0){
+                    int i=in.read(tmp, 0, 1024);
+                    if(i<0)break;
+                    print(new String(tmp, 0, i));
+                }
+                if(channel.isClosed()){
+                    if(in.available()>0) continue;
+                    print("Creating config properties exit-status: "+channel.getExitStatus());
+                    break;
+                }
+                try{Thread.sleep(1000);}catch(Exception ee){}
+            }
+            channel.disconnect();
+            session.disconnect();
+        }
+        catch(JSchException | IOException e) {
+            System.err.print(e);
+        }
+        print("Fetching " + REMOTE_EUCTL_FILE + " file");
+        getRemoteFile(clcip, user, password, REMOTE_EUCTL_FILE, LOCAL_EUCTL_FILE);
+    }
+
+
     public static void getRemoteFile(String clcip, String user, String password, String remoteFile, String localFile) {
         try
         {
@@ -377,6 +453,14 @@ class N4j {
         return as;
     }
 
+      static AmazonSQS getSqsClient(String accessKey, String secretKey,
+                                    String endpoint) {
+        AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
+        final AmazonSQS sqs = new AmazonSQSClient(creds);
+        sqs.setEndpoint(endpoint);
+        return sqs;
+    }
+
     private static AmazonElasticLoadBalancing getElbClient(String accessKey, String secretKey,
                                                            String endpoint) {
         AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
@@ -389,11 +473,12 @@ class N4j {
      * The YouAre interface extends AmazonIdentityManagement so you have the
      * regular IAM actions plus (a few) Euare specific ones.
      */
-    public static YouAre getYouAreClient(String accessKey, String secretKey,
-                                                        String endpoint) {
-        AWSCredentialsProvider awsCredentialsProvider =
-                new StaticCredentialsProvider( new BasicAWSCredentials(accessKey, secretKey));
-        final YouAre youAre = new YouAreClient(awsCredentialsProvider);
+    public static YouAre getYouAreClient(String accessKey, String secretKey, String endpoint) {
+        return getYouAreClient( new BasicAWSCredentials(accessKey, secretKey), endpoint );
+    }
+
+    public static YouAre getYouAreClient(AWSCredentials credentials, String endpoint) {
+        final YouAre youAre = new YouAreClient(credentials);
         youAre.setEndpoint(endpoint);
         return youAre;
     }
@@ -416,6 +501,35 @@ class N4j {
             new AmazonS3Client(credentials, new ClientConfiguration( ).withSignerOverride("S3SignerType"));
         s3.setEndpoint(endpoint);
         return s3;
+    }
+
+    public static String getConfigProperty(String configPath, String field) throws IOException {
+        Charset charset = Charset.forName("UTF-8");
+        String result = null;
+        try {
+            List<String> lines = Files.readAllLines(Paths.get(configPath), charset);
+            for (String line : lines) {
+                if (line.contains(field)) {
+                    result = line.substring(line.indexOf('=') + 2);
+                    break;
+                }
+            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+        return result;
+    }
+
+    public static AmazonS3 getS3SigV4Client(AWSCredentials credentials, String endpoint) {
+        return getS3SigV4Client( new AWSStaticCredentialsProvider( credentials ), endpoint );
+    }
+
+    public static AmazonS3 getS3SigV4Client(AWSCredentialsProvider credentials, String endpoint) {
+        return AmazonS3Client.builder( )
+            .withCredentials( credentials )
+            .withClientConfiguration( new ClientConfiguration( ).withSignerOverride("AWSS3V4SignerType") )
+            .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( endpoint, "eucalyptus" ) )
+            .build( );
     }
 
     /**
@@ -456,6 +570,14 @@ class N4j {
 
     public static void assertThat(boolean condition, String message) {
         assert condition : message;
+    }
+
+    /**
+     * Skip a test without failure if an assumption is false
+     */
+    public static void assumeThat(boolean condition, String message) {
+        // testng does not have an equivalent of junits Assume.*
+        if (!condition) throw new SkipException( message );
     }
 
     public static void print(String text) {
@@ -507,66 +629,66 @@ class N4j {
 
     public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
                                            final boolean asString) throws Exception {
+        return waitForInstances( timeout, expectedCount, groupName, asString, Collections.emptyList( ) );
+    }
+
+    public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
+                                           final boolean asString, final Collection<String> ignoreIds) throws Exception {
         final long startTime = System.currentTimeMillis();
         boolean completed = false;
-        if (asString) {
-            List<?> instanceIds = Collections.emptyList();
-            while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
-                Thread.sleep(5000);
-                instanceIds = getInstancesForGroup(groupName, "running", true);
-                completed = instanceIds.size() == expectedCount;
-            }
-            assertThat(completed, "Instances count did not change to " + expectedCount + " within the expected timeout");
-            print("Instance count changed in " + (System.currentTimeMillis() - startTime) + "ms");
-            return instanceIds;
-        } else {
-            List<?> instances = Collections.emptyList();
-            while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
-                Thread.sleep(5000);
-                instances = getInstancesForGroup(groupName, "running", false);
-                completed = instances.size() == expectedCount;
-            }
-            assertThat(completed, "Instances count did not change to " + expectedCount + " within the expected timeout");
-            print("Instance count changed in " + (System.currentTimeMillis() - startTime) + "ms");
-            return instances;
+        List<Instance> instances = Collections.emptyList();
+        while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
+            Thread.sleep(5000);
+            instances = getInstancesForGroup(groupName, "running", Function.identity( ) );
+            completed =
+                instances.stream( ).filter( instance -> !ignoreIds.contains( instance.getInstanceId( ) ) ).count( ) ==
+                    expectedCount;
         }
+        assertThat(completed, "Instances count did not change to " + expectedCount + " within the expected timeout");
+        print("Instance count changed in " + (System.currentTimeMillis() - startTime) + "ms");
+        return asString ?
+            instances.stream( ).map( Instance::getInstanceId ).collect( Collectors.toList( ) ):
+            instances;
     }
 
     public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
+        if ( asString ) {
+            return getInstancesForGroup( groupName, status, Instance::getInstanceId );
+        } else {
+            return getInstancesForGroup( groupName, status, Function.identity( ) );
+        }
+    }
+
+    public static <T> List<T> getInstancesForGroup( final String groupName, final String status,
+                                                    final Function<Instance,T> resultTransform ) {
         final DescribeInstancesResult instancesResult = ec2
                 .describeInstances(new DescribeInstancesRequest()
                         .withFilters(new Filter()
                                 .withName("tag:aws:autoscaling:groupName")
                                 .withValues(groupName)));
-        if (asString) {
-            final List<String> instanceIds = new ArrayList<String>();
-            for (final Reservation reservation : instancesResult.getReservations()) {
-                for (final Instance instance : reservation.getInstances()) {
-                    if (status == null || instance.getState() == null
-                            || status.equals(instance.getState().getName())) {
-                        instanceIds.add(instance.getInstanceId());
-                    }
+        final List<T> instanceIds = new ArrayList<>();
+        for (final Reservation reservation : instancesResult.getReservations()) {
+            for (final Instance instance : reservation.getInstances()) {
+                if (status == null || instance.getState() == null
+                        || status.equals(instance.getState().getName())) {
+                    instanceIds.add(resultTransform.apply(instance));
                 }
             }
-            return instanceIds;
-        } else {
-            final List<Instance> instances = new ArrayList<Instance>();
-            for (final Reservation reservation : instancesResult.getReservations()) {
-                for (final Instance instance : reservation.getInstances()) {
-                    if (status == null || instance.getState() == null
-                            || status.equals(instance.getState().getName())) {
-                        instances.add(instance);
-                    }
-                }
-            }
-            return instances;
         }
+        return instanceIds;
     }
 
     /**
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
      */
     public static void waitForInstances(final long timeout) {
+        waitForInstances(ec2,timeout);
+    }
+
+    /**
+     * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
+     */
+    public static void waitForInstances(final AmazonEC2 ec2, final long timeout) {
         final long startTime = System.currentTimeMillis();
         withWhile:
         while (true) {
@@ -590,6 +712,37 @@ class N4j {
                 }
             }
             break;
+        }
+    }
+
+    /**
+     * Wait for volumes to be attached / detached
+     */
+    public static void waitForVolumeAttachments(final long timeout) {
+        waitForVolumeAttachments(ec2, timeout);
+    }
+
+    /**
+     * Wait for volumes to be attached / detached
+     */
+    public static void waitForVolumeAttachments(final AmazonEC2 ec2, final long timeout) {
+        final long startTime = System.currentTimeMillis();
+        while (true) {
+            if ((System.currentTimeMillis() - startTime) > timeout) {
+                throw new IllegalStateException("Volume attachment wait timed out");
+            }
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            DescribeVolumesResult result = ec2.describeVolumes(
+                new DescribeVolumesRequest( )
+                    .withFilters( new Filter( "attachment.status", Arrays.asList( "attaching", "detaching" ) ) )
+            );
+            if ( result.getVolumes( ).isEmpty( ) ) {
+                break;
+            }
         }
     }
 
@@ -1113,11 +1266,11 @@ class N4j {
     }
 
     public static void createIAMPolicy(final String accountName, String userName, String policyName, String policyDocument) {
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
@@ -1142,12 +1295,31 @@ class N4j {
         print("Created policy: " + policyName);
     }
 
-    public static AWSCredentials getUserCreds(final String accountName, String userName) {
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+    public static void deleteIAMPolicy(final String accountName, String userName, String policyName) {
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
+            public void beforeRequest(final Request<?> request) {
+                request.addParameter("DelegateAccount", accountName);
+            }
+        });
+
+
+        DeleteUserPolicyRequest deleteUserPolicyRequest = new DeleteUserPolicyRequest()
+          .withPolicyName(policyName)
+          .withUserName(userName);
+        youAre.deleteUserPolicy(deleteUserPolicyRequest);
+        print("Delete policy: " + policyName);
+    }
+
+    public static AWSCredentials getUserCreds(final String accountName, String userName) {
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
+        youAre.setEndpoint(IAM_ENDPOINT);
+
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
@@ -1190,11 +1362,11 @@ class N4j {
     }
 
     public static void createUser(final String accountName, String userName){
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }
@@ -1213,11 +1385,11 @@ class N4j {
     public static Map<String, String> getUserKeys(final String accountName, String userName){
         Map<String, String> keys = new HashMap<>();
 
-        AWSCredentialsProvider awsCredentialsProvider = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
-        youAre.addRequestHandler(new AbstractRequestHandler() {
+        youAre.addRequestHandler(new RequestHandler2() {
             public void beforeRequest(final Request<?> request) {
                 request.addParameter("DelegateAccount", accountName);
             }

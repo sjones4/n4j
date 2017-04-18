@@ -1,12 +1,19 @@
 package com.eucalyptus.tests.awssdk;
 
+import static com.eucalyptus.tests.awssdk.N4j.S3_ENDPOINT;
 import static com.eucalyptus.tests.awssdk.N4j.assertThat;
 import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
+import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -19,7 +26,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.Request;
+import com.amazonaws.Response;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
@@ -30,26 +41,29 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.GroupGrantee;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SetBucketLoggingConfigurationRequest;
 import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.TagSet;
+import com.google.common.io.ByteStreams;
 
 /**
  * <p>
  * This class contains tests for basic operations on S3 buckets.
  * </p>
- * 
+ *
  * <p>
  * {@link #versioningConfiguration()} fails against Walrus due to <a href="https://eucalyptus.atlassian.net/browse/EUCA-7635">EUCA-7635</a>
  * </p>
- * 
+ *
  * <p>
  * {@link #unimplementedOps()} passes only against Walrus as the APIs are not implemented by Walrus
- * 
+ *
  * @author Swathi Gangisetty
- * 
+ *
  */
 public class S3BucketTests {
 
@@ -64,6 +78,7 @@ public class S3BucketTests {
   @BeforeClass
   public void init() throws Exception {
     print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+    System.setProperty("sun.net.http.allowRestrictedHeaders", "true"); // enable host header override for cname test
     try {
       account = this.getClass().getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
@@ -119,7 +134,7 @@ public class S3BucketTests {
 
   /**
    * Tests for the following S3 APIs
-   * 
+   *
    * <li>createBucket</li> <li>deleteBucket</li> <li>listBuckets</li> <li>doesBucketExist</li> <li>getBucketLocation</li> <li>
    * getBucketLoggingConfiguration</li> <li>getBucketVersioningConfiguration</li>
    */
@@ -178,17 +193,6 @@ public class S3BucketTests {
 
     error = false;
     try {
-      print(account + ": Fetching bucket policy for " + bucketName);
-      s3.getBucketPolicy(bucketName);
-    } catch (AmazonServiceException ase) {
-      verifyException(ase);
-      error = true;
-    } finally {
-      assertTrue("Expected to receive a 501 NotImplemented error but did not", error);
-    }
-
-    error = false;
-    try {
       print(account + ": Fetching bucket notification configuration for " + bucketName);
       s3.getBucketNotificationConfiguration(bucketName);
     } catch (AmazonServiceException ase) {
@@ -241,9 +245,9 @@ public class S3BucketTests {
 
       print(account + ": Getting ACL for bucket " + bucketName);
       AccessControlList acl = s3.getBucketAcl(bucketName);
-      assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + acl.getGrants().size(), acl.getGrants().size() == 3);
+      assertTrue("Mismatch in number of ACLs associated with the bucket. Expected 3 but got " + acl.getGrantsAsList().size(), acl.getGrantsAsList().size() == 3);
 
-      Iterator<Grant> iterator = acl.getGrants().iterator();
+      Iterator<Grant> iterator = acl.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         if (grant.getGrantee() instanceof CanonicalGrantee) {
@@ -279,10 +283,10 @@ public class S3BucketTests {
 
   /**
    * Test for changing versioning configuration of a bucket and verifying it.
-   * 
+   *
    * Test failed against Walrus. Versioning configuration cannot be turned OFF once its ENABLED/SUSPENDED on a bucket. While S3 throws an exception
    * for such a request, Walrus does not. The versioning configuration remains unchanged but no error is received.</p>
-   * 
+   *
    * @see <a href="https://eucalyptus.atlassian.net/browse/EUCA-7635">EUCA-7635</a>
    */
   @Test
@@ -350,7 +354,16 @@ public class S3BucketTests {
     List<TagSet> tagSetList = new ArrayList<TagSet>();
     tagSetList.add(tagSet1);
     bucketTaggingConfiguration.setTagSets(tagSetList);
+    final RequestHandler2 statusCodeCheckingHandler = new RequestHandler2( ) {
+      @Override
+      public void afterResponse( final Request<?> request, final Response<?> response ) {
+        print(account + ": Got response status code " + response.getHttpResponse( ).getStatusCode( ));
+        assertEquals( "Status code", 204, response.getHttpResponse( ).getStatusCode( ) );
+      }
+    };
+    ((AmazonS3Client)s3).addRequestHandler( statusCodeCheckingHandler );
     s3.setBucketTaggingConfiguration(bucketName, bucketTaggingConfiguration);
+    ((AmazonS3Client)s3).removeRequestHandler( statusCodeCheckingHandler );
 
     print(account + ": Getting TagSets for bucket '" + bucketName + "'");
     List<TagSet> tagSets = bucketTaggingConfiguration.getAllTagSets();
@@ -402,6 +415,48 @@ public class S3BucketTests {
     } catch (AmazonS3Exception e) {
       assertTrue("Expected StatusCode 400 found: " + e.getStatusCode(), e.getStatusCode() == 400);
       assertTrue("Expected StatusCode MalformedXML found: " + e.getErrorCode(), e.getErrorCode().equals("MalformedXML"));
+    }
+  }
+
+  @Test
+  public void testBucketVhostAndCname( ) throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - testBucketVhostAndCname");
+
+    print(account + ": Putting hello.txt object for public read");
+    s3.putObject( new PutObjectRequest(
+        bucketName,
+        "hello.txt",
+        new ByteArrayInputStream( "hello".getBytes( StandardCharsets.UTF_8 ) ),
+        new ObjectMetadata( )
+    ).withCannedAcl( CannedAccessControlList.PublicRead ) );
+
+    cleanupTasks.add( () -> {
+      print(account + ": Deleting hello.txt object");
+      s3.deleteObject(bucketName, "hello.txt");
+    } );
+
+    // vhost
+    {
+      String urlText = S3_ENDPOINT.replace( "http://", "http://" + bucketName + "." ) + "hello.txt";
+      print( account + ": Accessing object @ " + urlText );
+      URL url = new URL( urlText );
+      String content =  new String( ByteStreams.toByteArray( (InputStream) url.getContent( ) ) );
+      print( account + ": got " + content );
+      assertEquals( "Content", "hello", content );
+    }
+
+    // cname
+    {
+      String urlText = S3_ENDPOINT + "hello.txt";
+      URL url = new URL( urlText );
+      String hostHeader = bucketName + ":" + url.getPort( );
+      print( account + ": Accessing object using host header " + hostHeader );
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setDoOutput( true );
+      conn.setRequestProperty( "Host", hostHeader );
+      String content = new String( ByteStreams.toByteArray( (InputStream) conn.getContent( ) ) );
+      print( account + ": got " + content );
+      assertEquals( "Content", "hello", content );
     }
   }
 

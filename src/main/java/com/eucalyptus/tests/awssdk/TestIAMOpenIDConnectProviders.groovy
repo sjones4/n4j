@@ -3,8 +3,8 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement
 import com.amazonaws.services.identitymanagement.model.AddClientIDToOpenIDConnectProviderRequest
 import com.amazonaws.services.identitymanagement.model.CreateAccessKeyRequest
@@ -53,7 +53,7 @@ class TestIAMOpenIDConnectProviders {
     this.host = CLC_IP
     this.testAcct= "${NAME_PREFIX}oidc-test-acct"
     N4j.createAccount(testAcct)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
+    this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
   }
 
   @AfterClass
@@ -374,7 +374,7 @@ class TestIAMOpenIDConnectProviders {
               N4j.print "Deleting access key ${accessKeyId} for user ${userName}"
               deleteAccessKey( new DeleteAccessKeyRequest( userName: userName, accessKeyId: accessKeyId ) )
             }
-            new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
+            new AWSStaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
           }
         }
       }

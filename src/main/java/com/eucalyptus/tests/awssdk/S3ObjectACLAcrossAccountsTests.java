@@ -40,10 +40,10 @@ import com.amazonaws.util.Md5Utils;
  * </p>Amazon S3 supports a set of predefined grants, known as canned ACLs. Each canned ACL has a predefined a set of grantees and permissions. This
  * class contains tests for creating buckets with canned ACLs. After a bucket is successfully created, the bucket ACL is fetched and verified against
  * the canned ACL definition.</p>
- * 
+ *
  * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ACLOverview.html">S3 Access Control Lists</a>
  * @author Swathi Gangisetty
- * 
+ *
  */
 public class S3ObjectACLAcrossAccountsTests {
 
@@ -121,7 +121,7 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>bucket-owner-full-control</code> canned ACL on object
    * </p>
-   * 
+   *
    * <p>
    * S3: Initially, the bucket owner has FULL_CONTROL permission on both the bucket and the object. Object owner has FULL_CONTROL permission on the
    * object. As the bucket owner, change the canned ACL on the object to <code>private</code>. This reduces the number of grants on the object to 1.
@@ -129,14 +129,14 @@ public class S3ObjectACLAcrossAccountsTests {
    * have READ_ACP permission since he/she can get the ACL for the object. Object owner cannot get the object i.e. object owner does not have READ
    * permission on the object
    * </p>
-   * 
+   *
    * <p>
    * Walrus: Initially, the bucket owner has FULL_CONTROL permission on both the bucket and the object. Though not listed in the object ACL, object
    * owner has FULL_CONTROL permission on the object. As the bucket owner, change the canned ACL on the object to <code>private</code>. This reduces
    * the number of grants on the object to 1. Object owner continues to have FULL_CONTROL permission on the object, and is listed in the object ACL.
    * Bucket owner has no listed permissions in the ACL and does not seem to have READ_ACP, WRITE_ACP or READ permissions
    * </p>
-   * 
+   *
    * @see <a href="https://eucalyptus.atlassian.net/browse/EUCA-7712">EUCA-7712</a>
    */
   // @Test
@@ -153,9 +153,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 2);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -215,14 +215,14 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>bucket-owner-full-control</code> canned ACL on object
    * </p>
-   * 
+   *
    * <p>
    * S3: Initially, the bucket owner has FULL_CONTROL permission on both the bucket and the object. Object owner has FULL_CONTROL permission on the
    * object. As the object owner, change the canned ACL on the object to <code>private</code>. This reduces the number of grants on the object to 1.
    * Object owner continues to have FULL_CONTROL permission on the object, bucket owner has no listed permissions. Bucket owner cannot get the object
    * or the ACL for the object i.e. bucket owner does not have READ and READ_ACP permissions on the object
    * </p>
-   * 
+   *
    * @see <a href="https://eucalyptus.atlassian.net/browse/EUCA-7712">EUCA-7712</a>
    */
   @Test
@@ -239,9 +239,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 2);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -299,7 +299,7 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>bucket-owner-read</code> canned ACL on object
    * </p>
-   * 
+   *
    * @see <a href="https://eucalyptus.atlassian.net/browse/EUCA-7724">EUCA-7724</a>
    */
   @Test
@@ -316,9 +316,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 2);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -364,7 +364,7 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>authenticated-read</code> canned ACL on object
    * </p>
-   * 
+   *
    * @see <a href="https://eucalyptus.atlassian.net/browse/EUCA-7728">EUCA-7728</a>
    */
   @Test
@@ -381,9 +381,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 2);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         if (grant.getGrantee() instanceof CanonicalGrantee) {
@@ -428,7 +428,7 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>public-read</code> canned ACL on object
    * </p>
-   * 
+   *
    * bug only in case of eucalyptus admin account
    */
   @Test
@@ -445,9 +445,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 2 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 2);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         if (grant.getGrantee() instanceof CanonicalGrantee) {
@@ -492,7 +492,7 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>public-read-write</code> canned ACL on object
    * </p>
-   * 
+   *
    * bug only in case of eucalyptus admin account
    */
   @Test
@@ -509,9 +509,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 3 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 3 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 3);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         if (grant.getGrantee() instanceof CanonicalGrantee) {
@@ -556,7 +556,7 @@ public class S3ObjectACLAcrossAccountsTests {
    * <p>
    * Test for <code>public-read-write</code> canned ACL on bucket and <code>private</code> canned ACL on object
    * </p>
-   * 
+   *
    * bug only in case of eucalyptus admin account
    */
   @Test
@@ -573,9 +573,9 @@ public class S3ObjectACLAcrossAccountsTests {
       /* Get object ACL as account B admin */
       print(ownerNameB + ": Getting ACL for object " + key);
       AccessControlList objectACL = s3ClientB.getObjectAcl(bucketName, key);
-      assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + objectACL.getGrants().size(), objectACL.getGrants()
+      assertTrue("Mismatch in number of ACLs associated with the object. Expected 1 but got " + objectACL.getGrantsAsList().size(), objectACL.getGrantsAsList()
           .size() == 1);
-      Iterator<Grant> iterator = objectACL.getGrants().iterator();
+      Iterator<Grant> iterator = objectACL.getGrantsAsList().iterator();
       while (iterator.hasNext()) {
         Grant grant = iterator.next();
         assertTrue("Grantee is not of type CanonicalGrantee", grant.getGrantee() instanceof CanonicalGrantee);
@@ -613,17 +613,17 @@ public class S3ObjectACLAcrossAccountsTests {
     try {
       /* Create bucket as account B admin with read-write permission for account A */
       AccessControlList acl = new AccessControlList();
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.Read));
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.Write));
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerIdB), Permission.FullControl));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.Read));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.Write));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdB), Permission.FullControl));
       createBucket(s3ClientB, ownerNameB, bucketName, acl, ownerIdB);
 
       /* Put object with as account A admin */
       acl = new AccessControlList();
-      acl.getGrants().add(new Grant(GroupGrantee.LogDelivery, Permission.ReadAcp));
-      acl.getGrants().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Read));
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerIdB), Permission.Read));
-      acl.getGrants().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.FullControl));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.LogDelivery, Permission.ReadAcp));
+      acl.getGrantsAsList().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Read));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdB), Permission.Read));
+      acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.FullControl));
       putObjectWithACL(s3ClientA, ownerNameA, bucketName, key, acl);
 
       /* Verify object ACLs */
