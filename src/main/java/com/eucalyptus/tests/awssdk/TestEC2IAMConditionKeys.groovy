@@ -1502,7 +1502,10 @@ class TestEC2IAMConditionKeys {
       instanceId = runInstances( new RunInstancesRequest(
           minCount: 1,
           maxCount: 1,
-          imageId: imageId
+          imageId: imageId,
+          placement: new Placement(
+              availabilityZone: availabilityZone
+          )
       ) ).with {
         reservation?.instances?.getAt(0)?.instanceId
       }
@@ -1704,7 +1707,10 @@ class TestEC2IAMConditionKeys {
         String instanceId = runInstances( new RunInstancesRequest(
             minCount: 1,
             maxCount: 1,
-            imageId: imageId
+            imageId: imageId,
+            placement: new Placement(
+                availabilityZone: availabilityZone
+            )
         ) ).with {
           reservation?.instances?.getAt(0)?.instanceId
         }
