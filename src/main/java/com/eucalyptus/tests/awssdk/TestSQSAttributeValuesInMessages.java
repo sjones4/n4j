@@ -17,6 +17,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.net.URL;
@@ -92,8 +94,22 @@ public class TestSQSAttributeValuesInMessages {
   }
 
   @Test
-  public void testAttributeValuesInMessages() throws Exception {
+  @Parameters("concise")
+  public void testAttributeValuesInMessages(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testAttributeValuesInMessages");
+
+    long PAUSE_TIME;
+    int MAX_NUM_RECEIVES;
+
+    if (concise) {
+      // cut the time/operations a little during a concise test
+      PAUSE_TIME = 15000L;
+      MAX_NUM_RECEIVES = 10;
+    } else {
+      PAUSE_TIME = 30000L;
+      MAX_NUM_RECEIVES = 50;
+    }
+
     String queueName = "queue_name_attributes_in_message";
     int errorSecs = 5;
 
@@ -114,15 +130,15 @@ public class TestSQSAttributeValuesInMessages {
     );
     long clockSkew = Math.abs(remoteQueueCreateTimeSecs - localQueueCreateTimeSecs);
 
-    Thread.sleep(30000L);
+    Thread.sleep(PAUSE_TIME);
     // now send a message
     String messageId = accountSQSClient.sendMessage(queueUrl, "hello").getMessageId();
     long localSendMessageTimeSecs = System.currentTimeMillis() / 1000;
-    Thread.sleep(30000L);
+    Thread.sleep(PAUSE_TIME);
     int numReceives = 0;
     Message lastMessage = null;
     long localFirstReceiveTimeSecs = 0; long start = System.currentTimeMillis();
-    while (numReceives < 50 && System.currentTimeMillis() - start < 120000L) {
+    while (numReceives < MAX_NUM_RECEIVES && System.currentTimeMillis() - start < 120000L) {
       ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
       receiveMessageRequest.setQueueUrl(queueUrl);
       receiveMessageRequest.setAttributeNames(Collections.singletonList("All"));

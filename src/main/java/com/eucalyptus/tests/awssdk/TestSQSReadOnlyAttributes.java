@@ -15,6 +15,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.net.URL;
@@ -81,8 +83,19 @@ public class TestSQSReadOnlyAttributes {
   }
 
   @Test
-  public void testReadOnlyAttributes() throws Exception {
+  @Parameters("concise")
+  public void testReadOnlyAttributes(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testReadOnlyAttributes");
+
+    int delaySeconds = 20;
+    if (concise) {
+      // make it faster for concise
+      delaySeconds = 10;
+    }
+
+    int visibilityTimeout = 2 * delaySeconds;
+
+    int messageRetentionPeriod = 60;
     String queueName = "queue_name_read_only_account";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
 
@@ -95,8 +108,8 @@ public class TestSQSReadOnlyAttributes {
     assertThat(queueArn.endsWith(":" + accountId + ":" + queueName), "Arn match (start)");
     assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages at all to start");
 
-    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("VisibilityTimeout","40"));
-    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("MessageRetentionPeriod","60"));
+    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("VisibilityTimeout",String.valueOf(visibilityTimeout)));
+    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("MessageRetentionPeriod",String.valueOf(messageRetentionPeriod)));
     accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds","0"));
     // add 5 'normal' messages
     Set<String> undelayedMessageIds = Sets.newHashSet();
@@ -105,7 +118,7 @@ public class TestSQSReadOnlyAttributes {
     }
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 0, 5, 0), "Should have 5 visible messages");
-    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds", "20"));
+    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds", String.valueOf(delaySeconds)));
     for (int i=0;i<3;i++) {
       accountSQSClient.sendMessage(queueUrl, "hello").getMessageId();
     }
@@ -121,15 +134,17 @@ public class TestSQSReadOnlyAttributes {
     }
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 3, 0, 5), "Should have 5 invisible messages, 3 delayed messages");
-    Thread.sleep(20000L);
+    Thread.sleep(1000L * delaySeconds);
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 0, 3, 5), "Should have 5 invisible messages, 3 visible messages");
-    Thread.sleep(20000L);
+    Thread.sleep(1000L * delaySeconds);
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 0, 8, 0), "Should have 8 visible messages");
-    Thread.sleep(20000L);
-    getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
-    assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages (all expired)");
+    if (!concise) {
+      Thread.sleep(1000L * (messageRetentionPeriod - 2 * delaySeconds));
+      getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
+      assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages (all expired)");
+    }
   }
 
   private boolean numbersMatch(GetQueueAttributesResult getQueueAttributesResult, int delayed, int visible, int notVisible) {

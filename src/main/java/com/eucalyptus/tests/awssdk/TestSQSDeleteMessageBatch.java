@@ -19,6 +19,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -325,7 +327,8 @@ public class TestSQSDeleteMessageBatch {
   }
 
   @Test
-  public void testDeleteMessageBatchSuccess() throws Exception {
+  @Parameters("concise")
+  public void testDeleteMessageBatchSuccess(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testDeleteMessageBatchSuccess");
     String queueName = "queue_name_delete_message_batch_success";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -369,7 +372,8 @@ public class TestSQSDeleteMessageBatch {
       "Should have successfully deleted all messages");
 
     long startTimeSecondLoop = System.currentTimeMillis();
-    while (System.currentTimeMillis() - startTimeSecondLoop < 120000L) {
+    long timeout = concise ? 30000L : 120000L;
+    while (System.currentTimeMillis() - startTimeSecondLoop < timeout) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {

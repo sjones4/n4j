@@ -19,6 +19,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -410,8 +412,14 @@ public class TestSQSChangeMessageVisibilityBatch {
   }
 
   @Test
-  public void testChangeMessageVisibilityBatchSuccess() throws Exception {
+  @Parameters("concise")
+  public void testChangeMessageVisibilityBatchSuccess(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testChangeMessageVisibilityBatchSuccess");
+
+    // use fewer batch entries in the concise case for speed
+    
+    int numBatchEntries = concise ? Math.min(2, MAX_NUM_BATCH_ENTRIES) : MAX_NUM_BATCH_ENTRIES;
+
     String queueName = "queue_name_change_message_visibility_batch_success";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
@@ -419,7 +427,7 @@ public class TestSQSChangeMessageVisibilityBatch {
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
 
     Set<String> messageIds = Sets.newHashSet();
-    for (int i = 0; i < MAX_NUM_BATCH_ENTRIES; i++) {
+    for (int i = 0; i < numBatchEntries; i++) {
       messageIds.add(accountSQSClient.sendMessage(queueUrl, "hello").getMessageId());
     }
     Map<String, String> receiptHandles = Maps.newHashMap();
@@ -428,7 +436,7 @@ public class TestSQSChangeMessageVisibilityBatch {
     receiveMessageRequest.setQueueUrl(queueUrl);
     receiveMessageRequest.setMaxNumberOfMessages(MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES);
     long startTimeFirstLoop = System.currentTimeMillis();
-    while (receiptHandles.size() < MAX_NUM_BATCH_ENTRIES && System.currentTimeMillis() - startTimeFirstLoop < 120000L) {
+    while (receiptHandles.size() < numBatchEntries && System.currentTimeMillis() - startTimeFirstLoop < 120000L) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {
@@ -437,7 +445,7 @@ public class TestSQSChangeMessageVisibilityBatch {
         }
       }
     }
-    assertThat(receiptHandles.size() == MAX_NUM_BATCH_ENTRIES && lastReceivedTimes.size() == MAX_NUM_BATCH_ENTRIES, "We should receive all the messages in a timely manner");
+    assertThat(receiptHandles.size() == numBatchEntries && lastReceivedTimes.size() == numBatchEntries, "We should receive all the messages in a timely manner");
 
     int spacingSecs = 15;
     Map<String, Long> visibilityTimeouts = Maps.newHashMap();
@@ -456,12 +464,12 @@ public class TestSQSChangeMessageVisibilityBatch {
     ChangeMessageVisibilityBatchResult changeMessageVisibilityBatchResult =
       accountSQSClient.changeMessageVisibilityBatch(changeMessageVisibilityBatchRequest);
 
-    assertThat(changeMessageVisibilityBatchResult.getSuccessful().size() == MAX_NUM_BATCH_ENTRIES,
+    assertThat(changeMessageVisibilityBatchResult.getSuccessful().size() == numBatchEntries,
       "Should have successfully changed all visibilities");
 
     Map<String, Long> nextReceivedTimes = Maps.newHashMap();
     long startTimeSecondLoop = System.currentTimeMillis();
-    while (nextReceivedTimes.size() < MAX_NUM_BATCH_ENTRIES && System.currentTimeMillis() - startTimeSecondLoop < spacingSecs * 1000 * MAX_NUM_BATCH_ENTRIES + 120000L) {
+    while (nextReceivedTimes.size() < numBatchEntries && System.currentTimeMillis() - startTimeSecondLoop < spacingSecs * 1000 * numBatchEntries + 120000L) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {
@@ -473,7 +481,7 @@ public class TestSQSChangeMessageVisibilityBatch {
       Thread.sleep(1000L);
     }
 
-    assertThat(nextReceivedTimes.size() == MAX_NUM_BATCH_ENTRIES, "We should receive all the messages in a timely manner");
+    assertThat(nextReceivedTimes.size() == numBatchEntries, "We should receive all the messages in a timely manner");
     int errorSecs = 5;
     for (String messageId: nextReceivedTimes.keySet()) {
       assertThat(Math.abs(visibilityTimeouts.get(messageId) - (nextReceivedTimes.get(messageId) - lastReceivedTimes.get(messageId))) < errorSecs, "Visibility timeout should match how long it takes to see the message again" );
