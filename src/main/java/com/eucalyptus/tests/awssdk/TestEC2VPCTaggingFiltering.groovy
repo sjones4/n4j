@@ -3,6 +3,7 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
@@ -33,9 +34,10 @@ class TestEC2VPCTaggingFiltering {
     }
 
     private AmazonEC2 getEC2Client(final AWSCredentialsProvider credentials) {
-        final AmazonEC2 ec2 = new AmazonEC2Client(credentials)
-        ec2.setEndpoint(EC2_ENDPOINT)
-        ec2
+        AmazonEC2Client.builder( )
+            .withCredentials( credentials )
+            .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( EC2_ENDPOINT, 'eucalyptus' ) )
+            .build( )
     }
 
     private boolean assertThat(boolean condition,
@@ -324,7 +326,6 @@ class TestEC2VPCTaggingFiltering {
                 describeRouteTables(new DescribeRouteTablesRequest(
                         filters: [
                                 new Filter(name: 'association.route-table-id', values: [defaultRouteTableId]),
-                                new Filter(name: 'association.subnet-id', values: [subnetId]),
                                 new Filter(name: 'association.main', values: ['true']),
                                 new Filter(name: 'route-table-id', values: [defaultRouteTableId]),
                                 new Filter(name: 'route.destination-cidr-block', values: ['10.1.2.0/24']),
@@ -396,7 +397,7 @@ class TestEC2VPCTaggingFiltering {
                 describeSubnets(new DescribeSubnetsRequest(
                         filters: [
                                 new Filter(name: 'availability-zone', values: [availabilityZone]),
-                                new Filter(name: 'available-ip-address-count', values: ['251']),
+                                new Filter(name: 'available-ip-address-count', values: ['250']),
                                 new Filter(name: 'cidr-block', values: ['10.1.2.0/24']),
                                 new Filter(name: 'default-for-az', values: ['false']),
                                 new Filter(name: 'state', values: ['available']),
@@ -413,7 +414,7 @@ class TestEC2VPCTaggingFiltering {
                 describeSubnets(new DescribeSubnetsRequest(
                         filters: [
                                 new Filter(name: 'availability-zone', values: [availabilityZone]),
-                                new Filter(name: 'available-ip-address-count', values: ['251']),
+                                new Filter(name: 'available-ip-address-count', values: ['250']),
                                 new Filter(name: 'cidr-block', values: ['10.1.2.0/24']),
                                 new Filter(name: 'default-for-az', values: ['false']),
                                 new Filter(name: 'state', values: ['INVALID']),
