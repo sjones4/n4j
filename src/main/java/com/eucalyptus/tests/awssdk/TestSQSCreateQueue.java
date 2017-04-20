@@ -55,11 +55,11 @@ public class TestSQSCreateQueue {
       MAX_VISIBILITY_TIMEOUT = getLocalConfigInt("MAX_VISIBILITY_TIMEOUT");
       MAX_MAX_RECEIVE_COUNT = getLocalConfigInt("MAX_MAX_RECEIVE_COUNT");
       region = defaultIfNullOrJustWhitespace(getConfigProperty(LOCAL_EUCTL_FILE, "region.region_name"), "eucalyptus");
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-cwm-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-cwm-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -80,7 +80,7 @@ public class TestSQSCreateQueue {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -89,7 +89,7 @@ public class TestSQSCreateQueue {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

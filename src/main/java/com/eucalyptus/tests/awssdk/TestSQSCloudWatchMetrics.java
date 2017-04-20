@@ -55,8 +55,8 @@ public class TestSQSCloudWatchMetrics {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-cw-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       AWSCredentials creds = getUserCreds(account, "admin");
       accountSQSClient = new AmazonSQSClient(
         new BasicAWSCredentials(creds.getAWSAccessKeyId(), creds.getAWSSecretKey())
@@ -85,7 +85,7 @@ public class TestSQSCloudWatchMetrics {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
   }
 

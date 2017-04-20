@@ -66,11 +66,11 @@ public class TestSQSSendMessageBatch {
       MAX_MAXIMUM_MESSAGE_SIZE = getLocalConfigInt("MAX_MAXIMUM_MESSAGE_SIZE");
       MAX_NUM_BATCH_ENTRIES = getLocalConfigInt("MAX_NUM_BATCH_ENTRIES");
       MAX_BATCH_ID_LENGTH = getLocalConfigInt("MAX_BATCH_ID_LENGTH");
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-smb-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-smb-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -91,7 +91,7 @@ public class TestSQSSendMessageBatch {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -100,7 +100,7 @@ public class TestSQSSendMessageBatch {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

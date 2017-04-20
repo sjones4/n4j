@@ -44,11 +44,11 @@ public class TestSQSReadOnlyAttributes {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-roa-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-roa-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -69,7 +69,7 @@ public class TestSQSReadOnlyAttributes {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -78,7 +78,7 @@ public class TestSQSReadOnlyAttributes {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

@@ -81,17 +81,17 @@ public class TestSQSIAMPolicies {
     try {
       getCloudInfoAndSqs();
       authorizationExpiryMs = parseInterval(getConfigProperty(LOCAL_EUCTL_FILE, "authentication.authorization_expiry"), 5000L);
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-iam-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
       AWSCredentials accountCredentials = getUserCreds(account, "admin");
-      createUser(account, "user");
+      synchronizedCreateUser(account, "user");
       accountUserSQSClient = getSqsClientWithNewAccount(account, "user");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-iam-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
       AWSCredentials otherAccountCredentials = getUserCreds(otherAccount, "admin");
-      createUser(otherAccount, "user");
+      synchronizedCreateUser(otherAccount, "user");
       otherAccountUserSQSClient = getSqsClientWithNewAccount(otherAccount, "user");
     } catch (Exception e) {
       try {
@@ -112,7 +112,7 @@ public class TestSQSIAMPolicies {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -121,7 +121,7 @@ public class TestSQSIAMPolicies {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

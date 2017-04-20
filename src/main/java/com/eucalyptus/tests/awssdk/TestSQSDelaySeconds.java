@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
-import static com.eucalyptus.tests.awssdk.N4j.deleteAccount;
+import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
 
 /**
  * Created by ethomas on 10/4/16.
@@ -41,11 +41,11 @@ public class TestSQSDelaySeconds {
     try {
       getCloudInfoAndSqs();
       MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES = getLocalConfigInt("MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES");
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-ds-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-ds-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -66,7 +66,7 @@ public class TestSQSDelaySeconds {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -75,7 +75,7 @@ public class TestSQSDelaySeconds {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

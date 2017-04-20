@@ -13,7 +13,7 @@ import org.testng.annotations.Test;
 import java.util.Collections;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
-import static com.eucalyptus.tests.awssdk.N4j.deleteAccount;
+import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
 
 /**
  * Created by ethomas on 10/6/16.
@@ -31,11 +31,11 @@ public class TestSQSDeadLetterQueue {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-dlq-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-dlq-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -56,7 +56,7 @@ public class TestSQSDeadLetterQueue {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -65,7 +65,7 @@ public class TestSQSDeadLetterQueue {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

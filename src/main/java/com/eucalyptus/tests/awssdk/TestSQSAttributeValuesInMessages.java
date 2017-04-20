@@ -46,8 +46,8 @@ public class TestSQSAttributeValuesInMessages {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-avim-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       AWSCredentials creds = getUserCreds(account, "admin");
       accountSQSClient = new AmazonSQSClient(
         new BasicAWSCredentials(creds.getAWSAccessKeyId(), creds.getAWSSecretKey())
@@ -58,8 +58,8 @@ public class TestSQSAttributeValuesInMessages {
       );
       accountIAMClient.setEndpoint(IAM_ENDPOINT);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-avim-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -80,7 +80,7 @@ public class TestSQSAttributeValuesInMessages {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -89,7 +89,7 @@ public class TestSQSAttributeValuesInMessages {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

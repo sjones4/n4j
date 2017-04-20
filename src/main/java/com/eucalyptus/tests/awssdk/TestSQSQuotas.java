@@ -56,8 +56,8 @@ public class TestSQSQuotas {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-quo-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
     } catch (Exception e) {
       try {
@@ -78,7 +78,7 @@ public class TestSQSQuotas {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
   }
 
