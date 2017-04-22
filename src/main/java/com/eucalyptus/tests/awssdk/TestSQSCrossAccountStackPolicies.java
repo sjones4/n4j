@@ -81,13 +81,13 @@ public class TestSQSCrossAccountStackPolicies {
     try {
       getCloudInfoAndSqs();
       authorizationExpiryMs = parseInterval(getConfigProperty(LOCAL_EUCTL_FILE, "authentication.authorization_expiry"), 5000L);
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-casp-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-casp-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
-      createUser(otherAccount, "user");
+      synchronizedCreateUser(otherAccount, "user");
       otherAccountUserSQSClient = getSqsClientWithNewAccount(otherAccount, "user");
       String otherQueueUrl = otherAccountSQSClient.createQueue("placeholder").getQueueUrl();
       List<String> otherPathParts = Lists.newArrayList(Splitter.on('/').omitEmptyStrings().split(new URL(otherQueueUrl).getPath()));
@@ -111,7 +111,7 @@ public class TestSQSCrossAccountStackPolicies {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -120,7 +120,7 @@ public class TestSQSCrossAccountStackPolicies {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

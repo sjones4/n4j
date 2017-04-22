@@ -132,7 +132,9 @@ class N4j {
         print("Cloud Discovery Complete");
     }
 
-    public static void getCloudInfoAndSqs() throws Exception {
+    private static boolean cloudInfoAndSqsLoaded = false;
+    public static synchronized void getCloudInfoAndSqs() throws Exception {
+        if (cloudInfoAndSqsLoaded) return;
         getCloudInfo();
         getConfigProperties(CLC_IP, USER, PASSWORD);
         print("Getting sqs info from " + LOCAL_INI_FILE);
@@ -142,6 +144,7 @@ class N4j {
           SQS_ENDPOINT = S3_ENDPOINT.replace("s3.","simplequeue.");
         }
         sqs = getSqsClient(ACCESS_KEY, SECRET_KEY, SQS_ENDPOINT);
+        cloudInfoAndSqsLoaded = true;
     }
 
     public static AmazonSQS getSqsClientWithNewAccount(String account, String user) throws Exception {
@@ -1344,6 +1347,9 @@ class N4j {
         return new BasicAWSCredentials(accessKey, secretKey);
     }
 
+    public static synchronized void synchronizedCreateAccount(String accountName) {
+        createAccount(accountName);
+    }
     public static void createAccount(String accountName) {
         int numAccountsBefore = youAre.listAccounts().getAccounts().size();
         CreateAccountRequest createAccountRequest = new CreateAccountRequest().withAccountName(accountName);
@@ -1352,6 +1358,9 @@ class N4j {
         print("Created account: " + accountName);
     }
 
+    public static synchronized void synchronizedDeleteAccount(String accountName) {
+        deleteAccount(accountName);
+    }
     public static void deleteAccount(String accountName){
         int numAccountsBefore = youAre.listAccounts().getAccounts().size();
         DeleteAccountRequest deleteAccountRequest = new DeleteAccountRequest().withAccountName(accountName).withRecursive(Boolean.TRUE);
@@ -1359,6 +1368,10 @@ class N4j {
         assertThat((numAccountsBefore > youAre.listAccounts().getAccounts().size()),"Failed to delete account " + accountName);
         print("Deleted account: " + accountName);
 
+    }
+
+    public static synchronized void synchronizedCreateUser(final String accountName, String userName) {
+        createUser(accountName, userName);
     }
 
     public static void createUser(final String accountName, String userName){
@@ -1381,6 +1394,7 @@ class N4j {
         assertThat((numUsersBefore < youAre.listUsers().getUsers().size()), "Failed to create user " + userName);
         print("Created new user " + userName + " in account " + accountName);
     }
+
 
     public static Map<String, String> getUserKeys(final String accountName, String userName){
         Map<String, String> keys = new HashMap<>();

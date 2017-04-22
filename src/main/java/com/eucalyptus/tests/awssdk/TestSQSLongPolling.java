@@ -58,8 +58,8 @@ public class TestSQSLongPolling {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-lp-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
       pool = Executors.newFixedThreadPool(3);
     } catch (Exception e) {
@@ -81,7 +81,7 @@ public class TestSQSLongPolling {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
       if (pool != null) {
         pool.shutdown();
       }

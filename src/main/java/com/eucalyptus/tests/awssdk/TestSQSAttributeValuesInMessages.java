@@ -17,6 +17,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.net.URL;
@@ -44,8 +46,8 @@ public class TestSQSAttributeValuesInMessages {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-avim-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       AWSCredentials creds = getUserCreds(account, "admin");
       accountSQSClient = new AmazonSQSClient(
         new BasicAWSCredentials(creds.getAWSAccessKeyId(), creds.getAWSSecretKey())
@@ -56,8 +58,8 @@ public class TestSQSAttributeValuesInMessages {
       );
       accountIAMClient.setEndpoint(IAM_ENDPOINT);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-avim-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -78,7 +80,7 @@ public class TestSQSAttributeValuesInMessages {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -87,13 +89,27 @@ public class TestSQSAttributeValuesInMessages {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 
   @Test
-  public void testAttributeValuesInMessages() throws Exception {
+  @Parameters("concise")
+  public void testAttributeValuesInMessages(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testAttributeValuesInMessages");
+
+    long PAUSE_TIME;
+    int MAX_NUM_RECEIVES;
+
+    if (concise) {
+      // cut the time/operations a little during a concise test
+      PAUSE_TIME = 15000L;
+      MAX_NUM_RECEIVES = 10;
+    } else {
+      PAUSE_TIME = 30000L;
+      MAX_NUM_RECEIVES = 50;
+    }
+
     String queueName = "queue_name_attributes_in_message";
     int errorSecs = 5;
 
@@ -114,15 +130,15 @@ public class TestSQSAttributeValuesInMessages {
     );
     long clockSkew = Math.abs(remoteQueueCreateTimeSecs - localQueueCreateTimeSecs);
 
-    Thread.sleep(30000L);
+    Thread.sleep(PAUSE_TIME);
     // now send a message
     String messageId = accountSQSClient.sendMessage(queueUrl, "hello").getMessageId();
     long localSendMessageTimeSecs = System.currentTimeMillis() / 1000;
-    Thread.sleep(30000L);
+    Thread.sleep(PAUSE_TIME);
     int numReceives = 0;
     Message lastMessage = null;
     long localFirstReceiveTimeSecs = 0; long start = System.currentTimeMillis();
-    while (numReceives < 50 && System.currentTimeMillis() - start < 120000L) {
+    while (numReceives < MAX_NUM_RECEIVES && System.currentTimeMillis() - start < 120000L) {
       ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
       receiveMessageRequest.setQueueUrl(queueUrl);
       receiveMessageRequest.setAttributeNames(Collections.singletonList("All"));

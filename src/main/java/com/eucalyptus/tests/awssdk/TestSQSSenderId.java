@@ -77,24 +77,24 @@ public class TestSQSSenderId {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-sid-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
 
       accountCredentials = getUserCreds(account, "admin");
       accountSQSClient = new AmazonSQSClient(accountCredentials);
       accountSQSClient.setEndpoint(SQS_ENDPOINT);
 
-      createUser(account, "user1ac1");
-      createUser(account, "user2ac1");
+      synchronizedCreateUser(account, "user1ac1");
+      synchronizedCreateUser(account, "user2ac1");
 
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-sid-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountCredentials = getUserCreds(otherAccount, "admin");
       otherAccountSQSClient = new AmazonSQSClient(otherAccountCredentials);
       otherAccountSQSClient.setEndpoint(SQS_ENDPOINT);
 
-      createUser(otherAccount, "user1ac2");
-      createUser(otherAccount, "user2ac2");
+      synchronizedCreateUser(otherAccount, "user1ac2");
+      synchronizedCreateUser(otherAccount, "user2ac2");
 
     } catch (Exception e) {
       try {
@@ -115,7 +115,7 @@ public class TestSQSSenderId {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -124,7 +124,7 @@ public class TestSQSSenderId {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 

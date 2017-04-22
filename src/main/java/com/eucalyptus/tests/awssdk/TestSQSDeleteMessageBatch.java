@@ -19,6 +19,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -54,11 +56,11 @@ public class TestSQSDeleteMessageBatch {
       MAX_NUM_BATCH_ENTRIES = getLocalConfigInt("MAX_NUM_BATCH_ENTRIES");
       MAX_BATCH_ID_LENGTH = getLocalConfigInt("MAX_BATCH_ID_LENGTH");
       MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES = getLocalConfigInt("MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES");
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-dmb-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-dmb-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -79,7 +81,7 @@ public class TestSQSDeleteMessageBatch {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -88,7 +90,7 @@ public class TestSQSDeleteMessageBatch {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 
@@ -325,7 +327,8 @@ public class TestSQSDeleteMessageBatch {
   }
 
   @Test
-  public void testDeleteMessageBatchSuccess() throws Exception {
+  @Parameters("concise")
+  public void testDeleteMessageBatchSuccess(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testDeleteMessageBatchSuccess");
     String queueName = "queue_name_delete_message_batch_success";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -369,7 +372,8 @@ public class TestSQSDeleteMessageBatch {
       "Should have successfully deleted all messages");
 
     long startTimeSecondLoop = System.currentTimeMillis();
-    while (System.currentTimeMillis() - startTimeSecondLoop < 120000L) {
+    long timeout = concise ? 30000L : 120000L;
+    while (System.currentTimeMillis() - startTimeSecondLoop < timeout) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {

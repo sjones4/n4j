@@ -11,6 +11,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Optional;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 import java.util.Collections;
@@ -35,11 +37,11 @@ public class TestSQSVisibilityTimeout {
 
     try {
       getCloudInfoAndSqs();
-      account = "sqs-account-a-" + System.currentTimeMillis();
-      createAccount(account);
+      account = "sqs-account-vt-a-" + System.currentTimeMillis();
+      synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
-      otherAccount = "sqs-account-b-" + System.currentTimeMillis();
-      createAccount(otherAccount);
+      otherAccount = "sqs-account-vt-b-" + System.currentTimeMillis();
+      synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
     } catch (Exception e) {
       try {
@@ -60,7 +62,7 @@ public class TestSQSVisibilityTimeout {
           listQueuesResult.getQueueUrls().forEach(accountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(account);
+      synchronizedDeleteAccount(account);
     }
     if (otherAccount != null) {
       if (otherAccountSQSClient != null) {
@@ -69,20 +71,23 @@ public class TestSQSVisibilityTimeout {
           listQueuesResult.getQueueUrls().forEach(otherAccountSQSClient::deleteQueue);
         }
       }
-      deleteAccount(otherAccount);
+      synchronizedDeleteAccount(otherAccount);
     }
   }
 
   @Test
-  public void testVisibilityTimeout() throws Exception {
+  @Parameters("concise")
+  public void testVisibilityTimeout(@Optional("false") boolean concise) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testVisibilityTimeout");
     String queueName = "queue_name_message_delay";
     int errorSecs = 5;
 
-    // start with a delay seconds of 15 seconds
+    int baseDelay = 15;
+    if (concise) baseDelay = 10;
+    // start with a delay seconds of base_delay seconds
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
-    createQueueRequest.getAttributes().put("VisibilityTimeout", "15");
+    createQueueRequest.getAttributes().put("VisibilityTimeout", String.valueOf(baseDelay));
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
 
     String messageId = accountSQSClient.sendMessage(queueUrl, "hello").getMessageId();
@@ -91,30 +96,31 @@ public class TestSQSVisibilityTimeout {
     // wait until we get a message id
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long secondReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(15 - (secondReceiveTime - firstReceiveTime)) < errorSecs, "Should receive the second time around 15 secs after the first");
+    assertThat(Math.abs(baseDelay - (secondReceiveTime - firstReceiveTime)) < errorSecs, "Should receive the second time around " + baseDelay+ " secs after the first");
 
     // change the delay seconds (shouldn't affect the current time)
-    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("VisibilityTimeout", "30"));
+    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("VisibilityTimeout", String.valueOf(2 * baseDelay)));
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long thirdReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(15 - (thirdReceiveTime - secondReceiveTime)) < errorSecs, "Should receive the third time around 15 secs after the second");
+    assertThat(Math.abs(baseDelay - (thirdReceiveTime - secondReceiveTime)) < errorSecs, "Should receive the third time around " + baseDelay + " secs after the second");
 
     // test override
-    receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId, 15);
+    receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId, baseDelay);
     long fourthReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(30 - (fourthReceiveTime - thirdReceiveTime)) < errorSecs, "Should receive the fourth time around 30 secs after the third");
+    assertThat(Math.abs(2 * baseDelay - (fourthReceiveTime - thirdReceiveTime)) < errorSecs, "Should receive the fourth time around " + (2 *baseDelay ) + " secs after the third");
 
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long fifthReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(15 - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around 30 secs after the fourth");
-
-    Thread.sleep(25000L);
+    assertThat(Math.abs(baseDelay - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around " + (2 * baseDelay) + " secs after the fourth");
+    if (!concise) { // no idea why this sleep is actually here, but keeping it for old compatibility, I guess
+      Thread.sleep(25000L);
+    }
     // test change message visibility
-    accountSQSClient.changeMessageVisibility(queueUrl, receiptHandle, 45);
+    accountSQSClient.changeMessageVisibility(queueUrl, receiptHandle, 3 * baseDelay);
     long startChangeMessageVisibility = System.currentTimeMillis() / 1000L;
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long sixthReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(45 - (sixthReceiveTime - startChangeMessageVisibility)) < errorSecs, "Should receive the sixth time around 45 secs after changing the message availability");
+    assertThat(Math.abs(3 * baseDelay - (sixthReceiveTime - startChangeMessageVisibility)) < errorSecs, "Should receive the sixth time around " + (3 * baseDelay) +" secs after changing the message availability");
   }
 
   private String waitUntilReceiveMessage(AmazonSQS sqsClient, String queueUrl, String messageId) throws InterruptedException {
