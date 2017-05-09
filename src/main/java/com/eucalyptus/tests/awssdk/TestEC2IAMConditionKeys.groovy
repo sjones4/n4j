@@ -17,6 +17,8 @@ import com.amazonaws.services.ec2.model.CreateNetworkAclRequest
 import com.amazonaws.services.ec2.model.CreateRouteRequest
 import com.amazonaws.services.ec2.model.CreateRouteTableRequest
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
+import com.amazonaws.services.ec2.model.CreateSnapshotRequest
+import com.amazonaws.services.ec2.model.CreateSubnetRequest
 import com.amazonaws.services.ec2.model.CreateTagsRequest
 import com.amazonaws.services.ec2.model.CreateVolumeRequest
 import com.amazonaws.services.ec2.model.CreateVpcRequest
@@ -27,10 +29,13 @@ import com.amazonaws.services.ec2.model.DeleteNetworkAclRequest
 import com.amazonaws.services.ec2.model.DeleteRouteRequest
 import com.amazonaws.services.ec2.model.DeleteRouteTableRequest
 import com.amazonaws.services.ec2.model.DeleteSecurityGroupRequest
+import com.amazonaws.services.ec2.model.DeleteSnapshotRequest
+import com.amazonaws.services.ec2.model.DeleteSubnetRequest
 import com.amazonaws.services.ec2.model.DeleteTagsRequest
 import com.amazonaws.services.ec2.model.DeleteVolumeRequest
 import com.amazonaws.services.ec2.model.DeleteVpcRequest
 import com.amazonaws.services.ec2.model.DescribeImagesRequest
+import com.amazonaws.services.ec2.model.DescribeInstanceStatusRequest
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.DescribeTagsRequest
 import com.amazonaws.services.ec2.model.DescribeVolumesRequest
@@ -74,6 +79,7 @@ import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
 import static com.eucalyptus.tests.awssdk.N4j.getUserKeys
 import static com.eucalyptus.tests.awssdk.N4j.print
 import static com.eucalyptus.tests.awssdk.N4j.waitForInstances
+import static com.eucalyptus.tests.awssdk.N4j.waitForSnapshots
 import static com.eucalyptus.tests.awssdk.N4j.waitForVolumeAttachments
 
 /**
@@ -83,6 +89,7 @@ import static com.eucalyptus.tests.awssdk.N4j.waitForVolumeAttachments
  *   https://eucalyptus.atlassian.net/browse/EUCA-8962
  *   https://eucalyptus.atlassian.net/browse/EUCA-11770
  *   https://eucalyptus.atlassian.net/browse/EUCA-13332
+ *   https://eucalyptus.atlassian.net/browse/EUCA-13333
  */
 class TestEC2IAMConditionKeys {
 
@@ -148,6 +155,96 @@ class TestEC2IAMConditionKeys {
       } catch (Exception e) {
         print("Unable to run clean up task: ${e}")
       }
+    }
+  }
+
+  /**
+   * Test creating a policy with all ec2 condition keys
+   */
+  @Test
+  void testPolicyWithEc2ConditionKeys( ) {
+    // policy is not expected to work, but should be accepted
+    accountIam.with{
+      putUserPolicy( new PutUserPolicyRequest(
+          userName: this.user,
+          policyName: 'ec2-conditions',
+          policyDocument: '''\
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:RunInstances"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "ArnEquals": {
+                      "ec2:InstanceProfile": "arn:aws:iam::123456789012:instance-profile/profile-1",
+                      "ec2:ParentSnapshot": "arn:aws:ec2::123456789012:snapshot/snap-00000000",
+                      "ec2:ParentVolume": "arn:aws:ec2::123456789012:volume/vol-00000000",
+                      "ec2:PlacementGroup": "arn:aws:ec2::123456789012:placement-group/group-1",
+                      "ec2:SourceInstanceArn": "arn:aws:ec2::123456789012:instance/i-00000000",
+                      "ec2:Subnet": "arn:aws:ec2::123456789012:subnet/subnet-00000000",
+                      "ec2:Vpc": "arn:aws:ec2::123456789012:vpc/vpc-00000000"
+                    },
+                    "Bool": {
+                      "ec2:EbsOptimized": "false",
+                      "ec2:Encrypted": "false",
+                      "ec2:Public": "true"
+                    },
+                    "DateGreaterThan": {
+                      "ec2:SnapshotTime": "2000-01-01T00:00:00Z"
+                    },
+                    "NumericGreaterThanEquals": {
+                      "ec2:VolumeIops": "1000",
+                      "ec2:VolumeSize": "1"
+                    },
+                    "StringEquals": {
+                      "ec2:AvailabilityZone": "us-west-1a",
+                      "ec2:ImageType": "emi",
+                      "ec2:InstanceType": "t1.micro",
+                      "ec2:Owner": "123456789012",
+                      "ec2:PlacementGroupStrategy": "cluster",
+                      "ec2:Region": "us-west-1",
+                      "ec2:ResourceTag/key-1": "value-1",
+                      "ec2:RootDeviceType": "instance-store",
+                      "ec2:Tenancy": "default",
+                      "ec2:VolumeType": "standard"
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "ec2:AcceptVpcPeeringConnection",
+                  "Resource": "*",
+                  "Condition": {
+                    "ArnEquals": {
+                      "ec2:AccepterVpc": "arn:aws:iam::123456789012:vpc/vpc-00000000",
+                      "ec2:RequesterVpc": "arn:aws:ec2::123456789012:vpc/vpc-00000000"
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "ec2:CreateTags",
+                  "Resource": "*",
+                  "Condition": {
+                    "ForAllValues:StringEquals": {
+                      "aws:TagKeys": [
+                        "key1",
+                        "key2"
+                      ]
+                    },
+                    "StringEquals": {
+                      "ec2:CreateAction": "CreateTags"
+                    }
+                  }
+                }
+              ]
+            }
+        '''.stripIndent( )
+      ) )
     }
   }
 
@@ -1129,6 +1226,535 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         print( "Volume tags: ${tags}" )
         Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+      }
+
+      void
+    }
+  }
+
+  /**
+   * Test permission to create tags on volumes / snapshots by resource permission
+   */
+  @Test
+  void testCreateTagsEbsResourceConditions( ) {
+    // Find an AZ to use
+    String availabilityZone = accountEc2.with {
+      describeAvailabilityZones().with {
+        availabilityZones?.getAt(0)?.zoneName
+      }
+    }
+    print("Using availability zone: ${availabilityZone}")
+    Assert.assertNotNull(availabilityZone, "Expected availability zone")
+
+    accountIam.with{
+      print( "Putting policy for user ${this.user}, authorizing conditional create tags" )
+      putUserPolicy( new PutUserPolicyRequest(
+          userName: this.user,
+          policyName: 'ec2-create-delete-tags-on-some-ebs-resources',
+          policyDocument: """\
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:Describe*",
+                        "Resource": "*"
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:CreateTags",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:snapshot/*"
+                        ],
+                        "Condition": {
+                          "StringEquals": {
+                            "ec2:Owner": "${accountNumber}"
+                          }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:CreateTags",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:volume/*"
+                        ],
+                        "Condition": {
+                          "NumericEquals": {
+                            "ec2:VolumeSize": "1"
+                          },
+                          "StringEquals": {
+                            "ec2:AvailabilityZone": "${availabilityZone}"
+                          }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [ "ec2:CreateTags", "ec2:DeleteTags" ],
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:snapshot/*",
+                          "arn:aws:ec2::${accountNumber}:volume/*"
+                        ],
+                        "Condition": {
+                          "StringEquals": {
+                            "ec2:ResourceTag/usertaggable": "indeed"
+                          }
+                        }
+                    }
+                ]
+            }
+          """.stripIndent( )
+      ) )
+    }
+
+    String volumeId_1 = null
+    String volumeId_2 = null
+    String snapshotId = null
+    accountEc2.with {
+      print( "Creating volume size 1 in availability zone: ${availabilityZone}" )
+      volumeId_1 = createVolume( new CreateVolumeRequest(
+          size: 1,
+          availabilityZone: availabilityZone
+      ) ).with {
+        volume?.volumeId
+      }
+      print( "Created volume ${volumeId_1}" )
+      Assert.assertNotNull( volumeId_1, "Expected volumeId" )
+      cleanupTasks.add{
+        print( "Deleting volume ${volumeId_1}" )
+        deleteVolume( new DeleteVolumeRequest( volumeId: volumeId_1 ) )
+      }
+
+      print( "Creating volume size 2 in availability zone: ${availabilityZone}" )
+      volumeId_2 = createVolume( new CreateVolumeRequest(
+          size: 2,
+          availabilityZone: availabilityZone
+      ) ).with {
+        volume?.volumeId
+      }
+      print( "Created volume ${volumeId_2}" )
+      Assert.assertNotNull( volumeId_2, "Expected volumeId" )
+      cleanupTasks.add{
+        print( "Deleting volume ${volumeId_2}" )
+        deleteVolume( new DeleteVolumeRequest( volumeId: volumeId_2 ) )
+      }
+
+      print( "Creating snapshot from volume ${volumeId_1}" )
+      snapshotId = createSnapshot( new CreateSnapshotRequest(
+          volumeId: volumeId_1
+      ) ).with {
+        snapshot?.snapshotId
+      }
+      print( "Created snapshot ${snapshotId}" )
+      Assert.assertNotNull( snapshotId, "Expected snapshotId" )
+      cleanupTasks.add{
+        print( "Deleting snapshot ${snapshotId}" )
+        deleteSnapshot( new DeleteSnapshotRequest( snapshotId: snapshotId ) )
+      }
+
+      print( "Waiting for snapshot to complete ${snapshotId}" )
+      waitForSnapshots( it, TimeUnit.SECONDS.toMillis( 60L ) )
+    }
+
+    AmazonEC2 userEc2 = AmazonEC2Client.builder( )
+        .withCredentials( userCredentials )
+        .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+        .build( )
+    userEc2.with {
+      try {
+        print( "Tagging volume ${volumeId_2} which has non-permitted size" )
+        createTags( new CreateTagsRequest(
+            resources: [ volumeId_2 ],
+            tags: [
+                new Tag( key: 'meaning', value: '42' ),
+            ]
+        ) )
+        print( "Describing tags for volume ${volumeId_2} to check if added" )
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new Filter( name: 'resource-id', values: [ volumeId_2 ] )
+            ]
+        ) ).with {
+          print( "Volume tags: ${tags}" )
+          Assert.assertEquals( tags.size(), 0, 'Volume tag count' )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+      }
+
+      print( "Creating volume tags ${volumeId_1}" )
+      createTags( new CreateTagsRequest(
+          resources: [ volumeId_1 ],
+          tags: [
+              new Tag( key: 'cost-center', value: '5' ),
+          ]
+      ) )
+      print( "Describing tags for volume ${volumeId_1} to verify added" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ volumeId_1 ] )
+          ]
+      ) ).with {
+        print( "Volume tags: ${tags}" )
+        Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+      }
+      try {
+        print( "Deleting volume tags ${volumeId_1} without permission (should fail)" )
+        deleteTags( new DeleteTagsRequest(
+            resources: [ volumeId_1 ],
+            tags: [
+                new Tag( key: 'cost-center' ),
+            ]
+        ) )
+        print( "Describing tags for volume ${volumeId_1} to verify not deleted" )
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new Filter( name: 'resource-id', values: [ volumeId_1 ] )
+            ]
+        ) ).with {
+          print( "Volume tags: ${tags}" )
+          Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+      }
+      print( "Creating volume tags ${volumeId_1} to add tag delete permission" )
+      createTags( new CreateTagsRequest(
+          resources: [ volumeId_1 ],
+          tags: [
+              new Tag( key: 'usertaggable', value: 'indeed' ),
+          ]
+      ) )
+      print( "Sleeping to allow tags to apply" )
+      N4j.sleep( tagWaitSeconds )
+      print( "Deleting volume tags ${volumeId_1}" )
+      deleteTags( new DeleteTagsRequest(
+          resources: [ volumeId_1 ],
+          tags: [
+              new Tag( key: 'cost-center' ),
+              new Tag( key: 'usertaggable' ),
+          ]
+      ) )
+      print( "Describing tags for volume ${volumeId_1} to verify deleted" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ volumeId_1 ] )
+          ]
+      ) ).with {
+        print( "Volume tags: ${tags}" )
+        Assert.assertEquals( tags.size(), 0, 'Volume tag count' )
+      }
+
+      print( "Creating snapshot tags ${snapshotId}" )
+      createTags( new CreateTagsRequest(
+          resources: [ snapshotId ],
+          tags: [
+              new Tag( key: 'usertaggable', value: 'indeed' ),
+          ]
+      ) )
+      print( "Describing tags for snapshot ${snapshotId} to verify added" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ snapshotId ] )
+          ]
+      ) ).with {
+        print( "Snapshot tags: ${tags}" )
+        Assert.assertEquals( tags.size(), 1, 'Snapshot tag count' )
+      }
+      print( "Sleeping to allow tags to apply" )
+      N4j.sleep( tagWaitSeconds )
+      print( "Deleting snapshot tags ${snapshotId}" )
+      deleteTags( new DeleteTagsRequest(
+          resources: [ snapshotId ],
+          tags: [
+              new Tag( key: 'usertaggable' )
+          ]
+      ) )
+      print( "Describing tags for snapshot ${snapshotId} to verify deleted" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ snapshotId ] )
+          ]
+      ) ).with {
+        print( "Snapshot tags: ${tags}" )
+        Assert.assertEquals( tags.size(), 0, 'Snapshot tag count' )
+      }
+
+      void
+    }
+  }
+
+  /**
+   * Test permission to create tags on vpc / subnet by resource permission
+   */
+  @Test
+  void testCreateTagsVpcResourceConditions( ) {
+    String vpcId_1 = null
+    String subnetId_1 = null
+    String vpcId_2 = null
+    String subnetId_2 = null
+    accountEc2.with {
+      def doCreateVpc = {
+        print( "Creating vpc" )
+        String vpcId = createVpc( new CreateVpcRequest( cidrBlock: '10.10.0.0/16' ) ).with {
+          vpc?.vpcId
+        }
+        print( "Created vpc ${vpcId}" )
+        Assert.assertNotNull( vpcId, "Expected vpcId" )
+        cleanupTasks.add{
+          print( "Deleting vpc ${vpcId}" )
+          deleteVpc( new DeleteVpcRequest( vpcId: vpcId ) )
+        }
+        vpcId
+      }
+      vpcId_1 = doCreateVpc( )
+      vpcId_2 = doCreateVpc( )
+
+      def doCreateSubnet = { String vpcId ->
+        print( "Creating subnet" )
+        String subnetId = createSubnet( new CreateSubnetRequest( vpcId: vpcId, cidrBlock: '10.10.0.0/16' ) ).with {
+          subnet?.subnetId
+        }
+        print( "Created subnet ${subnetId}" )
+        Assert.assertNotNull( subnetId, "Expected subnetId" )
+        cleanupTasks.add{
+          print( "Deleting subnet ${subnetId}" )
+          deleteSubnet( new DeleteSubnetRequest( subnetId: subnetId ) )
+        }
+        subnetId
+      }
+
+      subnetId_1 = doCreateSubnet( vpcId_1 )
+      subnetId_2 = doCreateSubnet( vpcId_2 )
+    }
+
+    accountIam.with{
+      print( "Putting policy for user ${this.user}, authorizing conditional create tags" )
+      putUserPolicy( new PutUserPolicyRequest(
+          userName: this.user,
+          policyName: 'ec2-create-delete-tags-on-some-vpc-resources',
+          policyDocument: """\
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:Describe*",
+                        "Resource": "*"
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:CreateTags",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:subnet/*"
+                        ],
+                        "Condition": {
+                          "ArnEquals": {
+                            "ec2:Vpc": "arn:aws:ec2::${accountNumber}:vpc/${vpcId_1}"
+                          }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": [ "ec2:CreateTags", "ec2:DeleteTags" ],
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:subnet/*"
+                        ],
+                        "Condition": {
+                          "StringEquals": {
+                            "ec2:ResourceTag/usertaggable": "indeed"
+                          }
+                        }
+                    }
+                ]
+            }
+          """.stripIndent( )
+      ) )
+    }
+
+    AmazonEC2 userEc2 = AmazonEC2Client.builder( )
+        .withCredentials( userCredentials )
+        .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+        .build( )
+    userEc2.with {
+      try {
+        print( "Tagging subnet ${subnetId_2} in not authorized vpc" )
+        createTags( new CreateTagsRequest(
+            resources: [ subnetId_2 ],
+            tags: [
+                new Tag( key: 'meaning', value: '42' ),
+            ]
+        ) )
+        print( "Describing tags for subnet ${subnetId_2} to check if added" )
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new Filter( name: 'resource-id', values: [ subnetId_2 ] )
+            ]
+        ) ).with {
+          print( "Subnet ${subnetId_2} tags: ${tags}" )
+          Assert.assertEquals( tags.size(), 0, "Subnet ${subnetId_2} tag count" )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+      }
+
+      print( "Creating subnet tags ${subnetId_1}" )
+      createTags( new CreateTagsRequest(
+          resources: [ subnetId_1 ],
+          tags: [
+              new Tag( key: 'cost-center', value: '5' ),
+          ]
+      ) )
+      print( "Describing tags for subnet ${subnetId_1} to verify added" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ subnetId_1 ] )
+          ]
+      ) ).with {
+        print( "Subnet ${subnetId_1} tags: ${tags}" )
+        Assert.assertEquals( tags.size(), 1, "Subnet ${subnetId_1} tag count" )
+      }
+      try {
+        print( "Deleting subnet tags ${subnetId_1} without permission (should fail)" )
+        deleteTags( new DeleteTagsRequest(
+            resources: [ subnetId_1 ],
+            tags: [
+                new Tag( key: 'cost-center' ),
+            ]
+        ) )
+        print( "Describing tags for subnet ${subnetId_1} to verify not deleted" )
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new Filter( name: 'resource-id', values: [ subnetId_1 ] )
+            ]
+        ) ).with {
+          print( "Subnet ${subnetId_1} tags: ${tags}" )
+          Assert.assertEquals( tags.size(), 1, "Subnet ${subnetId_1} tag count" )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+      }
+      print( "Creating subnet tags ${subnetId_1} to add tag delete permission" )
+      createTags( new CreateTagsRequest(
+          resources: [ subnetId_1 ],
+          tags: [
+              new Tag( key: 'usertaggable', value: 'indeed' ),
+          ]
+      ) )
+      print( "Sleeping to allow tags to apply" )
+      N4j.sleep( tagWaitSeconds )
+      print( "Deleting subnet tags ${subnetId_1}" )
+      deleteTags( new DeleteTagsRequest(
+          resources: [ subnetId_1 ],
+          tags: [
+              new Tag( key: 'cost-center' ),
+              new Tag( key: 'usertaggable' ),
+          ]
+      ) )
+      print( "Describing tags for subnet ${subnetId_1} to verify deleted" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ subnetId_1 ] )
+          ]
+      ) ).with {
+        print( "Subnet ${subnetId_1} tags: ${tags}" )
+        Assert.assertEquals( tags.size(), 0, "Subnet ${subnetId_1} tag count" )
+      }
+
+      void
+    }
+  }
+
+  @Test
+  void testCreateVolumeSizeLimit( ) {
+    // Find an AZ to use
+    String availabilityZone = accountEc2.with {
+      describeAvailabilityZones().with {
+        availabilityZones?.getAt(0)?.zoneName
+      }
+    }
+    print("Using availability zone: ${availabilityZone}")
+    Assert.assertNotNull(availabilityZone, "Expected availability zone")
+
+    accountIam.with{
+      print( "Putting policy for user ${this.user}, authorizing volume create for < 2GB" )
+      putUserPolicy( new PutUserPolicyRequest(
+          userName: this.user,
+          policyName: 'ec2-volume-create-small',
+          policyDocument: """\
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "ec2:Describe*",
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "ec2:DeleteVolume",
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                     "ec2:CreateVolume"
+                  ],
+                  "Resource": "arn:aws:ec2::${accountNumber}:volume/*",
+                  "Condition":{
+                     "NumericLessThan": {
+                         "ec2:VolumeSize" : "2"
+                      },
+                      "StringEquals": {
+                        "ec2:AvailabilityZone": "${availabilityZone}"
+                      }
+                   }
+                }
+              ]
+            }
+          """.stripIndent( )
+      ) )
+    }
+
+    AmazonEC2 userEc2 = AmazonEC2Client.builder( )
+        .withCredentials( userCredentials )
+        .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+        .build( )
+    userEc2.with {
+      print("Creating volume in availability zone: ${availabilityZone}, should fail due to size=2")
+      try {
+        createVolume(new CreateVolumeRequest(
+            size: 2,
+            availabilityZone: availabilityZone
+        )).with {
+          String createdVolumeId = volume?.volumeId
+          print("Created volume ${createdVolumeId}")
+          Assert.assertNotNull(createdVolumeId, "Expected volumeId")
+          cleanupTasks.add {
+            print("Deleting volume ${createdVolumeId}")
+            deleteVolume(new DeleteVolumeRequest(volumeId: createdVolumeId))
+          }
+          Assert.fail( "Expected volume create failure" )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+      }
+
+      createVolume(new CreateVolumeRequest(
+          size: 1,
+          availabilityZone: availabilityZone
+      )).with {
+        String createdVolumeId = volume?.volumeId
+        print("Created volume ${createdVolumeId}")
+        Assert.assertNotNull(createdVolumeId, "Expected volumeId")
+        cleanupTasks.add {
+          print("Deleting volume ${createdVolumeId}")
+          deleteVolume(new DeleteVolumeRequest(volumeId: createdVolumeId))
+        }
       }
 
       void
@@ -2122,8 +2748,146 @@ class TestEC2IAMConditionKeys {
     }
   }
 
+  /**
+   * Test running an instance that restricts volume creation by size/zone
+   */
+  @Test
+  void testRunInstancesDeniedByVolumeConditions( ) {
+    String availabilityZone = null
+    String imageId = null
+    accountEc2.with {
+      // Find an image to use
+      imageId = describeImages( new DescribeImagesRequest(
+          filters: [
+              new Filter( name: 'image-type', values: ['machine'] ),
+              new Filter( name: 'is-public', values: ['true'] ),
+              new Filter( name: 'root-device-type', values: ['ebs'] ),
+          ]
+      ) ).with {
+        images?.getAt( 0 )?.imageId
+      }
+      assumeThat( imageId != null, "Public ebs image not found" )
+      print( "Using image: ${imageId}" )
+
+      // Find an AZ to use
+      availabilityZone = describeAvailabilityZones( ).with{
+        availabilityZones?.getAt( 0 )?.zoneName
+      }
+      print( "Using availability zone: ${availabilityZone}" )
+      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+    }
+
+    accountIam.with{
+      putUserPolicy( new PutUserPolicyRequest(
+          userName: this.user,
+          policyName: 'ec2-instance-with-volume-conditions',
+          policyDocument: """\
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:volume/*"
+                        ],
+                        "Condition": {
+                            "StringEquals": {
+                                "ec2:AvailabilityZone": "${availabilityZone}"
+                            },
+                            "NumericLessThan": {
+                                "ec2:VolumeSize": 1
+                            }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": [
+                            "arn:aws:ec2:::availabilityzone/*",
+                            "arn:aws:ec2:::image/*",
+                            "arn:aws:ec2:::instance/*",
+                            "arn:aws:ec2:::keypair/*",
+                            "arn:aws:ec2:::securitygroup/*",
+                            "arn:aws:ec2:::vmtype/*"
+                        ]
+                    }
+                ]
+            }
+          """.stripIndent( )
+      ) )
+    }
+
+    String instanceId = null
+    AmazonEC2 userEc2 = AmazonEC2Client.builder( )
+        .withCredentials( userCredentials )
+        .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+        .build( )
+    userEc2.with {
+      try {
+        print( "Launching instance with too large volume (should fail)" )
+        runInstances( new RunInstancesRequest(
+            minCount: 1,
+            maxCount: 1,
+            placement: new Placement(
+                availabilityZone: availabilityZone
+            ),
+            imageId: imageId
+        ) ).with {
+          instanceId = reservation?.instances?.getAt(0)?.instanceId
+        }
+        print( "Launched instance: ${instanceId}" )
+        if ( instanceId ) cleanupTasks.add{
+          print( "Terminating instance ${instanceId}" )
+          accountEc2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
+        }
+
+        print( "Waiting for instance ${instanceId} to exit pending" )
+        waitForInstances( accountEc2, TimeUnit.MINUTES.toMillis( 1 ) )
+
+        print( "Checking instance ${instanceId} state is terminated (volume create denied)" )
+        describeInstanceStatus( new DescribeInstanceStatusRequest(
+            instanceIds: [instanceId],
+            includeAllInstances: true
+        ) ).with {
+          Assert.assertEquals( instanceStatuses?.size()?:0, 1, "instance count" )
+          instanceStatuses?.getAt( 0 )?.with {
+            Assert.assertEquals( instanceState?.name, "terminated", "instance state name" )
+          }
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+      }
+      void
+    }
+  }
+
   @Test
   void testRunInstancesWithInstanceAndVolumeTags( ) {
+    String availabilityZone = null
+    String imageId = null
+    accountEc2.with {
+      // Find an image to use
+      imageId = describeImages( new DescribeImagesRequest(
+          filters: [
+              new Filter( name: 'image-type', values: ['machine'] ),
+              new Filter( name: 'is-public', values: ['true'] ),
+              new Filter( name: 'root-device-type', values: ['ebs'] ),
+          ]
+      ) ).with {
+        images?.getAt( 0 )?.imageId
+      }
+      assumeThat( imageId != null, "Public ebs image not found" )
+      print( "Using image: ${imageId}" )
+
+      // Find an AZ to use
+      availabilityZone = describeAvailabilityZones( ).with{
+        availabilityZones?.getAt( 0 )?.zoneName
+      }
+      print( "Using availability zone: ${availabilityZone}" )
+      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+    }
+
     accountIam.with{
       putUserPolicy( new PutUserPolicyRequest(
           userName: this.user,
@@ -2141,7 +2905,8 @@ class TestEC2IAMConditionKeys {
                         "Condition": {
                             "StringEquals": {
                                 "aws:RequestTag/cost-center": "cc123",
-                                "aws:RequestTag/environment": "instance"
+                                "aws:RequestTag/environment": "instance",
+                                "ec2:AvailabilityZone": "${availabilityZone}"
                             },
                             "ForAllValues:StringEquals": {
                                 "aws:TagKeys": ["environment","cost-center"]
@@ -2155,9 +2920,13 @@ class TestEC2IAMConditionKeys {
                           "arn:aws:ec2::${accountNumber}:volume/*"
                         ],
                         "Condition": {
+                            "NumericGreaterThanEquals": {
+                                "ec2:VolumeSize": 1
+                            },
                             "StringEquals": {
                                 "aws:RequestTag/cost-center": "cc123",
-                                "aws:RequestTag/environment": "volume"
+                                "aws:RequestTag/environment": "volume",
+                                "ec2:AvailabilityZone": "${availabilityZone}"
                             },
                             "ForAllValues:StringEquals": {
                                 "aws:TagKeys": ["environment","cost-center"]
@@ -2192,30 +2961,6 @@ class TestEC2IAMConditionKeys {
             }
           """.stripIndent( )
       ) )
-    }
-
-    String availabilityZone = null
-    String imageId = null
-    accountEc2.with {
-      // Find an image to use
-      imageId = describeImages( new DescribeImagesRequest(
-          filters: [
-              new Filter( name: 'image-type', values: ['machine'] ),
-              new Filter( name: 'is-public', values: ['true'] ),
-              new Filter( name: 'root-device-type', values: ['ebs'] ),
-          ]
-      ) ).with {
-        images?.getAt( 0 )?.imageId
-      }
-      assumeThat( imageId != null, "Public ebs image not found" )
-      print( "Using image: ${imageId}" )
-
-      // Find an AZ to use
-      availabilityZone = describeAvailabilityZones( ).with{
-        availabilityZones?.getAt( 0 )?.zoneName
-      }
-      print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
     }
 
     String instanceId = null

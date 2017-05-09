@@ -777,6 +777,13 @@ class N4j {
      * Wait for snapshot steady state (no pending)
      */
     public static void waitForSnapshots(final long timeout) {
+        waitForSnapshots( ec2, timeout );
+    }
+
+    /**
+     * Wait for snapshot steady state (no pending)
+     */
+    public static void waitForSnapshots(final AmazonEC2 ec2, final long timeout) {
         final long startTime = System.currentTimeMillis();
         withWhile:
         while (true) {
