@@ -10,6 +10,7 @@
             <class name="com.eucalyptus.tests.awssdk.TestSQSVisibilityTimeout"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDeleteMessageBatch"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSCrossAccountStackPolicies"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSAnonymousAccess"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDelaySeconds"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSMessageExpirationPeriod"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributeValuesInMessages"/>

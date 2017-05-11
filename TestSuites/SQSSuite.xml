@@ -4,6 +4,7 @@
     <test name="SQS_Tests">
         <classes>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributes"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSAnonymousAccess"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributeValuesInMessages"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAdminFunctions"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSDelaySeconds"/>

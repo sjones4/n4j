@@ -5,6 +5,16 @@
         <classes>
             <parameter name="concise" value="true"/> 
             <class name="com.eucalyptus.tests.awssdk.TestSQSAdminFunctions"/>
+            <class name="com.eucalyptus.tests.awssdk.TestSQSAnonymousAccess">
+              <methods>
+                <include name="testCreateQueue"/>
+                <include name="testDeleteMessageBatch"/>
+                <include name="testReceiveMessage"/>
+                <include name="testDeleteQueue"/>
+                <include name="testSendMessage"/>
+                <include name="testSenderId"/>
+              </methods>
+            </class>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributes"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSAttributeValuesInMessages"/>
             <class name="com.eucalyptus.tests.awssdk.TestSQSChangeMessageVisibility"/>
