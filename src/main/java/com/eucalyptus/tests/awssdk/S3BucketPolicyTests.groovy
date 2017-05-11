@@ -53,6 +53,7 @@ import static org.testng.Assert.*
  * Related eucalyptus issues:
  *   https://eucalyptus.atlassian.net/browse/EUCA-651
  *   https://eucalyptus.atlassian.net/browse/EUCA-13195
+ *   https://eucalyptus.atlassian.net/browse/EUCA-13370
  *
  * Relevant aws documentation:
  *   http://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html
@@ -285,6 +286,32 @@ class S3BucketPolicyTests {
   }
 
   @Test
+  void testPutAccessDeniedWithNoPermissions( ) {
+    testInfo( "${getClass().simpleName}.testPutAccessDeniedWithNoPermissions" )
+    createBucket( bucketName )
+
+    requestorS3.with {
+      print( "Putting object foo to bucket ${bucketName} as ${requestorAccount}" )
+      try {
+        putObject( new PutObjectRequest(
+            bucketName,
+            'foo',
+            new ByteArrayInputStream('content'.getBytes(StandardCharsets.UTF_8)),
+            new ObjectMetadata( )
+        ) )
+        cleanupTasks.add{
+          print( "${account}: Deleting object foo from bucket ${bucketName}" )
+          s3.deleteObject( bucketName, 'foo' )
+        }
+        fail( "Expected access denied for cross account access with no permissions" )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected object access error: ${e}" )
+        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+      }
+    }
+  }
+
+  @Test
   void testLargePolicy( ) {
     testInfo( "${getClass().simpleName}.testLargePolicy" )
     createBucket( bucketName )
@@ -311,6 +338,49 @@ class S3BucketPolicyTests {
       print( "Getting object foo from bucket ${bucketName} as ${requestorAccount}" )
       String content = getObjectAsString( bucketName, 'foo' )
       assertEquals( content, 'content', 'Content for foo' )
+    }
+  }
+
+  @Test
+  void testBucketPolicyAllowsPutAccess( ) {
+    testInfo( "${getClass().simpleName}.testBucketPolicyAllowsPutAccess" )
+    createBucket( bucketName )
+    String policy1 = """{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"${requestorAccountNumber}"},"Action":"s3:PutObject","Resource":"arn:aws:s3:::${bucketName}/foo"}]}"""
+    s3.with {
+      print( "Setting bucket ${bucketName} policy ${policy1}" )
+      setBucketPolicy( bucketName, policy1 )
+    }
+
+    requestorS3.with {
+      try {
+        print( "Putting object bar to bucket ${bucketName} as ${requestorAccount} (should fail)" )
+        putObject( new PutObjectRequest(
+            bucketName,
+            'bar',
+            new ByteArrayInputStream('content'.getBytes(StandardCharsets.UTF_8)),
+            new ObjectMetadata( )
+        ) )
+        cleanupTasks.add{
+          print( "${account}: Deleting object bar from bucket ${bucketName}" )
+          s3.deleteObject( bucketName, 'bar' )
+        }
+        fail( "Expected access denied for cross account put with no permission for object" )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected object access error: ${e}" )
+        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+      }
+
+      print( "Putting object foo to bucket ${bucketName} as ${requestorAccount}" )
+      putObject( new PutObjectRequest(
+          bucketName,
+          'foo',
+          new ByteArrayInputStream('content'.getBytes(StandardCharsets.UTF_8)),
+          new ObjectMetadata( )
+      ) )
+      cleanupTasks.add{
+        print( "${account}: Deleting object foo from bucket ${bucketName}" )
+        s3.deleteObject( bucketName, 'foo' )
+      }
     }
   }
 
