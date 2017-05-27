@@ -26,6 +26,7 @@ import static N4j.EC2_ENDPOINT
 import static N4j.CLC_IP
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests quotas and limits for EC2 VPC resources.
@@ -86,6 +87,12 @@ class TestEC2VPCQuotasLimits {
   @Test
   public void EC2VPCQuotasLimitsTest( ) throws Exception {
     final YouProp prop = getYouPropClient( credentials )
+    final AmazonEC2 ec20 = getEC2Client( credentials )
+
+    if ( !isVPC(ec20) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     // End discovery, start test
     final String namePrefix = UUID.randomUUID().toString() + "-"

@@ -23,6 +23,7 @@ import static N4j.CLC_IP
 import static N4j.EC2_ENDPOINT
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests IAM policy for EC2 VPC resource conditions.
@@ -77,6 +78,13 @@ class TestEC2VPCResourceConditionPolicy {
   @Test
   public void EC2VPCResourceConditionPolicyTest( ) throws Exception {
     final String namePrefix = UUID.randomUUID().toString() + "-"
+    final AmazonEC2 ec2 = getEC2Client( credentials )
+
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
+
     print( "Using resource prefix for test: ${namePrefix}" )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>

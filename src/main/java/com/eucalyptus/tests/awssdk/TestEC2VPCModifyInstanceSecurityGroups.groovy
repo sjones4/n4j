@@ -12,6 +12,7 @@ import static N4j.ACCESS_KEY
 import static N4j.EC2_ENDPOINT
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests modification of instance security groups in EC2 VPC.
@@ -52,6 +53,11 @@ class TestEC2VPCModifyInstanceSecurityGroups {
   @Test
   public void EC2VPCModifyInstanceSecurityGroupsTest( ) throws Exception {
     final AmazonEC2 ec2 = getEC2Client( credentials )
+
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     // Find an image to use
     final String imageId = ec2.describeImages( new DescribeImagesRequest(

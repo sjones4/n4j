@@ -34,6 +34,7 @@ import static N4j.ACCESS_KEY
 import static N4j.CLC_IP
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests EC2 VPC security group functionality.
@@ -91,6 +92,11 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
   @Test
   public void test( ) throws Exception {
     final AmazonEC2 ec2 = getEC2Client( credentials )
+
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
