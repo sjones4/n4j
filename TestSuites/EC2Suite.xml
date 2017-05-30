@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="EC2 Test Suite">
+    <test name="_Tests">
+        <classes>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2Basics"/>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2DescribeInstanceStatus"/>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2IAMConditionKeys"/>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2InstanceProfile"/>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2InstanceTerminationProtection"/>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2LongIdentifiers"/>
+            <class name="com.eucalyptus.tests.awssdk.TestEC2RunInstancesClientToken"/>
+        </classes>>
+    </test>
+</suite>

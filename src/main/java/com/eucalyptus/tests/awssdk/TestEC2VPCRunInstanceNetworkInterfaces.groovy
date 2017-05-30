@@ -13,7 +13,7 @@ import org.testng.annotations.Test
 import static N4j.minimalInit
 import static N4j.ACCESS_KEY
 import static N4j.EC2_ENDPOINT
-import static N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 
 /**
  * This application tests EC2 VPC run instance with multiple network interfaces.

@@ -40,6 +40,7 @@ import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
 import org.testng.SkipException;
+import sun.security.krb5.internal.crypto.Des;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -231,7 +232,6 @@ class N4j {
         ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
         print("Cloud Discovery Complete");
     }
-
 
     public static void testInfo(String testName) {
         print("*****TEST NAME: " + testName);
@@ -1446,4 +1446,18 @@ class N4j {
     private static <T> List<T> list( T... ts ) {
         return ts == null || (ts.length == 1 && ts[0] == null) ? Collections.<T>emptyList( ) : Arrays.<T>asList( ts );
     }
+
+    public static Boolean isVPC(AmazonEC2 ec2) {
+        DescribeAccountAttributesRequest describeAccountAttributesRequest = new DescribeAccountAttributesRequest()
+                .withAttributeNames("supported-platforms");
+        DescribeAccountAttributesResult describeAccountAttributesResult = ec2
+                .describeAccountAttributes(describeAccountAttributesRequest);
+        Boolean checkVPC = describeAccountAttributesResult
+                .getAccountAttributes().get(0)
+                .getAttributeValues().get(0)
+                .getAttributeValue().contains("VPC");
+        print("VPC Enabled: " + checkVPC);
+        return checkVPC;
+    }
+
 }

@@ -5,6 +5,7 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.handlers.RequestHandler2
+import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
 import com.amazonaws.services.identitymanagement.model.CreateAccessKeyRequest
@@ -21,7 +22,8 @@ import static N4j.minimalInit;
 import static N4j.CLC_IP;
 import static N4j.EC2_ENDPOINT;
 import static N4j.ACCESS_KEY;
-import static N4j.SECRET_KEY;
+import static N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.isVPC;
 
 /**
  * This application tests EC2 VPC default VPC.
@@ -93,8 +95,15 @@ class TestEC2VPCDefaultVPC {
 
   @Test
   public void EC2VPCDefaultVPCTest( ) throws Exception {
+
     final YouProp prop = getYouPropClient( credentials )
     final YouAreClient euare = getYouAreClient( credentials );
+
+    final AmazonEC2 ec2 = getEC2Client( credentials )
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     final String namePrefix = UUID.randomUUID().toString() + "-";
     print( "Using resource prefix for test: " + namePrefix );
