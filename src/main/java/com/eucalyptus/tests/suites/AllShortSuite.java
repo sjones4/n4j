@@ -16,6 +16,7 @@ import org.junit.runners.Suite.SuiteClasses;
     Ec2ShortSuite.class,
     ElbShortSuite.class,
     IamSuite.class,
+    ServicesSuite.class,
     S3Suite.class,
 })
 public class AllShortSuite {
