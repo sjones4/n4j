@@ -2,6 +2,7 @@ package com.eucalyptus.tests.awssdk;
 
 //LPT To switch between testing against Eucalyptus and AWS,
 //LPT (un)comment the code identified by LPTEuca and LPTAWS.
+import static org.junit.Assert.assertTrue;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
 import static com.eucalyptus.tests.awssdk.N4j.assertThat;
@@ -11,23 +12,19 @@ import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 //LPTEuca The below import is only needed for running against Eucalyptus
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 //LPTAWS The below import is only needed for running against AWS
-import static com.eucalyptus.tests.awssdk.N4j.initS3Client;
-
-import static org.testng.AssertJUnit.assertTrue;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.Request;
@@ -42,7 +39,6 @@ import com.amazonaws.services.s3.model.CORSRule.AllowedMethods;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.HeadBucketRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 
 /**
@@ -94,10 +90,10 @@ public class S3CorsTests {
   private static final String VARY = "Vary";
       
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3CorsTests.class.getSimpleName());
     try {
-      account = this.getClass().getSimpleName().toLowerCase();
+      account = S3CorsTests.class.getSimpleName().toLowerCase();
       //LPTEuca Declare s3 this way for Eucalyptus only, because AWS won't 
       //LPTEuca let you create an account via API. Comment out for AWS.
       s3 = initS3ClientWithNewAccount(account, "admin");
@@ -113,15 +109,15 @@ public class S3CorsTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3CorsTests.class.getSimpleName());
     //LPTEuca AWS won't let you create an account via API.
     //LPTEuca Comment out for AWS.
     N4j.deleteAccount(account);
     s3 = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     bucketName = eucaUUID() + "-cors";
     cleanupTasks = new ArrayList<Runnable>();
@@ -139,7 +135,7 @@ public class S3CorsTests {
         bucketName.equals(bucket.getName()));
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {

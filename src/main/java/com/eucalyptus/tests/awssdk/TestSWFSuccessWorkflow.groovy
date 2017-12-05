@@ -9,7 +9,7 @@ import com.amazonaws.services.simpleworkflow.model.*
 
 import java.util.concurrent.TimeUnit
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.minimalInit;
 import static N4j.CLC_IP;

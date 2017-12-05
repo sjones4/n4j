@@ -23,7 +23,7 @@ import com.amazonaws.services.simpleworkflow.model.TaskList
 import com.amazonaws.services.simpleworkflow.model.TypeDeprecatedException
 import com.amazonaws.services.simpleworkflow.model.WorkflowType
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.minimalInit;
 import static N4j.CLC_IP;

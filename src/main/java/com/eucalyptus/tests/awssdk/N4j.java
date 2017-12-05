@@ -1,5 +1,6 @@
 package com.eucalyptus.tests.awssdk;
 
+import static org.junit.Assert.fail;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
@@ -45,7 +46,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-class N4j {
+public class N4j {
     static String CLC_IP = System.getProperty("clcip");
     static String USER = System.getProperty("user", "root");
     static String PASSWORD = System.getProperty("password", "foobar");
@@ -263,6 +264,7 @@ class N4j {
         }
         catch(JSchException | IOException e) {
             System.err.print(e);
+            fail( e.toString( ) );
         }
         // we have known creds exist or we have created them by now so save them locally for processing
         print("Fetching euca-admin.ini file");

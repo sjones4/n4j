@@ -16,9 +16,9 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.YouAreClient
-import org.testng.annotations.AfterClass
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.IAM_ENDPOINT
@@ -40,20 +40,20 @@ import java.text.SimpleDateFormat
 class TestSTSConditionKeys {
 
 
-  private String account
-  private AWSCredentialsProvider credentials
+  private static String account
+  private static AWSCredentialsProvider credentials
 
   @BeforeClass
-  public void init() throws Exception {
+  public static void init() throws Exception {
     N4j.getCloudInfo()
-    this.account = this.getClass().simpleName.toLowerCase()
+    account = TestSTSConditionKeys.simpleName.toLowerCase()
     N4j.createAccount(account)
-    this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(account,'admin') )
+    credentials = new StaticCredentialsProvider( N4j.getUserCreds(account,'admin') )
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    N4j.print("### POST SUITE CLEANUP - ${getClass().simpleName}")
+  public static  void teardown() throws Exception {
+    N4j.print("### POST SUITE CLEANUP - ${TestSTSConditionKeys.simpleName}")
     N4j.deleteAccount(account)
   }
 

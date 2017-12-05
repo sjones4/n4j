@@ -1,10 +1,9 @@
-eucarc*
+.gradle/
+.shelf/
 awsrc*
 build/
-dependencies/
-eutester4j_results/
-test-output/
-n4j_results/
-*.iml
-zerofile
 euca-admin.ini
+eucarc*
+n4j.iml
+n4j.ipr
+n4j.iws

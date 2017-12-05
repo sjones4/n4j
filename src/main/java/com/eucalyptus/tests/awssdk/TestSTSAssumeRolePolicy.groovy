@@ -15,8 +15,8 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
 import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX

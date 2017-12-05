@@ -35,8 +35,8 @@ import com.github.sjones4.youcan.youprop.YouProp
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.DescribePropertiesRequest
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
 import static com.eucalyptus.tests.awssdk.N4j.CLC_IP

@@ -6,8 +6,8 @@ import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancing
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model.*
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
 import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX

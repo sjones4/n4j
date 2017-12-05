@@ -1,7 +1,7 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.cloudwatch.model.*;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;

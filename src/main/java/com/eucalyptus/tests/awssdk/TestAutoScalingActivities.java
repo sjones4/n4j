@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.tests.awssdk;
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.model.*;

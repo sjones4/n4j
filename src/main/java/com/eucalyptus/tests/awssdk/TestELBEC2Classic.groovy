@@ -22,7 +22,7 @@ import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancing
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model.*
 import java.nio.charset.StandardCharsets
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.minimalInit;
 import static N4j.CLC_IP;
