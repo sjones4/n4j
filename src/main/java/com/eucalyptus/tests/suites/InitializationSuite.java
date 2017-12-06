@@ -3,18 +3,16 @@ package com.eucalyptus.tests.suites;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
+import com.eucalyptus.tests.awssdk.*;
 
+/**
+ * Suite to configure cloud for tests
+ */
 @RunWith(Suite.class)
 @SuiteClasses({
-    InitializationSuite.class,
-    AutoScalingShortSuite.class,
-    CloudFormationSuite.class,
-    CloudWatchSuite.class,
-    Ec2Suite.class,
-    ElbSuite.class,
-    IamSuite.class,
-    S3Suite.class,
+    InitializationTest.class,
+    TestEC2ImageRegistration.class
 })
-public class AllShortSuite {
+public class InitializationSuite {
   // junit test suite as defined by SuiteClasses annotation
 }

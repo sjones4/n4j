@@ -23,7 +23,7 @@ repositories {
     jcenter( )
 }
 
-sourceSets { 
+sourceSets {
     main {
         java.srcDirs = []
         groovy.srcDirs = []
@@ -71,7 +71,7 @@ dependencies {
     compile 'com.amazonaws:aws-java-sdk-simpleworkflow:1.11.+'
     compile 'com.amazonaws:aws-java-sdk-sqs:1.11.+'
     compile 'com.amazonaws:aws-java-sdk-sts:1.11.+'
-    compile 'com.github.sjones4:you-are-sdk:1.1.+'
+    compile 'com.github.sjones4:you-are-sdk:1.2.+'
     compile 'com.jcraft:jsch:0.1.54'
     compile 'junit:junit:4.+'
     compile 'log4j:log4j:1.2.17'
@@ -87,7 +87,7 @@ idea {
             file( "$buildDir/classes" ),
         ]
     }
-  
+
     project {
         jdkName = '1.8'
         languageLevel = '1.8'

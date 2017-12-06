@@ -39,8 +39,6 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.github.sjones4.youcan.youare.YouAreClient;
 import com.github.sjones4.youcan.youare.model.Account;
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
-import com.github.sjones4.youcan.youconfig.YouConfigClient;
-import com.github.sjones4.youcan.youconfig.model.ComponentInfo;
 import com.github.sjones4.youcan.youprop.YouPropClient;
 import com.github.sjones4.youcan.youprop.model.Property;
 import com.github.sjones4.youcan.youserv.YouServClient;
@@ -56,7 +54,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
-import static com.eucalyptus.tests.awssdk.N4j.youAre;
 
 /**
  * This test verifies the functionality of https://eucalyptus.atlassian.net/browse/EUCA-8156, EUCA-8157, and EUCA-8158
@@ -249,11 +246,6 @@ public class TestCannedRoles {
             youProp.setEndpoint(endpoint + "/services/Properties/");
             List<Property> properties = youProp.describeProperties().getProperties();
             assertThat(!properties.isEmpty(), "Expected Properties");
-
-            final YouConfigClient youConfig = new YouConfigClient(credentialsProvider("arn:aws:iam::eucalyptus:role/eucalyptus/InfrastructureAdministrator", "session-name-here", accessKey, secretKey));
-            youConfig.setEndpoint(endpoint + "/services/Configuration/");
-            List<ComponentInfo> components = youConfig.describeComponents().getComponentInfos();
-            assertThat(!components.isEmpty(), "Expected Components");
 
             // Test Resource Admin Role  first create an account and add a keypair
             final String resourceAccount = NAME_PREFIX + "resource-account";
