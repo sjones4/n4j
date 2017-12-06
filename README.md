@@ -1,33 +1,63 @@
 # n4j
-n4j is a test framework for building and running tests against AWS compatible clouds. It is written in java and is based on the Amazon Java SDK. It is possile to run tests as java applications but TestNG is also supported as a test runner. Test can be written in Java or Groovy.
+n4j is a collection of tests for Eucalyptus clouds. 
+
+The framework is written in Java and primarily uses the Amazon SDK for Java. JUnit is used for tests and test suites and these can be written in Java or Groovy.
 
 Prerequisites
 ------
-1. Java (JDK8)
+1. Java (JDK8), e.g. yum install java-1.8.0-openjdk-devel
 
-2. apache ant
-
-3. access to a cloud that has at least 1 public image available
+2. A Eucalyptus cloud to test
 
 Installation
 ------
-1. git clone https://github.com/eucalyptus/n4j.git
+Clone the git repository:
 
-2. cd n4j
+```
+  git clone https://github.com/eucalyptus/n4j.git
+  cd n4j
+```
 
-3. ant -Dclcip=your_cloudcontroller_ip -Duser=user_to_log_into_host_as -Dpassword=host_user_password
+Running Tests
+------
+Gradle is used to compile/run tests:
 
-(The default ant target will download all the dependencies required and run the test suite "DefaultSuite.xml")
+```
+  ./gradlew -Dclcip=your_cloudcontroller_ip \
+            -Duser=user_to_log_into_host_as \
+            -Dpassword=host_user_password \
+            test
+```
+
+The above command will fetch the required dependencies and an image to use to test the cloud (~500MB required)
+
+To run a particular test or test suite use:
+
+```
+  ./gradlew -Dclcip=your_cloudcontroller_ip \
+            -Duser=user_to_log_into_host_as \
+            -Dpassword=host_user_password \
+            -Dtest.single=suite_or_test_name \
+            test
+```
+
+Example of a suite is Ec2Suite, an example test is TestEC2DescribeInstanceStatus.
+
+Test results are output to the console, an HTML report is also generated, e.g.:
+
+```
+  firefox ./build/reports/tests/test/index.html
+```
 
 Development
 ------
-1. fork the repository to your own account
+Gradle can be used to generate an IntelliJ IDEA project:
 
-2. create branch for your changes
+```
+  ./gradlew idea
+```
 
-3. submit pull request
-
-The project includes many tests written in both java and groovy. They are in the com/eucalyptus/tests/awssdk/ direcory. There is a sample test "N4jTest.java" that demonstrates the basic test structure for creating a TestNG test. IntelliJ CE works great for an IDE to develope new tests/features with.
+Tests can be run in the IDE by specifying the necessary VM options.
 
 How does it work?
 ------
