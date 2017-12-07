@@ -5,7 +5,7 @@ import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,16 +17,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.lang.StringUtils;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -72,10 +72,10 @@ public class S3ListVersionsTests {
   private static final int DEFAULT_MAX_KEYS = 1000;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3ListVersionsTests.class.getSimpleName());
     try {
-      account = this.getClass().getSimpleName().toLowerCase();
+      account = S3ListVersionsTests.class.getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
     } catch (Exception e) {
       try {
@@ -91,13 +91,13 @@ public class S3ListVersionsTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3ListVersionsTests.class.getSimpleName());
     N4j.deleteAccount(account);
     s3 = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     bucketName = eucaUUID();
     // bucketName = "test-bucket";
@@ -125,7 +125,7 @@ public class S3ListVersionsTests {
     enableBucketVersioning(bucketName);
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {
@@ -1686,7 +1686,7 @@ public class S3ListVersionsTests {
       }
     });
     assertTrue("Invalid put object result", putResult != null);
-    assertTrue("Invalid version ID: " + putResult.getVersionId(), StringUtils.isNotBlank(putResult.getVersionId()));
+    assertTrue("Invalid version ID: " + putResult.getVersionId(), !Objects.toString(putResult.getVersionId()).isEmpty());
     assertTrue("Expected version ID to be unique", !versionIdList.contains(putResult.getVersionId()));
     versionIdList.add(putResult.getVersionId());
   }
@@ -1769,16 +1769,16 @@ public class S3ListVersionsTests {
     assertTrue("Expected version listing bucket name to be " + bucketName + ", but got " + versionList.getBucketName(), versionList.getBucketName()
         .equals(bucketName));
     assertTrue("Expected delimiter to be " + delimiter + ", but got " + versionList.getDelimiter(),
-        StringUtils.equals(versionList.getDelimiter(), delimiter));
+        Objects.equals(versionList.getDelimiter(), delimiter));
     assertTrue("Expected common prefixes to be empty or populated, but got " + versionList.getCommonPrefixes(),
         versionList.getCommonPrefixes() != null);
     assertTrue("Expected key-marker to be " + keyMarker + ", but got " + versionList.getKeyMarker(),
-        StringUtils.equals(versionList.getKeyMarker(), keyMarker));
+        Objects.equals(versionList.getKeyMarker(), keyMarker));
     assertTrue("Expected max-keys to be " + (maxKeys != null ? maxKeys : DEFAULT_MAX_KEYS) + ", but got " + versionList.getMaxKeys(),
         versionList.getMaxKeys() == (maxKeys != null ? maxKeys : DEFAULT_MAX_KEYS));
-    assertTrue("Expected prefix to be " + prefix + ", but got " + versionList.getPrefix(), StringUtils.equals(versionList.getPrefix(), prefix));
+    assertTrue("Expected prefix to be " + prefix + ", but got " + versionList.getPrefix(), Objects.equals(versionList.getPrefix(), prefix));
     assertTrue("Expected version-id-marker to be " + versionIdMarker + ", but got " + versionList.getVersionIdMarker(),
-        StringUtils.equals(versionList.getVersionIdMarker(), versionIdMarker));
+        Objects.equals(versionList.getVersionIdMarker(), versionIdMarker));
     assertTrue("Invalid version summary list", versionList.getVersionSummaries() != null);
     assertTrue("Expected is truncated to be " + isTruncated + ", but got " + versionList.isTruncated(), versionList.isTruncated() == isTruncated);
     if (versionList.isTruncated()) {

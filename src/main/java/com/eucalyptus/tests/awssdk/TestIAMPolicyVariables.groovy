@@ -10,7 +10,7 @@ import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
-import org.testng.annotations.Test
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
 import static com.eucalyptus.tests.awssdk.N4j.CLC_IP

@@ -18,8 +18,8 @@ import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersRe
 import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersResult
 import com.amazonaws.services.elasticloadbalancing.model.Listener
 import com.amazonaws.services.elasticloadbalancing.model.SetLoadBalancerPoliciesOfListenerRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 /**
  * Test ELB administrative functionality.

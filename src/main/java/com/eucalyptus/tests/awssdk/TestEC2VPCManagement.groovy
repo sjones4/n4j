@@ -30,7 +30,7 @@ import com.amazonaws.services.ec2.model.DescribeVpcsRequest
 import com.amazonaws.services.ec2.model.DetachInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DhcpConfiguration
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.*;
 

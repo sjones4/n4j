@@ -39,22 +39,21 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.github.sjones4.youcan.youare.YouAreClient;
 import com.github.sjones4.youcan.youare.model.Account;
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
-import com.github.sjones4.youcan.youconfig.YouConfigClient;
-import com.github.sjones4.youcan.youconfig.model.ComponentInfo;
 import com.github.sjones4.youcan.youprop.YouPropClient;
 import com.github.sjones4.youcan.youprop.model.Property;
 import com.github.sjones4.youcan.youserv.YouServClient;
 import com.github.sjones4.youcan.youserv.model.DescribeServicesRequest;
 import com.github.sjones4.youcan.youserv.model.ServiceStatus;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
+import java.net.InetAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
-import static com.eucalyptus.tests.awssdk.N4j.youAre;
 
 /**
  * This test verifies the functionality of https://eucalyptus.atlassian.net/browse/EUCA-8156, EUCA-8157, and EUCA-8158
@@ -228,21 +227,25 @@ public class TestCannedRoles {
                 }
             });
 
+            // Derive an endpoint
+            final URI uri = URI.create( EC2_ENDPOINT );
+            final String host = uri.getHost();
+            final int port = uri.getPort( );
+            final String endpoint = uri.getScheme( ) + "://" +
+                ( host.startsWith( "ec2." ) ? InetAddress.getByName( host ).getHostAddress( ) : host ) +
+                (port > 0 ? ":" + port : "");
+            print( "Using endpoint as base for admin services : " + endpoint );
+
             // Test Infrastructure Admin Role
             final YouServClient youServ = new YouServClient(credentialsProvider("arn:aws:iam::eucalyptus:role/eucalyptus/InfrastructureAdministrator", "session-name-here", accessKey, secretKey));
-            youServ.setEndpoint(EC2_ENDPOINT.substring(0, EC2_ENDPOINT.length() - 17) + "/services/Empyrean/");
+            youServ.setEndpoint(endpoint + "/services/Empyrean/");
             List<ServiceStatus> serviceStatuses = youServ.describeServices(new DescribeServicesRequest()).getServiceStatuses();
             assertThat(!serviceStatuses.isEmpty(), "Expected Services");
 
             final YouPropClient youProp = new YouPropClient(credentialsProvider("arn:aws:iam::eucalyptus:role/eucalyptus/InfrastructureAdministrator", "session-name-here", accessKey, secretKey));
-            youProp.setEndpoint(EC2_ENDPOINT.substring(0, EC2_ENDPOINT.length() - 17) + "/services/Properties/");
+            youProp.setEndpoint(endpoint + "/services/Properties/");
             List<Property> properties = youProp.describeProperties().getProperties();
             assertThat(!properties.isEmpty(), "Expected Properties");
-
-            final YouConfigClient youConfig = new YouConfigClient(credentialsProvider("arn:aws:iam::eucalyptus:role/eucalyptus/InfrastructureAdministrator", "session-name-here", accessKey, secretKey));
-            youConfig.setEndpoint(EC2_ENDPOINT.substring(0, EC2_ENDPOINT.length() - 17) + "/services/Configuration/");
-            List<ComponentInfo> components = youConfig.describeComponents().getComponentInfos();
-            assertThat(!components.isEmpty(), "Expected Components");
 
             // Test Resource Admin Role  first create an account and add a keypair
             final String resourceAccount = NAME_PREFIX + "resource-account";

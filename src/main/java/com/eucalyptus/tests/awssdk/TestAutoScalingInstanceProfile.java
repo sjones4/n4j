@@ -26,7 +26,7 @@ import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.IamInstanceProfile;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.identitymanagement.model.*;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -21,7 +21,7 @@ import com.amazonaws.services.identitymanagement.model.DeleteUserPolicyRequest
 import com.amazonaws.services.identitymanagement.model.DeleteUserRequest
 import com.amazonaws.services.identitymanagement.model.GetUserPolicyRequest
 import com.amazonaws.services.identitymanagement.model.PutUserPolicyRequest
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
 import static N4j.CLC_IP

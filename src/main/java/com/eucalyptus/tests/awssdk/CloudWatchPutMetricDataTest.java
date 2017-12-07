@@ -3,7 +3,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;

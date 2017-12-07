@@ -1,7 +1,7 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.cloudwatch.model.DisableAlarmActionsRequest;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collection;

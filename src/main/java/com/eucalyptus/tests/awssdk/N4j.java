@@ -1,5 +1,6 @@
 package com.eucalyptus.tests.awssdk;
 
+import static org.junit.Assert.fail;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
@@ -45,7 +46,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-class N4j {
+public class N4j {
     static String CLC_IP = System.getProperty("clcip");
     static String USER = System.getProperty("user", "root");
     static String PASSWORD = System.getProperty("password", "foobar");
@@ -77,29 +78,33 @@ class N4j {
     static String AVAILABILITY_ZONE = null;
     static String INSTANCE_TYPE = "m1.small";
 
+    public static void initEndpoints( ) throws Exception {
+      getAdminCreds(CLC_IP, USER, PASSWORD);
+
+      if (endpointFile != null) {
+        endpoints = endpointFile;
+      } else {
+        endpoints = "endpoints.xml";
+      }
+
+      print("Getting cloud information from " + LOCAL_INI_FILE);
+      EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
+      AS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "autoscaling-url");
+      ELB_ENDPOINT = getAttribute(LOCAL_INI_FILE, "elasticloadbalancing-url");
+      CW_ENDPOINT = getAttribute(LOCAL_INI_FILE, "monitoring-url");
+      IAM_ENDPOINT = getAttribute(LOCAL_INI_FILE, "iam-url");
+      S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
+      TOKENS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "sts-url");
+      SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
+      ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
+      ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
+
+      print("Updating endpoints file");
+      updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
+    }
+
     public static void getCloudInfo() throws Exception {
-        getAdminCreds(CLC_IP, USER, PASSWORD);
-
-        if (endpointFile != null) {
-            endpoints = endpointFile;
-        } else {
-            endpoints = "endpoints.xml";
-        }
-
-        print("Getting cloud information from " + LOCAL_INI_FILE);
-        EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
-        AS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "autoscaling-url");
-        ELB_ENDPOINT = getAttribute(LOCAL_INI_FILE, "elasticloadbalancing-url");
-        CW_ENDPOINT = getAttribute(LOCAL_INI_FILE, "monitoring-url");
-        IAM_ENDPOINT = getAttribute(LOCAL_INI_FILE, "iam-url");
-        S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
-        TOKENS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "sts-url");
-        SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
-        ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
-        ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
-
-        print("Updating endpoints file");
-        updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
+        initEndpoints( );
 
         print("Getting cloud connections");
         as = getAutoScalingClient(ACCESS_KEY, SECRET_KEY, AS_ENDPOINT);
@@ -263,6 +268,7 @@ class N4j {
         }
         catch(JSchException | IOException e) {
             System.err.print(e);
+            fail( e.toString( ) );
         }
         // we have known creds exist or we have created them by now so save them locally for processing
         print("Fetching euca-admin.ini file");

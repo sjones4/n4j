@@ -1,0 +1,95 @@
+/*
+ * Gradle build for n4j
+ *
+ * To run a single test or test suite use:
+ *
+ *  ./gradlew -Dtest.single=AllShortSuite -Dclcip=CLC_IP_ADDR test
+ *
+ * An example of a suite is Ec2Suite, an example test is
+ * TestEC2DescribeInstanceStatus.
+ *
+ * Results location:
+ *
+ *  ./build/reports/tests/test/index.html
+ */
+apply plugin: 'groovy'
+apply plugin: 'idea'
+apply plugin: 'java'
+
+targetCompatibility = 1.8
+sourceCompatibility = 1.8
+
+repositories {
+    jcenter( )
+}
+
+sourceSets {
+    main {
+        java.srcDirs = []
+        groovy.srcDirs = []
+    }
+    test {
+        java {
+            srcDirs = []
+        }
+        groovy {
+            srcDirs = ['src/main/java']
+        }
+    }
+}
+
+compileJava {
+    options.debug = true
+}
+
+test {
+    description '''\
+Run unit tests. To run quick tests use: ./gradlew -Dclcip=CLC_IP_ADDR test \
+(pass -Dpassword, etc as needed)'''
+
+    testLogging.showStandardStreams =
+        Boolean.valueOf( System.getProperty( 'testsToConsole', 'true' ) )
+
+    [ 'clcip', 'user', 'password', 'endpoints', 'inifile' ].each{
+        if ( System.getProperty( it ) ) systemProperty it, System.getProperty( it )
+    }
+
+    if ( !System.hasProperty( 'test.single' ) ) {
+      include 'com/eucalyptus/tests/suites/AllShortSuite.class'
+    }
+}
+
+dependencies {
+    compile 'com.amazonaws:aws-java-sdk-autoscaling:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-cloudformation:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-cloudwatch:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-core:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-ec2:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-elasticloadbalancing:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-iam:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-s3:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-simpleworkflow:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-sqs:1.11.+'
+    compile 'com.amazonaws:aws-java-sdk-sts:1.11.+'
+    compile 'com.github.sjones4:you-are-sdk:1.2.+'
+    compile 'com.jcraft:jsch:0.1.54'
+    compile 'junit:junit:4.+'
+    compile 'log4j:log4j:1.2.17'
+    compile 'org.codehaus.groovy:groovy-all:2.2.2'
+    compile 'org.jclouds.api:ec2:1.6.+'
+    compile 'org.jclouds.driver:jclouds-log4j:1.6.+'
+    compile 'org.jclouds:jclouds-compute:1.6.+'
+}
+
+idea {
+    module {
+        excludeDirs = [
+            file( "$buildDir/classes" ),
+        ]
+    }
+
+    project {
+        jdkName = '1.8'
+        languageLevel = '1.8'
+    }
+}

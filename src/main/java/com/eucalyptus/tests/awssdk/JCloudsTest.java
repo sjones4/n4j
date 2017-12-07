@@ -22,7 +22,7 @@ import org.jclouds.ec2.domain.Snapshot;
 import org.jclouds.ec2.domain.Volume;
 import org.jclouds.logging.log4j.config.Log4JLoggingModule;
 import org.jclouds.rest.RestContext;
-import org.testng.annotations.Test;
+import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Module;
 

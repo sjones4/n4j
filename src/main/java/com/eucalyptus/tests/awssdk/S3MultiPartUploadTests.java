@@ -67,7 +67,7 @@ import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -86,11 +86,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -134,13 +135,13 @@ public class S3MultiPartUploadTests {
   private static String ownerName = null;
   private static Owner owner = null;
   private static String ownerId = null;
-  byte[] randomBytes;
+  private static byte[] randomBytes;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3MultiPartUploadTests.class.getSimpleName());
     try {
-      account = this.getClass().getSimpleName().toLowerCase();
+      account = S3MultiPartUploadTests.class.getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
     } catch (Exception e) {
       try {
@@ -175,13 +176,13 @@ public class S3MultiPartUploadTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3MultiPartUploadTests.class.getSimpleName());
     N4j.deleteAccount(account);
     s3 = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     bucketName = eucaUUID();
     cleanupTasks = new ArrayList<Runnable>();
@@ -199,7 +200,7 @@ public class S3MultiPartUploadTests {
         bucketName.equals(bucket.getName()));
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {
@@ -433,7 +434,8 @@ public class S3MultiPartUploadTests {
   }
 
   // This test might never pass as the s3 sdk sorts parts before sending the request
-  @Test(enabled = false)
+  @Ignore
+  @Test
   public void invalidPartOrder() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - invalidPartOrder");
     try {

@@ -8,7 +8,7 @@ import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
 import static N4j.CLC_IP

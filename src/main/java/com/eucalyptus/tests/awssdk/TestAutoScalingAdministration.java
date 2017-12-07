@@ -22,7 +22,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
 import com.amazonaws.services.autoscaling.model.*;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;

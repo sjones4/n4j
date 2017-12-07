@@ -36,7 +36,7 @@ import com.amazonaws.services.identitymanagement.model.NoSuchEntityException
 import com.amazonaws.services.identitymanagement.model.PutUserPolicyRequest
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 /**
  * Tests name limits for IAM resources.

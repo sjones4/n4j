@@ -37,7 +37,7 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 import com.github.sjones4.youcan.youare.YouAreClient;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
