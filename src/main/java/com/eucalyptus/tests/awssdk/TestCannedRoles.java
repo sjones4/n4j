@@ -46,8 +46,10 @@ import com.github.sjones4.youcan.youserv.model.DescribeServicesRequest;
 import com.github.sjones4.youcan.youserv.model.ServiceStatus;
 import org.junit.Test;
 
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -127,6 +129,14 @@ public class TestCannedRoles {
                 "}";
     }
 
+    public String urlDecode(String text) {
+      try {
+        return URLDecoder.decode( text, "utf-8" );
+      } catch ( UnsupportedEncodingException e ) {
+        throw new RuntimeException( e );
+      }
+    }
+
     @Test
     public void test() throws Exception {
 
@@ -155,7 +165,7 @@ public class TestCannedRoles {
                     print("Resetting assume role policy for account administrator");
                     youAre.updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest()
                             .withRoleName("AccountAdministrator")
-                            .withPolicyDocument("{"+aaAssumeRolePolicy+"}"));
+                            .withPolicyDocument(urlDecode(aaAssumeRolePolicy)));
                 }
             });
 
@@ -167,7 +177,7 @@ public class TestCannedRoles {
                     print("Resetting assume role policy for infrastructure administrator");
                     youAre.updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest()
                             .withRoleName("InfrastructureAdministrator")
-                            .withPolicyDocument("{"+iaAssumeRolePolicy+"}"));
+                            .withPolicyDocument(urlDecode(iaAssumeRolePolicy)));
                 }
             });
 
@@ -178,7 +188,7 @@ public class TestCannedRoles {
                     print("Resetting assume role policy for resource administrator");
                     youAre.updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest()
                             .withRoleName("ResourceAdministrator")
-                            .withPolicyDocument("{"+raAssumeRolePolicy+"}"));
+                            .withPolicyDocument(urlDecode(raAssumeRolePolicy)));
                 }
             });
 
