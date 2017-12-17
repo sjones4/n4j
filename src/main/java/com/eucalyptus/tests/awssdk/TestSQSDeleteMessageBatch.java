@@ -17,11 +17,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URL;
@@ -327,8 +325,7 @@ public class TestSQSDeleteMessageBatch {
   }
 
   @Test
-  @Parameters("concise")
-  public void testDeleteMessageBatchSuccess(@Optional("false") boolean concise) throws Exception {
+  public void testDeleteMessageBatchSuccess() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testDeleteMessageBatchSuccess");
     String queueName = "queue_name_delete_message_batch_success";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -372,7 +369,7 @@ public class TestSQSDeleteMessageBatch {
       "Should have successfully deleted all messages");
 
     long startTimeSecondLoop = System.currentTimeMillis();
-    long timeout = concise ? 30000L : 120000L;
+    long timeout = 120000L;
     while (System.currentTimeMillis() - startTimeSecondLoop < timeout) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {

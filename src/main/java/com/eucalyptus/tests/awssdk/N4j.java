@@ -40,8 +40,7 @@ import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
-import org.testng.SkipException;
-import sun.security.krb5.internal.crypto.Des;
+import org.junit.Assume;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -585,8 +584,7 @@ public class N4j {
      * Skip a test without failure if an assumption is false
      */
     public static void assumeThat(boolean condition, String message) {
-        // testng does not have an equivalent of junits Assume.*
-        if (!condition) throw new SkipException( message );
+      Assume.assumeTrue( message, condition );
     }
 
     public static void print(String text) {

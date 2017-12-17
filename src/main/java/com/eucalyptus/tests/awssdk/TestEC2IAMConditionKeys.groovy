@@ -58,12 +58,12 @@ import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient
 import com.amazonaws.services.identitymanagement.model.PutUserPolicyRequest
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
-import org.testng.Assert
-import org.testng.annotations.AfterClass
-import org.testng.annotations.AfterMethod
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.BeforeMethod
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.After
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Before
+import org.junit.Test
 
 import java.util.concurrent.TimeUnit
 
@@ -94,12 +94,12 @@ import static com.eucalyptus.tests.awssdk.N4j.waitForVolumeAttachments
 class TestEC2IAMConditionKeys {
 
   // for all tests
-  private String account
-  private String accountNumber
-  private AWSCredentialsProvider accountCredentials
-  private AmazonEC2 accountEc2
-  private AmazonIdentityManagement accountIam
-  private int tagWaitSeconds = 10
+  private static String account
+  private static String accountNumber
+  private static AWSCredentialsProvider accountCredentials
+  private static AmazonEC2 accountEc2
+  private static AmazonIdentityManagement accountIam
+  private static int tagWaitSeconds = 10
 
   // for each test
   private List<Runnable> cleanupTasks
@@ -107,7 +107,7 @@ class TestEC2IAMConditionKeys {
   private AWSCredentialsProvider userCredentials
 
   @BeforeClass
-  void init( ) {
+  static void init( ) {
     print("### SETUP - ${getClass().simpleName}")
     getCloudInfo( )
     account = "${getClass().simpleName.toLowerCase( )}-${eucaUUID()}"
@@ -129,14 +129,14 @@ class TestEC2IAMConditionKeys {
   }
 
   @AfterClass
-  void teardown( ) {
+  static void teardown( ) {
     print("### CLEANUP - ${getClass().simpleName}")
     if ( account ) {
       deleteAccount( account )
     }
   }
 
-  @BeforeMethod
+  @Before
   void initTest(  ) {
     print( "Initializing user and clean up tasks" )
     cleanupTasks = [ ]
@@ -146,7 +146,7 @@ class TestEC2IAMConditionKeys {
         getUserKeys( account, user ).with{ it -> new BasicAWSCredentials( it['ak'], it['sk'] ) } )
   }
 
-  @AfterMethod
+  @After
   void cleanup( ) {
     Collections.reverse(cleanupTasks)
     for (final Runnable cleanupTask : cleanupTasks) {
@@ -282,7 +282,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
 
       print( 'Creating volume for delete test' )
       volumeId = createVolume( new CreateVolumeRequest(
@@ -292,7 +292,7 @@ class TestEC2IAMConditionKeys {
         volume?.volumeId
       }
       print( "Created volume: ${volumeId}" )
-      Assert.assertNotNull( volumeId, "Expected volumeId" )
+      Assert.assertNotNull( "Expected volumeId", volumeId )
       cleanupTasks.add{
         print( "Deleting volume ${volumeId}" )
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
@@ -306,7 +306,7 @@ class TestEC2IAMConditionKeys {
         groupId
       }
       print( "Created security group: ${securityGroupId}" )
-      Assert.assertNotNull( securityGroupId, "Expected securityGroupId" )
+      Assert.assertNotNull( "Expected securityGroupId", securityGroupId )
       cleanupTasks.add{
         print( "Deleting security group ${securityGroupId}" )
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
@@ -403,7 +403,7 @@ class TestEC2IAMConditionKeys {
         vpc?.vpcId
       }
       print( "Created vpc: ${vpcId}" )
-      Assert.assertNotNull( vpcId, "Expected vpcId" )
+      Assert.assertNotNull( "Expected vpcId", vpcId )
       cleanupTasks.add{
         print( "Deleting vpc ${vpcId}" )
         deleteVpc( new DeleteVpcRequest( vpcId: vpcId ) )
@@ -414,7 +414,7 @@ class TestEC2IAMConditionKeys {
         dhcpOptions?.dhcpOptionsId
       }
       print( "Created dhcp options: ${dhcpOptionsId}" )
-      Assert.assertNotNull( dhcpOptionsId, "Expected dhcpOptionsId" )
+      Assert.assertNotNull( "Expected dhcpOptionsId", dhcpOptionsId )
       cleanupTasks.add{
         print( "Deleting dhcp options ${dhcpOptionsId}" )
         deleteDhcpOptions( new DeleteDhcpOptionsRequest( dhcpOptionsId: dhcpOptionsId ) )
@@ -425,7 +425,7 @@ class TestEC2IAMConditionKeys {
         internetGateway?.internetGatewayId
       }
       print( "Created internet gateway: ${internetGatewayId}" )
-      Assert.assertNotNull( internetGatewayId, "Expected internetGatewayId" )
+      Assert.assertNotNull( "Expected internetGatewayId", internetGatewayId )
       cleanupTasks.add{
         print( "Deleting internet gateway ${internetGatewayId}" )
         deleteInternetGateway( new DeleteInternetGatewayRequest( internetGatewayId: internetGatewayId ) )
@@ -436,7 +436,7 @@ class TestEC2IAMConditionKeys {
         networkAcl?.networkAclId
       }
       print( "Created network acl: ${networkAclId}" )
-      Assert.assertNotNull( networkAclId, "Expected networkAclId" )
+      Assert.assertNotNull( "Expected networkAclId", networkAclId )
       cleanupTasks.add{
         print( "Deleting network acl ${networkAclId}" )
         deleteNetworkAcl( new DeleteNetworkAclRequest( networkAclId: networkAclId ) )
@@ -458,7 +458,7 @@ class TestEC2IAMConditionKeys {
         routeTable?.routeTableId
       }
       print( "Created route table: ${routeTableId}" )
-      Assert.assertNotNull( routeTableId, "Expected routeTableId" )
+      Assert.assertNotNull( "Expected routeTableId", routeTableId )
       cleanupTasks.add{
         print( "Deleting route table ${routeTableId}" )
         deleteRouteTable( new DeleteRouteTableRequest( routeTableId: routeTableId ) )
@@ -620,7 +620,7 @@ class TestEC2IAMConditionKeys {
         groupId
       }
       print( "Created security group: ${securityGroupId}" )
-      Assert.assertNotNull( securityGroupId, "Expected securityGroupId" )
+      Assert.assertNotNull( "Expected securityGroupId", securityGroupId )
       cleanupTasks.add{
         print( "Deleting security group ${securityGroupId}" )
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
@@ -765,7 +765,7 @@ class TestEC2IAMConditionKeys {
         vpc?.vpcId
       }
       print( "Created vpc: ${vpcId}" )
-      Assert.assertNotNull( vpcId, "Expected vpcId" )
+      Assert.assertNotNull( "Expected vpcId", vpcId )
       cleanupTasks.add{
         print( "Deleting vpc ${vpcId}" )
         deleteVpc( new DeleteVpcRequest( vpcId: vpcId ) )
@@ -780,7 +780,7 @@ class TestEC2IAMConditionKeys {
         groupId
       }
       print( "Created security group: ${securityGroupId}" )
-      Assert.assertNotNull( securityGroupId, "Expected securityGroupId" )
+      Assert.assertNotNull( "Expected securityGroupId", securityGroupId )
       cleanupTasks.add{
         print( "Deleting security group ${securityGroupId}" )
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
@@ -1001,7 +1001,7 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         images?.getAt( 0 )?.imageId
       }
-      Assert.assertNotNull( imageId, "Public instance-store image not found" )
+      Assert.assertNotNull( "Public instance-store image not found", imageId )
       print( "Using image: ${imageId}" )
 
       // Run instance without any tags
@@ -1014,7 +1014,7 @@ class TestEC2IAMConditionKeys {
         reservation?.instances?.getAt(0)?.instanceId
       }
       print( "Launched instance: ${instanceId}" )
-      Assert.assertNotNull( instanceId, "Expected instance identifier" )
+      Assert.assertNotNull( "Expected instance identifier", instanceId )
 
       cleanupTasks.add{
         print( "Terminating instance ${instanceId}" )
@@ -1120,7 +1120,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
 
       print( "Creating volume in availability zone: ${availabilityZone}" )
       volumeId = createVolume( new CreateVolumeRequest(
@@ -1138,7 +1138,7 @@ class TestEC2IAMConditionKeys {
         volume?.volumeId
       }
       print( "Created volume ${volumeId}" )
-      Assert.assertNotNull( volumeId, "Expected volumeId" )
+      Assert.assertNotNull( "Expected volumeId", volumeId )
       cleanupTasks.add{
         print( "Deleting volume ${volumeId}" )
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
@@ -1165,11 +1165,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Volume tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+          Assert.assertEquals( 'Volume tag count', tags.size(), 1 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
       print( "Creating volume tags ${volumeId}" )
@@ -1186,7 +1186,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Volume tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 2, 'Volume tag count' )
+        Assert.assertEquals( 'Volume tag count', tags.size(), 2 )
       }
 
       try {
@@ -1204,11 +1204,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Volume tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 2, 'Volume tag count' )
+          Assert.assertEquals( 'Volume tag count', tags.size(), 2 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
       print( "Deleting volume tags ${volumeId}" )
@@ -1225,7 +1225,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Volume tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+        Assert.assertEquals( 'Volume tag count', tags.size(), 1 )
       }
 
       void
@@ -1244,7 +1244,7 @@ class TestEC2IAMConditionKeys {
       }
     }
     print("Using availability zone: ${availabilityZone}")
-    Assert.assertNotNull(availabilityZone, "Expected availability zone")
+    Assert.assertNotNull("Expected availability zone", availabilityZone)
 
     accountIam.with{
       print( "Putting policy for user ${this.user}, authorizing conditional create tags" )
@@ -1309,7 +1309,7 @@ class TestEC2IAMConditionKeys {
     String volumeId_1 = null
     String volumeId_2 = null
     String snapshotId = null
-    accountEc2.with {
+    TestEC2IAMConditionKeys.accountEc2.with {
       print( "Creating volume size 1 in availability zone: ${availabilityZone}" )
       volumeId_1 = createVolume( new CreateVolumeRequest(
           size: 1,
@@ -1318,7 +1318,7 @@ class TestEC2IAMConditionKeys {
         volume?.volumeId
       }
       print( "Created volume ${volumeId_1}" )
-      Assert.assertNotNull( volumeId_1, "Expected volumeId" )
+      Assert.assertNotNull( "Expected volumeId", volumeId_1 )
       cleanupTasks.add{
         print( "Deleting volume ${volumeId_1}" )
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId_1 ) )
@@ -1332,10 +1332,23 @@ class TestEC2IAMConditionKeys {
         volume?.volumeId
       }
       print( "Created volume ${volumeId_2}" )
-      Assert.assertNotNull( volumeId_2, "Expected volumeId" )
+      Assert.assertNotNull( "Expected volumeId", volumeId_2 )
       cleanupTasks.add{
         print( "Deleting volume ${volumeId_2}" )
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId_2 ) )
+      }
+
+      for ( int n = 0; n < 60; n += 5 ) {
+        N4j.sleep( 5 );
+        if ( describeVolumes( new DescribeVolumesRequest( filters: [
+            new Filter( name: 'volume-id', values: [ volumeId_1, volumeId_2 ] ),
+            new Filter( name: 'status', values: [ 'available' ] ),
+        ] ) ).with{ !volumes.empty } ) {
+          print( "Volumes available: ${volumeId_1} ${volumeId_2}" )
+          break;
+        } else {
+          print( "Waiting for volumes to be available: ${volumeId_1} ${volumeId_2}" )
+        }
       }
 
       print( "Creating snapshot from volume ${volumeId_1}" )
@@ -1345,7 +1358,7 @@ class TestEC2IAMConditionKeys {
         snapshot?.snapshotId
       }
       print( "Created snapshot ${snapshotId}" )
-      Assert.assertNotNull( snapshotId, "Expected snapshotId" )
+      Assert.assertNotNull( "Expected snapshotId", snapshotId )
       cleanupTasks.add{
         print( "Deleting snapshot ${snapshotId}" )
         deleteSnapshot( new DeleteSnapshotRequest( snapshotId: snapshotId ) )
@@ -1375,11 +1388,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Volume tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 0, 'Volume tag count' )
+          Assert.assertEquals( 'Volume tag count', tags.size(), 0 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
       print( "Creating volume tags ${volumeId_1}" )
@@ -1396,7 +1409,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Volume tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+        Assert.assertEquals( 'Volume tag count', tags.size(), 1 )
       }
       try {
         print( "Deleting volume tags ${volumeId_1} without permission (should fail)" )
@@ -1413,11 +1426,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Volume tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 1, 'Volume tag count' )
+          Assert.assertEquals( 'Volume tag count', tags.size(), 1 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
       print( "Creating volume tags ${volumeId_1} to add tag delete permission" )
       createTags( new CreateTagsRequest(
@@ -1443,7 +1456,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Volume tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 0, 'Volume tag count' )
+        Assert.assertEquals( 'Volume tag count', tags.size(), 0 )
       }
 
       print( "Creating snapshot tags ${snapshotId}" )
@@ -1460,7 +1473,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Snapshot tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 1, 'Snapshot tag count' )
+        Assert.assertEquals( 'Snapshot tag count', tags.size(), 1 )
       }
       print( "Sleeping to allow tags to apply" )
       N4j.sleep( tagWaitSeconds )
@@ -1478,7 +1491,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Snapshot tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 0, 'Snapshot tag count' )
+        Assert.assertEquals( 'Snapshot tag count', tags.size(), 0 )
       }
 
       void
@@ -1501,7 +1514,7 @@ class TestEC2IAMConditionKeys {
           vpc?.vpcId
         }
         print( "Created vpc ${vpcId}" )
-        Assert.assertNotNull( vpcId, "Expected vpcId" )
+        Assert.assertNotNull( "Expected vpcId", vpcId )
         cleanupTasks.add{
           print( "Deleting vpc ${vpcId}" )
           deleteVpc( new DeleteVpcRequest( vpcId: vpcId ) )
@@ -1517,7 +1530,7 @@ class TestEC2IAMConditionKeys {
           subnet?.subnetId
         }
         print( "Created subnet ${subnetId}" )
-        Assert.assertNotNull( subnetId, "Expected subnetId" )
+        Assert.assertNotNull( "Expected subnetId", subnetId )
         cleanupTasks.add{
           print( "Deleting subnet ${subnetId}" )
           deleteSubnet( new DeleteSubnetRequest( subnetId: subnetId ) )
@@ -1593,11 +1606,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Subnet ${subnetId_2} tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 0, "Subnet ${subnetId_2} tag count" )
+          Assert.assertEquals( "Subnet ${subnetId_2} tag count", tags.size(), 0 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
       print( "Creating subnet tags ${subnetId_1}" )
@@ -1614,7 +1627,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Subnet ${subnetId_1} tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 1, "Subnet ${subnetId_1} tag count" )
+        Assert.assertEquals( "Subnet ${subnetId_1} tag count", tags.size(), 1 )
       }
       try {
         print( "Deleting subnet tags ${subnetId_1} without permission (should fail)" )
@@ -1631,11 +1644,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Subnet ${subnetId_1} tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 1, "Subnet ${subnetId_1} tag count" )
+          Assert.assertEquals( "Subnet ${subnetId_1} tag count", tags.size(), 1 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
       print( "Creating subnet tags ${subnetId_1} to add tag delete permission" )
       createTags( new CreateTagsRequest(
@@ -1661,7 +1674,7 @@ class TestEC2IAMConditionKeys {
           ]
       ) ).with {
         print( "Subnet ${subnetId_1} tags: ${tags}" )
-        Assert.assertEquals( tags.size(), 0, "Subnet ${subnetId_1} tag count" )
+        Assert.assertEquals( "Subnet ${subnetId_1} tag count", tags.size(), 0 )
       }
 
       void
@@ -1677,7 +1690,7 @@ class TestEC2IAMConditionKeys {
       }
     }
     print("Using availability zone: ${availabilityZone}")
-    Assert.assertNotNull(availabilityZone, "Expected availability zone")
+    Assert.assertNotNull("Expected availability zone", availabilityZone)
 
     accountIam.with{
       print( "Putting policy for user ${this.user}, authorizing volume create for < 2GB" )
@@ -1732,7 +1745,7 @@ class TestEC2IAMConditionKeys {
         )).with {
           String createdVolumeId = volume?.volumeId
           print("Created volume ${createdVolumeId}")
-          Assert.assertNotNull(createdVolumeId, "Expected volumeId")
+          Assert.assertNotNull("Expected volumeId", createdVolumeId)
           cleanupTasks.add {
             print("Deleting volume ${createdVolumeId}")
             deleteVolume(new DeleteVolumeRequest(volumeId: createdVolumeId))
@@ -1741,7 +1754,7 @@ class TestEC2IAMConditionKeys {
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
       createVolume(new CreateVolumeRequest(
@@ -1750,7 +1763,7 @@ class TestEC2IAMConditionKeys {
       )).with {
         String createdVolumeId = volume?.volumeId
         print("Created volume ${createdVolumeId}")
-        Assert.assertNotNull(createdVolumeId, "Expected volumeId")
+        Assert.assertNotNull("Expected volumeId", createdVolumeId)
         cleanupTasks.add {
           print("Deleting volume ${createdVolumeId}")
           deleteVolume(new DeleteVolumeRequest(volumeId: createdVolumeId))
@@ -1816,7 +1829,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
 
       print( "Creating volume in availability zone: ${availabilityZone}" )
       String volumeId = createVolume( new CreateVolumeRequest(
@@ -1834,12 +1847,12 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         String createdVolumeId = volume?.volumeId
         print( "Created volume ${createdVolumeId} with tags ${volume?.tags}" )
-        Assert.assertNotNull( createdVolumeId, "Expected volumeId" )
+        Assert.assertNotNull( "Expected volumeId", createdVolumeId )
         cleanupTasks.add{
           print( "Deleting volume ${createdVolumeId}" )
           deleteVolume( new DeleteVolumeRequest( volumeId: createdVolumeId ) )
         }
-        Assert.assertEquals( volume?.tags?.size()?:0, 2 , 'create volume response tag count' )
+        Assert.assertEquals( 'create volume response tag count', volume?.tags?.size()?:0, 2 )
         createdVolumeId
       }
 
@@ -1858,11 +1871,11 @@ class TestEC2IAMConditionKeys {
             ]
         ) ).with {
           print( "Volume tags: ${tags}" )
-          Assert.assertEquals( tags.size(), 2 , 'Volume tag count' )
+          Assert.assertEquals( 'Volume tag count', tags.size(), 2 )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'HTTP status code for error' )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
       void
     }
@@ -1925,7 +1938,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt(0)?.zoneName
       }
       print("Using availability zone: ${availabilityZone}")
-      Assert.assertNotNull(availabilityZone, "Expected availability zone")
+      Assert.assertNotNull("Expected availability zone", availabilityZone)
 
       try {
         print( "Creating volume in availability zone: ${availabilityZone}, should fail" )
@@ -1946,7 +1959,7 @@ class TestEC2IAMConditionKeys {
         }
 
         print("Created volume: ${volumeId}")
-        Assert.assertNotNull(volumeId, "Expected volumeId")
+        Assert.assertNotNull("Expected volumeId", volumeId)
         cleanupTasks.add {
           print("Deleting volume ${volumeId}")
           deleteVolume(new DeleteVolumeRequest(volumeId: volumeId))
@@ -1954,7 +1967,7 @@ class TestEC2IAMConditionKeys {
         Assert.fail("Expected volume creation to fail with permission to tag only instance resources")
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'Unexpected HTTP status code for error' )
+        Assert.assertEquals( 'Unexpected HTTP status code for error', e.statusCode, 403 )
       }
     }
   }
@@ -2004,7 +2017,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt(0)?.zoneName
       }
       print("Using availability zone: ${availabilityZone}")
-      Assert.assertNotNull(availabilityZone, "Expected availability zone")
+      Assert.assertNotNull("Expected availability zone", availabilityZone)
 
       try {
         print( "Creating volume in availability zone: ${availabilityZone}, should fail" )
@@ -2025,7 +2038,7 @@ class TestEC2IAMConditionKeys {
         }
 
         print("Created volume: ${volumeId}")
-        Assert.assertNotNull(volumeId, "Expected volumeId")
+        Assert.assertNotNull("Expected volumeId", volumeId)
         cleanupTasks.add {
           print("Deleting volume ${volumeId}")
           deleteVolume(new DeleteVolumeRequest(volumeId: volumeId))
@@ -2033,7 +2046,7 @@ class TestEC2IAMConditionKeys {
         Assert.fail("Expected volume creation to fail with permission to tag only instance resources")
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
-        Assert.assertEquals( e.statusCode, 403, 'Unexpected HTTP status code for error' )
+        Assert.assertEquals( 'Unexpected HTTP status code for error', e.statusCode, 403 )
       }
     }
   }
@@ -2094,7 +2107,7 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         images?.getAt( 0 )?.imageId
       }
-      Assert.assertNotNull( imageId, "Public instance-store image not found" )
+      Assert.assertNotNull("Public instance-store image not found", imageId)
       print( "Using image: ${imageId}" )
 
       // Find an AZ to use
@@ -2102,7 +2115,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull("Expected availability zone", availabilityZone)
 
       def volumeCreate = { String desc ->
         print( "Creating volume ${desc} for delete test" )
@@ -2113,7 +2126,7 @@ class TestEC2IAMConditionKeys {
           volume?.volumeId
         }
         print( "Created volume ${desc}: ${volumeId}" )
-        Assert.assertNotNull( volumeId, "Expected volumeId" )
+        Assert.assertNotNull("Expected volumeId", volumeId)
         cleanupTasks.add{
           print( "Deleting volume ${desc} ${volumeId}" )
           deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
@@ -2136,7 +2149,7 @@ class TestEC2IAMConditionKeys {
         reservation?.instances?.getAt(0)?.instanceId
       }
       print( "Launched instance: ${instanceId}" )
-      Assert.assertNotNull( instanceId, "Expected instance identifier" )
+      Assert.assertNotNull("Expected instance identifier", instanceId)
       cleanupTasks.add{
         print( "Terminating instance ${instanceId}" )
         terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
@@ -2325,7 +2338,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull("Expected availability zone", availabilityZone)
 
       // Run instance without any tags
       def launchInstance = { String desc ->
@@ -2341,7 +2354,7 @@ class TestEC2IAMConditionKeys {
           reservation?.instances?.getAt(0)?.instanceId
         }
         print( "Launched instance ${desc}: ${instanceId}" )
-        Assert.assertNotNull( instanceId, "Expected instance identifier" )
+        Assert.assertNotNull("Expected instance identifier", instanceId)
         cleanupTasks.add{
           print( "Terminating instance ${desc} ${instanceId}" )
           terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
@@ -2466,7 +2479,7 @@ class TestEC2IAMConditionKeys {
       )).with {
         images?.getAt(0)?.imageId
       }
-      Assert.assertNotNull(imageId, "Public instance-store image not found")
+      Assert.assertNotNull("Public instance-store image not found", imageId)
       print("Using image: ${imageId}")
 
       print( 'Creating security group for run instances test' )
@@ -2477,7 +2490,7 @@ class TestEC2IAMConditionKeys {
         groupId
       }
       print( "Created security group: ${securityGroupId}" )
-      Assert.assertNotNull( securityGroupId, "Expected securityGroupId" )
+      Assert.assertNotNull(  "Expected securityGroupId", securityGroupId )
       cleanupTasks.add{
         print( "Deleting security group ${securityGroupId}" )
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
@@ -2650,14 +2663,14 @@ class TestEC2IAMConditionKeys {
         images?.getAt( 0 )?.imageId
       }
       print( "Using image: ${imageId}" )
-      Assert.assertNotNull( imageId, "Expected public instance-store image" )
+      Assert.assertNotNull( "Expected public instance-store image", imageId )
 
       // Find an AZ to use
       availabilityZone = describeAvailabilityZones( ).with{
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
     }
 
     String instanceId = null
@@ -2720,7 +2733,7 @@ class TestEC2IAMConditionKeys {
       }
 
       print( "Launched instance: ${instanceId}" )
-      Assert.assertNotNull( instanceId, "Expected instance identifier" )
+      Assert.assertNotNull( "Expected instance identifier", instanceId )
       cleanupTasks.add{
         print( "Terminating instance ${instanceId}" )
         accountEc2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
@@ -2741,8 +2754,8 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         reservations?.getAt( 0 )?.instances?.getAt( 0 )?.with {
           print( "Instance tags: ${tags}")
-          Assert.assertNotNull( tags, 'instance tags' )
-          Assert.assertEquals( tags.size(), 2 , 'instance tag count' )
+          Assert.assertNotNull( 'instance tags', tags )
+          Assert.assertEquals( 'instance tag count', tags.size(), 2 )
         }
       }
     }
@@ -2774,7 +2787,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
     }
 
     accountIam.with{
@@ -2850,9 +2863,9 @@ class TestEC2IAMConditionKeys {
             instanceIds: [instanceId],
             includeAllInstances: true
         ) ).with {
-          Assert.assertEquals( instanceStatuses?.size()?:0, 1, "instance count" )
+          Assert.assertEquals( 'instance count', instanceStatuses?.size()?:0, 1 )
           instanceStatuses?.getAt( 0 )?.with {
-            Assert.assertEquals( instanceState?.name, "terminated", "instance state name" )
+            Assert.assertEquals( "instance state name", "terminated", instanceState?.name )
           }
         }
       } catch ( AmazonServiceException e ) {
@@ -2885,7 +2898,7 @@ class TestEC2IAMConditionKeys {
         availabilityZones?.getAt( 0 )?.zoneName
       }
       print( "Using availability zone: ${availabilityZone}" )
-      Assert.assertNotNull( availabilityZone, "Expected availability zone" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
     }
 
     accountIam.with{
@@ -3034,7 +3047,7 @@ class TestEC2IAMConditionKeys {
       }
 
       print( "Launched instance: ${instanceId}" )
-      Assert.assertNotNull( instanceId, "Expected instance identifier" )
+      Assert.assertNotNull( "Expected instance identifier", instanceId )
       cleanupTasks.add{
         print( "Terminating instance ${instanceId}" )
         accountEc2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
@@ -3056,12 +3069,12 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         reservations?.getAt( 0 )?.instances?.getAt( 0 )?.with {
           print( "Instance tags: ${tags}")
-          Assert.assertNotNull( tags, 'instance tags' )
-          Assert.assertEquals( tags.size(), 2 , 'instance tag count' )
+          Assert.assertNotNull( 'instance tags', tags )
+          Assert.assertEquals( 'instance tag count', tags.size(), 2 )
         }
         volumeId = reservations?.getAt(0)?.instances?.getAt(0)?.blockDeviceMappings?.getAt( 0 )?.ebs?.volumeId
       }
-      Assert.assertNotNull( volumeId, "Expected volume identifier" )
+      Assert.assertNotNull( "Expected volume identifier", volumeId )
 
       print( "Describing volume ${volumeId} to check tags" )
       describeVolumes( new DescribeVolumesRequest(
@@ -3072,8 +3085,8 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         volumes?.getAt( 0 )?.with {
           print( "Volume tags: ${tags}")
-          Assert.assertNotNull( tags, 'volume tags' )
-          Assert.assertEquals( tags.size(), 2 , 'volume tag count' )
+          Assert.assertNotNull( 'volume tags', tags )
+          Assert.assertEquals( 'volume tag count', tags.size(), 2 )
         }
       }
     }

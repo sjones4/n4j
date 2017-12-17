@@ -15,11 +15,9 @@ import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.URL;
 import java.util.Collections;
@@ -94,21 +92,14 @@ public class TestSQSAttributeValuesInMessages {
   }
 
   @Test
-  @Parameters("concise")
-  public void testAttributeValuesInMessages(@Optional("false") boolean concise) throws Exception {
+  public void testAttributeValuesInMessages() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testAttributeValuesInMessages");
 
     long PAUSE_TIME;
     int MAX_NUM_RECEIVES;
 
-    if (concise) {
-      // cut the time/operations a little during a concise test
-      PAUSE_TIME = 15000L;
-      MAX_NUM_RECEIVES = 10;
-    } else {
-      PAUSE_TIME = 30000L;
-      MAX_NUM_RECEIVES = 50;
-    }
+    PAUSE_TIME = 30000L;
+    MAX_NUM_RECEIVES = 50;
 
     String queueName = "queue_name_attributes_in_message";
     int errorSecs = 5;

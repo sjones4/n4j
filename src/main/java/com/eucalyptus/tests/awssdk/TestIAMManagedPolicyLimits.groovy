@@ -8,8 +8,8 @@ import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.model.PutAccountPolicyRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.*
 

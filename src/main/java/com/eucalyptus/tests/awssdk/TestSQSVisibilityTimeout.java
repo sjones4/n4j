@@ -9,11 +9,9 @@ import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -76,14 +74,12 @@ public class TestSQSVisibilityTimeout {
   }
 
   @Test
-  @Parameters("concise")
-  public void testVisibilityTimeout(@Optional("false") boolean concise) throws Exception {
+  public void testVisibilityTimeout( ) throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testVisibilityTimeout");
     String queueName = "queue_name_message_delay";
     int errorSecs = 5;
 
     int baseDelay = 15;
-    if (concise) baseDelay = 10;
     // start with a delay seconds of base_delay seconds
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
@@ -112,9 +108,7 @@ public class TestSQSVisibilityTimeout {
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long fifthReceiveTime = System.currentTimeMillis() / 1000L;
     assertThat(Math.abs(baseDelay - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around " + (2 * baseDelay) + " secs after the fourth");
-    if (!concise) { // no idea why this sleep is actually here, but keeping it for old compatibility, I guess
-      Thread.sleep(25000L);
-    }
+
     // test change message visibility
     accountSQSClient.changeMessageVisibility(queueUrl, receiptHandle, 3 * baseDelay);
     long startChangeMessageVisibility = System.currentTimeMillis() / 1000L;

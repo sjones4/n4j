@@ -8,11 +8,12 @@ import com.amazonaws.services.s3.model.Bucket
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.github.sjones4.youcan.youare.YouAre
-import org.testng.annotations.AfterClass
-import org.testng.annotations.AfterMethod
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.BeforeMethod
-import org.testng.annotations.Test
+import org.junit.Assert.*
+import org.junit.AfterClass
+import org.junit.After
+import org.junit.BeforeClass
+import org.junit.Before
+import org.junit.Test
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -29,9 +30,6 @@ import static com.eucalyptus.tests.awssdk.N4j.getUserCreds
 import static com.eucalyptus.tests.awssdk.N4j.getYouAreClient
 import static com.eucalyptus.tests.awssdk.N4j.print
 import static com.eucalyptus.tests.awssdk.N4j.sleep
-import static org.testng.Assert.assertEquals
-import static org.testng.Assert.assertTrue
-import static org.testng.Assert.fail
 
 /**
  * Test covering HMAC signatures with S3.
@@ -82,7 +80,7 @@ class S3SignatureTests {
     N4j.deleteAccount(account)
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     bucketName = eucaUUID()
     cleanupTasks = []
@@ -96,7 +94,7 @@ class S3SignatureTests {
     assertTrue(bucketName.equals(bucket.name), "Mismatch in bucket names. Expected bucket name to be ${bucketName}, but got ${bucket.name}")
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks)
     for (final Runnable cleanupTask : cleanupTasks) {

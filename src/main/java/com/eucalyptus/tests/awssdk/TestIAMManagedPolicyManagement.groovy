@@ -6,8 +6,8 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement
 import com.amazonaws.services.identitymanagement.model.*
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.*
 

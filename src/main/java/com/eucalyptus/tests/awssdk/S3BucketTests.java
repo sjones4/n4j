@@ -452,9 +452,10 @@ public class S3BucketTests {
       String urlText = S3_ENDPOINT + "hello.txt";
       URL url = new URL( urlText );
       String hostHeader = bucketName + ":" + url.getPort( );
-      print( account + ": Accessing object using host header " + hostHeader );
+      print( account + ": Accessing object using host header " + hostHeader + " [if test fails check system property sun.net.http.allowRestrictedHeaders=true]" );
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn.setDoOutput( true );
+      conn.setUseCaches( false );
+      conn.setInstanceFollowRedirects( false );
       conn.setRequestProperty( "Host", hostHeader );
       String content = new String( ByteStreams.toByteArray( (InputStream) conn.getContent( ) ) );
       print( account + ": got " + content );

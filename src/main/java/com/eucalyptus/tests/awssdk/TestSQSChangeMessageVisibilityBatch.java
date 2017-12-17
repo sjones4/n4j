@@ -17,11 +17,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URL;
@@ -412,13 +410,12 @@ public class TestSQSChangeMessageVisibilityBatch {
   }
 
   @Test
-  @Parameters("concise")
-  public void testChangeMessageVisibilityBatchSuccess(@Optional("false") boolean concise) throws Exception {
+  public void testChangeMessageVisibilityBatchSuccess() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testChangeMessageVisibilityBatchSuccess");
 
     // use fewer batch entries in the concise case for speed
     
-    int numBatchEntries = concise ? Math.min(2, MAX_NUM_BATCH_ENTRIES) : MAX_NUM_BATCH_ENTRIES;
+    int numBatchEntries = MAX_NUM_BATCH_ENTRIES;
 
     String queueName = "queue_name_change_message_visibility_batch_success";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();

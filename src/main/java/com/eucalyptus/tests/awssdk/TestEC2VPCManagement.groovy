@@ -53,7 +53,7 @@ import static N4j.*;
 class TestEC2VPCManagement {
 
   // for each test
-  private List<Runnable> cleanupTasks
+  private static List<Runnable> cleanupTasks
 
   @BeforeClass
   void init( ) {
@@ -536,7 +536,7 @@ class TestEC2VPCManagement {
           Assert.assertTrue( routes.size( ) == 2, "Expected two routes" )
           routes.each { Route route ->
             if ( route.gatewayId == internetGatewayId ) {
-              Assert.assertEquals( '0.0.0.0/0', route.destinationCidrBlock, 'Invalid destination cidr')
+              Assert.assertEquals( 'Invalid destination cidr', '0.0.0.0/0', route.destinationCidrBlock )
             } else if ( route.gatewayId != 'local' ) {
               Assert.fail( "Unexpected route: ${route}" )
             }
@@ -583,7 +583,7 @@ class TestEC2VPCManagement {
           Assert.assertTrue( entries.size( ) == 3, "Expected two network acl entries" )
           entries.each { NetworkAclEntry entry ->
             if ( entry.ruleNumber == 42 ) {
-              Assert.assertEquals( '10.0.0.0/8', entry.cidrBlock, 'Invalid cidr')
+              Assert.assertEquals( 'Invalid cidr','10.0.0.0/8', entry.cidrBlock)
             } else if ( entry.ruleNumber != 100 && entry.ruleNumber != 32767 ) {
               Assert.fail( "Unexpected entry: ${entry}" )
             }

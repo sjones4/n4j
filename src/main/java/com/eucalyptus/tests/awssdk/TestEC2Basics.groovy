@@ -7,8 +7,9 @@ import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.Test
+import org.junit.BeforeClass
+import org.junit.Ignore
+import org.junit.Test
 
 import java.util.concurrent.TimeUnit
 
@@ -21,11 +22,12 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
 class TestEC2Basics {
 
   @BeforeClass
-  void init( ) {
+  static void init( ) {
     getCloudInfo( )
   }
 
-  @Test( enabled = false ) // Enable when functionality is fixed
+  @Ignore
+  @Test( ) // Enable when functionality is fixed
   void testUnknownAccessKeyError( ) throws Exception {
     testInfo("${this.getClass().simpleName}.testUnknownAccessKeyError");
 

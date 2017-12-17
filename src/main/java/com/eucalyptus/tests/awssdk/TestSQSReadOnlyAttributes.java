@@ -13,11 +13,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.URL;
 import java.util.Collections;
@@ -83,16 +81,10 @@ public class TestSQSReadOnlyAttributes {
   }
 
   @Test
-  @Parameters("concise")
-  public void testReadOnlyAttributes(@Optional("false") boolean concise) throws Exception {
+  public void testReadOnlyAttributes() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testReadOnlyAttributes");
 
     int delaySeconds = 20;
-    if (concise) {
-      // make it faster for concise
-      delaySeconds = 10;
-    }
-
     int visibilityTimeout = 2 * delaySeconds;
 
     int messageRetentionPeriod = 60;
@@ -140,11 +132,9 @@ public class TestSQSReadOnlyAttributes {
     Thread.sleep(1000L * delaySeconds);
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 0, 8, 0), "Should have 8 visible messages");
-    if (!concise) {
-      Thread.sleep(1000L * (messageRetentionPeriod - 2 * delaySeconds));
-      getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
-      assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages (all expired)");
-    }
+    Thread.sleep(1000L * (messageRetentionPeriod - 2 * delaySeconds));
+    getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
+    assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages (all expired)");
   }
 
   private boolean numbersMatch(GetQueueAttributesResult getQueueAttributesResult, int delayed, int visible, int notVisible) {

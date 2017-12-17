@@ -11,8 +11,8 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.After
+import org.junit.Test
 
 import static N4j.*
 
@@ -39,8 +39,8 @@ class TestEC2LongIdentifiers {
 
   }
 
-  @AfterClass
-  void tearDownAfterClass() throws Exception {
+  @After
+  void tearDown( ) throws Exception {
     deleteAccount(testAcct)
   }
 
@@ -151,6 +151,19 @@ class TestEC2LongIdentifiers {
             }
             assertThat( volumeId != null, 'Expected volume identifier')
             assertThat( volumeId.length( ) == 12, "Expected identifier length 12, but was: ${volumeId.length( )}" )
+
+            for ( int n = 0; n < 60; n += 5 ) {
+              N4j.sleep( 5 );
+              if ( describeVolumes( new DescribeVolumesRequest( filters: [
+                    new Filter( name: 'volume-id', values: [ volumeId ] ),
+                    new Filter( name: 'status', values: [ 'available' ] ),
+              ] ) ).with{ !volumes.empty } ) {
+                print( "Volume available: ${volumeId}" )
+                break;
+              } else {
+                print( "Waiting for volume to be available: ${volumeId}" )
+              }
+            }
           } else {
             print( 'Creating snapshot to check identifier format' )
             String snapshotId = createSnapshot( new CreateSnapshotRequest( volumeId: volumeId) ).with {

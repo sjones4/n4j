@@ -10,7 +10,7 @@ import com.amazonaws.services.autoscaling.model.SetInstanceProtectionRequest
 import com.amazonaws.services.autoscaling.model.TerminateInstanceInAutoScalingGroupRequest
 import com.amazonaws.services.autoscaling.model.UpdateAutoScalingGroupRequest
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest
-import org.testng.annotations.Test
+import org.junit.Test
 
 import java.util.concurrent.TimeUnit
 

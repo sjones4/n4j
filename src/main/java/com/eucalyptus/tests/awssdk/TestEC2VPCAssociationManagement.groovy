@@ -28,12 +28,12 @@ import static com.eucalyptus.tests.awssdk.N4j.testInfo;
  */
 class TestEC2VPCAssociationManagement {
 
-  private AWSCredentialsProvider credentials
+  private static AWSCredentialsProvider credentials
 
   @BeforeClass
   static void init( ){
     minimalInit()
-    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
@@ -184,7 +184,7 @@ class TestEC2VPCAssociationManagement {
         N4j.print( "Verifying default DHCP options ${dhcpOptionsId} associated with vpc ${vpcId}" )
         describeVpcs( new DescribeVpcsRequest( vpcIds: [ vpcId ] ) ).with {
           assertThat( vpcs != null && !vpcs.isEmpty( ), "Expected vpc"  )
-          Assert.assertEquals( vpcs.getAt( 0 )?.dhcpOptionsId, 'default', "Expected default (no) dhcp options" )
+          Assert.assertEquals( "Expected default (no) dhcp options", 'default', vpcs.getAt( 0 )?.dhcpOptionsId)
         }
 
         N4j.print( "Associating route table ${routeTableId} with subnet ${subnetId}" )

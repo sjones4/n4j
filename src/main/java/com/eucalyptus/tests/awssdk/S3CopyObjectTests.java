@@ -371,7 +371,7 @@ public class S3CopyObjectTests {
       acl.getGrantsAsList().add(new Grant(GroupGrantee.AuthenticatedUsers, Permission.Read));
       String destKey = eucaUUID();
       copyObject(ownerNameB, s3ClientB, new CopyObjectRequest(sourceBucket, sourceKey, sourceBucket, destKey).withAccessControlList(acl), md5);
-      acl.getGrantsAsList().add(ownerGrant);
+      //acl.getGrantsAsList().add(ownerGrant);
       S3Utils.verifyObjectACL(s3ClientB, ownerNameB, sourceBucket, destKey, acl, ownerIdB);
 
       // Copy object into the same bucket with acl equivalent of canned ACL BucketOwnerFullControl and verify the ACL
@@ -379,7 +379,7 @@ public class S3CopyObjectTests {
       acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.FullControl));
       destKey = eucaUUID();
       copyObject(ownerNameB, s3ClientB, new CopyObjectRequest(sourceBucket, sourceKey, sourceBucket, destKey).withAccessControlList(acl), md5);
-      acl.getGrantsAsList().add(ownerGrant);
+      //acl.getGrantsAsList().add(ownerGrant);
       S3Utils.verifyObjectACL(s3ClientB, ownerNameB, sourceBucket, destKey, acl, ownerIdB);
 
       // Copy object into the same bucket with acl equivalent of canned ACL BucketOwnerRead and verify the ACL
@@ -387,7 +387,7 @@ public class S3CopyObjectTests {
       acl.getGrantsAsList().add(new Grant(new CanonicalGrantee(ownerIdA), Permission.Read));
       destKey = eucaUUID();
       copyObject(ownerNameB, s3ClientB, new CopyObjectRequest(sourceBucket, sourceKey, sourceBucket, destKey).withAccessControlList(acl), md5);
-      acl.getGrantsAsList().add(ownerGrant);
+      //acl.getGrantsAsList().add(ownerGrant);
       S3Utils.verifyObjectACL(s3ClientB, ownerNameB, sourceBucket, destKey, acl, ownerIdB);
 
       // Copy object into the same bucket with acl equivalent of canned ACL LogDeliveryWrite and verify the ACL
@@ -396,7 +396,7 @@ public class S3CopyObjectTests {
       acl.getGrantsAsList().add(new Grant(GroupGrantee.LogDelivery, Permission.ReadAcp));
       destKey = eucaUUID();
       copyObject(ownerNameB, s3ClientB, new CopyObjectRequest(sourceBucket, sourceKey, sourceBucket, destKey).withAccessControlList(acl), md5);
-      acl.getGrantsAsList().add(ownerGrant);
+      //acl.getGrantsAsList().add(ownerGrant);
       S3Utils.verifyObjectACL(s3ClientB, ownerNameB, sourceBucket, destKey, acl, ownerIdB);
 
       // Copy object into the same bucket with acl equivalent of canned ACL Private and verify the ACL
@@ -412,7 +412,7 @@ public class S3CopyObjectTests {
       acl.getGrantsAsList().add(new Grant(GroupGrantee.AllUsers, Permission.Read));
       destKey = eucaUUID();
       copyObject(ownerNameB, s3ClientB, new CopyObjectRequest(sourceBucket, sourceKey, sourceBucket, destKey).withAccessControlList(acl), md5);
-      acl.getGrantsAsList().add(ownerGrant);
+      //acl.getGrantsAsList().add(ownerGrant);
       S3Utils.verifyObjectACL(s3ClientB, ownerNameB, sourceBucket, destKey, acl, ownerIdB);
 
       // Copy object into the same bucket with acl equivalent of canned ACL PublicReadWrite and verify the ACL
@@ -421,7 +421,7 @@ public class S3CopyObjectTests {
       acl.getGrantsAsList().add(new Grant(GroupGrantee.AllUsers, Permission.Write));
       destKey = eucaUUID();
       copyObject(ownerNameB, s3ClientB, new CopyObjectRequest(sourceBucket, sourceKey, sourceBucket, destKey).withAccessControlList(acl), md5);
-      acl.getGrantsAsList().add(ownerGrant);
+      //acl.getGrantsAsList().add(ownerGrant);
       S3Utils.verifyObjectACL(s3ClientB, ownerNameB, sourceBucket, destKey, acl, ownerIdB);
     } catch (AmazonServiceException ase) {
       printException(ase);

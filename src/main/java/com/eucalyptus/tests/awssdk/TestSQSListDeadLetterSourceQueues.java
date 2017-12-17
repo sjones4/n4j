@@ -8,11 +8,9 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.URL;
 import java.util.Collections;
@@ -128,19 +126,13 @@ public class TestSQSListDeadLetterSourceQueues {
   }
 
   @Test
-  @Parameters("concise")
-  public void testListDeadLetterSourceQueuesRandomSample(@Optional("false") boolean concise) throws Exception {
+  public void testListDeadLetterSourceQueuesRandomSample() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testListDeadLetterSourceQueuesRandomSample");
     List<String> queueUrls = Lists.newArrayList();
     List<String> queueArns = Lists.newArrayList();
     List<Set<String>> deadLetterSourceQueues = Lists.newArrayList();
     int NUM_QUEUES = 5;
     int NUM_TRIALS = 25;
-    // speed it up a bit in the concise case
-    if (concise) {
-      NUM_QUEUES = 2;
-      NUM_TRIALS = 5;
-    }
     for (int i=0 ; i < NUM_QUEUES ;i++) {
       queueUrls.add(accountSQSClient.createQueue("test_dl_random_" + i).getQueueUrl());
       queueArns.add(accountSQSClient.getQueueAttributes(queueUrls.get(i), Collections.singletonList("All")).getAttributes().get("QueueArn"));
