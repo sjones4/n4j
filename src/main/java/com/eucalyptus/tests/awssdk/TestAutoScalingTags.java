@@ -23,7 +23,7 @@ import com.amazonaws.services.autoscaling.model.*;
 import com.amazonaws.services.ec2.model.DescribeTagsRequest;
 import com.amazonaws.services.ec2.model.Filter;
 import com.google.common.collect.Lists;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;

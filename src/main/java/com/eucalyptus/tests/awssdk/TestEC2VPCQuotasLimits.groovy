@@ -19,7 +19,7 @@ import com.github.sjones4.youcan.youprop.YouProp
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
 import static N4j.EC2_ENDPOINT

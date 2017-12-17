@@ -5,8 +5,8 @@ import com.amazonaws.services.identitymanagement.model.DeleteServerCertificateRe
 import com.amazonaws.services.identitymanagement.model.GetServerCertificateRequest
 import com.amazonaws.services.identitymanagement.model.ListServerCertificatesRequest
 import com.amazonaws.services.identitymanagement.model.UploadServerCertificateRequest
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.Test
+import org.junit.BeforeClass
+import org.junit.Test
 
 /**
  * Tests management of IAM server certificates.
@@ -59,7 +59,7 @@ class TestIAMServerCertificateManagement {
   '''.stripIndent( )
 
   @BeforeClass
-  void init( ) {
+  static void init( ) {
     N4j.getCloudInfo( )
   }
 

@@ -46,7 +46,7 @@ import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
 import com.github.sjones4.youcan.youtoken.YouTokenClient;
 import com.github.sjones4.youcan.youtoken.model.GetImpersonationTokenRequest;
 import com.github.sjones4.youcan.youtoken.model.GetImpersonationTokenResult;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static com.eucalyptus.tests.awssdk.N4j.minimalInit;
 import static com.eucalyptus.tests.awssdk.N4j.CLC_IP;

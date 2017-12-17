@@ -24,7 +24,7 @@ import com.amazonaws.services.cloudwatch.model.Datapoint;
 import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
 import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsResult;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;

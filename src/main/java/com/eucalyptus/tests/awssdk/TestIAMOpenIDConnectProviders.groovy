@@ -19,8 +19,8 @@ import com.amazonaws.services.identitymanagement.model.NoSuchEntityException
 import com.amazonaws.services.identitymanagement.model.PutUserPolicyRequest
 import com.amazonaws.services.identitymanagement.model.RemoveClientIDFromOpenIDConnectProviderRequest
 import com.amazonaws.services.identitymanagement.model.UpdateOpenIDConnectProviderThumbprintRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
 import static com.eucalyptus.tests.awssdk.N4j.CLC_IP

@@ -21,7 +21,8 @@ import com.amazonaws.services.ec2.model.UserIdGroupPair
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancing
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model.*
-import org.testng.annotations.Test;
+import java.nio.charset.StandardCharsets
+import org.junit.Test;
 
 import static N4j.minimalInit;
 import static N4j.CLC_IP;

@@ -7,9 +7,10 @@ import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-import org.testng.Assert
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.Test;
+
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import static N4j.minimalInit;
 import static N4j.EC2_ENDPOINT;
@@ -30,7 +31,7 @@ class TestEC2VPCAssociationManagement {
   private AWSCredentialsProvider credentials
 
   @BeforeClass
-  void init( ){
+  static void init( ){
     minimalInit()
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }

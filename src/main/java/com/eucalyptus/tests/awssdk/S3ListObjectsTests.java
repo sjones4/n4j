@@ -5,7 +5,7 @@ import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,17 +16,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.lang.StringUtils;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -75,10 +75,10 @@ public class S3ListObjectsTests {
   private static int DEFAULT_MAX_KEYS = 1000;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3ListObjectsTests.class.getSimpleName());
     try {
-      account = this.getClass().getSimpleName().toLowerCase();
+      account = S3ListObjectsTests.class.getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
     } catch (Exception e) {
       try {
@@ -93,13 +93,13 @@ public class S3ListObjectsTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3ListObjectsTests.class.getSimpleName());
     N4j.deleteAccount(account);
     s3 = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     bucketName = eucaUUID();
     cleanupTasks = new ArrayList<Runnable>();
@@ -122,7 +122,7 @@ public class S3ListObjectsTests {
         bucketName.equals(bucket.getName()));
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {
@@ -702,12 +702,12 @@ public class S3ListObjectsTests {
     assertTrue("Expected object listing bucket name to be " + bucketName + ", but got " + objectList.getBucketName(), objectList.getBucketName()
         .equals(bucketName));
     assertTrue("Expected delimiter to be " + delimiter + ", but got " + objectList.getDelimiter(),
-        StringUtils.equals(objectList.getDelimiter(), delimiter));
+        Objects.equals(objectList.getDelimiter(), delimiter));
     assertTrue("Expected common prefixes to be empty or populated, but got " + objectList.getCommonPrefixes(), objectList.getCommonPrefixes() != null);
-    assertTrue("Expected marker to be " + marker + ", but got " + objectList.getMarker(), StringUtils.equals(objectList.getMarker(), marker));
+    assertTrue("Expected marker to be " + marker + ", but got " + objectList.getMarker(), Objects.equals(objectList.getMarker(), marker));
     assertTrue("Expected max-keys to be " + (maxKeys != null ? maxKeys : DEFAULT_MAX_KEYS) + ", but got " + objectList.getMaxKeys(),
         objectList.getMaxKeys() == (maxKeys != null ? maxKeys : DEFAULT_MAX_KEYS));
-    assertTrue("Expected prefix to be " + prefix + ", but got " + objectList.getPrefix(), StringUtils.equals(objectList.getPrefix(), prefix));
+    assertTrue("Expected prefix to be " + prefix + ", but got " + objectList.getPrefix(), Objects.equals(objectList.getPrefix(), prefix));
     assertTrue("Invalid object summary list", objectList.getObjectSummaries() != null);
     assertTrue("Expected is truncated to be " + isTruncated + ", but got " + objectList.isTruncated(), objectList.isTruncated() == isTruncated);
     if (objectList.isTruncated()) {

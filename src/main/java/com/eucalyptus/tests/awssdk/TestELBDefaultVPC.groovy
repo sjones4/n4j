@@ -23,7 +23,7 @@ import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersRe
 import com.amazonaws.services.elasticloadbalancing.model.DetachLoadBalancerFromSubnetsRequest
 import com.amazonaws.services.elasticloadbalancing.model.EnableAvailabilityZonesForLoadBalancerRequest
 import com.amazonaws.services.elasticloadbalancing.model.Listener
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
 import static N4j.CLC_IP

@@ -24,7 +24,7 @@ import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
 import com.github.sjones4.youcan.youare.YouAreClient
 
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.minimalInit;
 import static N4j.CLC_IP;

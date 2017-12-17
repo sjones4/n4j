@@ -2,7 +2,7 @@ package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.cloudwatch.model.SetAlarmStateRequest;
 import com.amazonaws.services.cloudwatch.model.StateValue;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 

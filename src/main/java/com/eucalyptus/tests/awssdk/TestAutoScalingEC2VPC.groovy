@@ -26,7 +26,7 @@ import com.amazonaws.services.ec2.model.DescribeImagesRequest
 import com.amazonaws.services.ec2.model.DetachInternetGatewayRequest
 import com.amazonaws.services.ec2.model.Filter
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
 import static N4j.CLC_IP

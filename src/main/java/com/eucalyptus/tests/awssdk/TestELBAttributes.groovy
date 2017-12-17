@@ -22,7 +22,7 @@ import com.amazonaws.services.elasticloadbalancing.model.Listener
 import com.amazonaws.services.elasticloadbalancing.model.LoadBalancerAttributes
 import com.amazonaws.services.elasticloadbalancing.model.ModifyLoadBalancerAttributesRequest
 
-import org.testng.annotations.Test
+import org.junit.Test
 
 import static N4j.CLC_IP;
 import static N4j.minimalInit;

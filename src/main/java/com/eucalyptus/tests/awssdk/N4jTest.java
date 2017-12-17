@@ -15,9 +15,9 @@
  ************************************************************************/
 
 package com.eucalyptus.tests.awssdk;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
 
@@ -28,8 +28,8 @@ public class N4jTest {
      * @throws java.lang.Exception
      */
     @BeforeClass
-    public void setUpBeforeClass() throws Exception {
-        testInfo(this.getClass().getSimpleName());
+    public static void setUpBeforeClass() throws Exception {
+        testInfo(N4jTest.class.getSimpleName());
         getCloudInfo();
         // create a user
     }

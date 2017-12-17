@@ -24,7 +24,7 @@ import com.amazonaws.services.autoscaling.model.ScalingPolicy;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.services.autoscaling.model.LaunchConfiguration;
 import com.amazonaws.services.autoscaling.model.AutoScalingGroup;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;

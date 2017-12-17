@@ -20,7 +20,7 @@ import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.ModifyInstanceAttributeRequest
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest
-import org.testng.annotations.Test
+import org.junit.Test
 
 import static N4j.ACCESS_KEY
 import static N4j.CLC_IP

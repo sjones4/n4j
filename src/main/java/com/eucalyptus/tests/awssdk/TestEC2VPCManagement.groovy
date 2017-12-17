@@ -32,13 +32,14 @@ import com.amazonaws.services.ec2.model.DetachInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DhcpConfiguration
 import com.amazonaws.services.ec2.model.NetworkAclEntry
 import com.amazonaws.services.ec2.model.Route
-import org.testng.Assert
-import org.testng.annotations.AfterMethod
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.BeforeMethod
-import org.testng.annotations.Test
 
-import static N4j.*
+import org.junit.Assert
+import org.junit.After
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test;
+
+import static N4j.*;
 
 
 /**
@@ -60,13 +61,13 @@ class TestEC2VPCManagement {
     getCloudInfo()
   }
 
-  @BeforeMethod
-  void initTest(  ) {
+  @Before
+  static void initTest(  ) {
     print( "Initializing clean up tasks" )
     cleanupTasks = [ ]
   }
 
-  @AfterMethod
+  @After
   void cleanup( ) {
     print( "Running clean up tasks" )
     Collections.reverse(cleanupTasks)
