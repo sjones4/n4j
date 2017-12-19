@@ -16,7 +16,9 @@ import com.amazonaws.services.ec2.model.RegisterImageRequest
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.S3ClientOptions
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import com.amazonaws.services.s3.model.ObjectMetadata
+import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
@@ -224,10 +226,12 @@ class TestEC2ImageRegistration {
           DigestInputStream partDigestInputStream =
               new DigestInputStream( ByteStreams.limit( uploadDataInputStream, partLength ), partSha1 )
           s3.putObject(
-              bucketName,
-              partName(part),
-              partDigestInputStream,
-              new ObjectMetadata( contentLength: partLength ) )
+              new PutObjectRequest(
+                  bucketName,
+                  partName(part),
+                  partDigestInputStream,
+                  new ObjectMetadata( contentLength: partLength )
+              ).withCannedAcl(CannedAccessControlList.AwsExecRead) )
           partSha1Digests.put( part, BaseEncoding.base16( ).lowerCase( ).encode( partSha1.digest( ) ) )
         }
 
@@ -292,7 +296,13 @@ class TestEC2ImageRegistration {
       String manifestName = "${imageName}.manifest.xml"
       String manifest = manifestBuilder.toString( )
       print( "Uploading generated manifest as ${manifestName}:\n${manifest}" )
-      s3.putObject( bucketName, manifestName, manifest )
+      byte[] manifestBytes = manifest.getBytes(StandardCharsets.UTF_8)
+      InputStream manifestIn = new ByteArrayInputStream(manifestBytes)
+      ObjectMetadata manifestMetadata = new ObjectMetadata()
+      manifestMetadata.setContentType('text/plain')
+      manifestMetadata.setContentLength(manifestBytes.length)
+      s3.putObject(new PutObjectRequest(bucketName, manifestName, manifestIn, manifestMetadata)
+          .withCannedAcl(CannedAccessControlList.AwsExecRead))
 
       // register image
       ec2.describeImages( new DescribeImagesRequest(
