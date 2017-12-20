@@ -51,6 +51,9 @@ public class N4j {
     static String USER = System.getProperty("user", "root");
     static String PASSWORD = System.getProperty("password", "foobar");
     static String endpointFile = System.getProperty("endpoints");
+    static File cacheDir = System.getProperty( "cache" ) == null ?
+        new File( "." ) :
+        new File( System.getProperty( "cache" ) );
     static String LOCAL_INI_FILE = System.getProperty("inifile", "euca-admin.ini");
     static String REMOTE_INI_FILE ="/root/.euca/euca-admin.ini";
     static Logger logger = Logger.getLogger(N4j.class.getCanonicalName());
