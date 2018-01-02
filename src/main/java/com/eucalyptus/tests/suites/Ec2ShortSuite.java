@@ -9,6 +9,6 @@ import com.eucalyptus.tests.awssdk.*;
 @SuiteClasses({
     TestEC2DescribeInstanceStatus.class,
 })
-public class Ec2Suite {
+public class Ec2ShortSuite {
   // junit test suite as defined by SuiteClasses annotation
 }
