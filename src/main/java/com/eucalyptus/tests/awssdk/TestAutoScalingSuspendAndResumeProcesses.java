@@ -21,6 +21,7 @@ package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.model.*;
+import com.google.common.collect.Sets;
 import org.junit.Test;
 
 import java.util.*;
@@ -169,7 +170,7 @@ public class TestAutoScalingSuspendAndResumeProcesses {
             boolean terminated = false;
             while (!terminated && (System.currentTimeMillis() - terminateStartTime) < terminateTimeout) {
                 Thread.sleep(5000);
-                final List<String> instanceIds = (List<String>) getInstancesForGroup(groupName, null, true);
+                final List<String> instanceIds = (List<String>) getInstancesForGroupWithStatus(groupName, Sets.newHashSet( "running", "shutting-down" ), true);
                 terminated = instanceIds.size() == 0;
             }
             assertThat(terminated, "Instance was not terminated within the expected timeout");

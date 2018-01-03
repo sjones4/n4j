@@ -544,6 +544,13 @@ public class N4j {
     }
 
     public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
+      return getInstancesForGroupWithStatus(
+          groupName,
+          status==null ? Collections.emptySet( ) : Collections.singleton( status ),
+          asString );
+    }
+
+    public static List<?> getInstancesForGroupWithStatus(final String groupName, final Set<String> status, final boolean asString) {
         final DescribeInstancesResult instancesResult = ec2
                 .describeInstances(new DescribeInstancesRequest()
                         .withFilters(new Filter()
@@ -553,8 +560,9 @@ public class N4j {
             final List<String> instanceIds = new ArrayList<String>();
             for (final Reservation reservation : instancesResult.getReservations()) {
                 for (final Instance instance : reservation.getInstances()) {
-                    if (status == null || instance.getState() == null
-                            || status.equals(instance.getState().getName())) {
+                    if ( instance.getState() == null
+                            || status.isEmpty( )
+                            || status.contains(instance.getState().getName())) {
                         instanceIds.add(instance.getInstanceId());
                     }
                 }
