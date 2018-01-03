@@ -19,12 +19,11 @@ import com.amazonaws.services.identitymanagement.model.NoSuchEntityException
 import com.amazonaws.services.identitymanagement.model.PutUserPolicyRequest
 import com.amazonaws.services.identitymanagement.model.RemoveClientIDFromOpenIDConnectProviderRequest
 import com.amazonaws.services.identitymanagement.model.UpdateOpenIDConnectProviderThumbprintRequest
-import org.junit.AfterClass
-import org.junit.Test
 
-import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
-import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
+import org.junit.AfterClass
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 
 /**
  * Tests functionality for IAM OpenID Connect providers.
@@ -42,44 +41,29 @@ import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
  */
 class TestIAMOpenIDConnectProviders {
 
-  private final String host
+  private static AWSCredentialsProvider credentials
+  private static String testAcct
 
-  private final AWSCredentialsProvider credentials
-
-  private final String testAcct
-
-  public TestIAMOpenIDConnectProviders( ) {
-    getCloudInfo( )
-    this.host = CLC_IP
-    this.testAcct= "${NAME_PREFIX}oidc-test-acct"
+  @BeforeClass
+  static void init( ) {
+    N4j.getCloudInfo( )
+    this.testAcct= "${N4j.NAME_PREFIX}oidc-test-acct"
     N4j.createAccount(testAcct)
     this.credentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
   }
 
   @AfterClass
-  public void tearDownAfterClass() throws Exception {
+  static void cleanup( ) throws Exception {
     N4j.deleteAccount(testAcct)
   }
 
-  private String cloudUri( String host, String servicePath ) {
-    URI.create( "http://${host}:8773/" )
-        .resolve( servicePath )
-        .toString( )
-  }
-
   private AmazonIdentityManagement getIamClient( AWSCredentialsProvider credentialsProvider = credentials ) {
-    AWSCredentials creds = credentialsProvider.getCredentials( );
-    N4j.getYouAreClient( creds.AWSAccessKeyId, creds.AWSSecretKey, cloudUri( host, '/services/Euare' ) )
-  }
-
-  private boolean assertThat( boolean condition,
-                              String message ){
-    N4j.assertThat( condition, message )
-    true
+    AWSCredentials creds = credentialsProvider.getCredentials( )
+    N4j.getYouAreClient( creds.AWSAccessKeyId, creds.AWSSecretKey, N4j.IAM_ENDPOINT )
   }
 
   @Test
-  public void testOpenIDConnectProviderManagement( ) throws Exception {
+  void testOpenIDConnectProviderManagement( ) throws Exception {
     N4j.testInfo( TestIAMOpenIDConnectProviders.simpleName )
     final String namePrefix = UUID.randomUUID().toString().substring(0,8) + "-"
     N4j.print "Using resource prefix for test: ${namePrefix}"
@@ -125,12 +109,12 @@ class TestIAMOpenIDConnectProviders {
               deleteOpenIDConnectProvider( new DeleteOpenIDConnectProviderRequest(
                   openIDConnectProviderArn: it.openIDConnectProviderArn
               ) )
-              assertThat( false, 'Expected creation to fail' )
+              Assert.assertTrue('Expected creation to fail', false)
             }
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 400, "Expected status code 400, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'ValidationError', "Expected error code ValidationError, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 400, but was: ${e.statusCode}", e.statusCode == 400)
+            Assert.assertTrue("Expected error code ValidationError, but was: ${e.errorCode}", e.errorCode == 'ValidationError')
           }
         }
 
@@ -151,12 +135,12 @@ class TestIAMOpenIDConnectProviders {
               deleteOpenIDConnectProvider( new DeleteOpenIDConnectProviderRequest(
                   openIDConnectProviderArn: it.openIDConnectProviderArn
               ) )
-              assertThat( false, 'Expected creation to fail' )
+              Assert.assertTrue('Expected creation to fail', false)
             }
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 409, "Expected status code 409, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'LimitExceeded', "Expected error code LimitExceeded, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 409, but was: ${e.statusCode}", e.statusCode == 409)
+            Assert.assertTrue("Expected error code LimitExceeded, but was: ${e.errorCode}", e.errorCode == 'LimitExceeded')
           }
         }
 
@@ -172,10 +156,10 @@ class TestIAMOpenIDConnectProviders {
           it.openIDConnectProviderArn
         }
         N4j.print "Created provider with arn : ${providerArn}"
-        assertThat( providerArn != null, "Expected provider arn" )
-        assertThat( providerArn.startsWith( 'arn:aws:iam:' ), "Expected provider arn to match iam service" )
-        assertThat( providerArn.contains( ':oidc-provider/' ), "Expected provider arn to contain resource type" )
-        assertThat( providerArn.endsWith( validParameters.url.substring( 7 ) ), "Expected provider arn to end with host/path" )
+        Assert.assertTrue("Expected provider arn", providerArn != null)
+        Assert.assertTrue("Expected provider arn to match iam service", providerArn.startsWith('arn:aws:iam:'))
+        Assert.assertTrue("Expected provider arn to contain resource type", providerArn.contains(':oidc-provider/'))
+        Assert.assertTrue("Expected provider arn to end with host/path", providerArn.endsWith(validParameters.url.substring(7)))
 
         N4j.print "Getting account summary to check existing provider count"
         getAccountSummary( ).with {
@@ -202,18 +186,18 @@ class TestIAMOpenIDConnectProviders {
             deleteOpenIDConnectProvider( new DeleteOpenIDConnectProviderRequest(
                 openIDConnectProviderArn: invalidArn
             ) )
-            assertThat( false, 'Expected deletion to fail' )
+            Assert.assertTrue('Expected deletion to fail', false)
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 400, "Expected status code 400, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'ValidationError', "Expected error code ValidationError, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 400, but was: ${e.statusCode}", e.statusCode == 400)
+            Assert.assertTrue("Expected error code ValidationError, but was: ${e.errorCode}", e.errorCode == 'ValidationError')
           }
         }
 
         N4j.print "Listing providers to ensure deleted"
         listOpenIDConnectProviders( ).with {
           int found = openIDConnectProviderList?.findAll{ it.arn == providerArn }?.size( ) ?: 0
-          assertThat( found == 0, "Expected provider was deleted: ${providerArn}")
+          Assert.assertTrue("Expected provider was deleted: ${providerArn}", found == 0)
         }
 
         Map<String,Object> pathParameters = [:]
@@ -223,8 +207,8 @@ class TestIAMOpenIDConnectProviders {
         final String pathProviderArn = createOpenIDConnectProvider( new CreateOpenIDConnectProviderRequest( pathParameters ) )?.with {
           it.openIDConnectProviderArn
         }
-        assertThat( pathProviderArn != null, "Expected provider arn" )
-        assertThat( pathProviderArn.endsWith( validParameters.url.substring( 7 ) ), "Expected provider arn to end with host/path" )
+        Assert.assertTrue("Expected provider arn", pathProviderArn != null)
+        Assert.assertTrue("Expected provider arn to end with host/path", pathProviderArn.endsWith(validParameters.url.substring(7)))
         cleanupTasks.add{
           N4j.print "Deleting provider : ${providerArn}"
           deleteOpenIDConnectProvider( new DeleteOpenIDConnectProviderRequest(
@@ -235,16 +219,16 @@ class TestIAMOpenIDConnectProviders {
         N4j.print "Listing providers to ensure present"
         listOpenIDConnectProviders( ).with {
           int found = openIDConnectProviderList?.findAll{ it.arn == pathProviderArn }?.size( ) ?: 0
-          assertThat( found == 1, "Expected provider listed once: ${pathProviderArn}")
+          Assert.assertTrue("Expected provider listed once: ${pathProviderArn}", found == 1)
         }
 
         N4j.print "Getting provider: ${pathProviderArn}"
         getOpenIDConnectProvider( new GetOpenIDConnectProviderRequest(
             openIDConnectProviderArn: pathProviderArn
         ) ).with {
-          assertThat( url != null , "Expected url" )
-          assertThat( createDate != null , "Expected create date" )
-          assertThat( thumbprintList != null && thumbprintList.size( ) == 1, "Expected thumbprint" )
+          Assert.assertTrue("Expected url", url != null)
+          Assert.assertTrue("Expected create date", createDate != null)
+          Assert.assertTrue("Expected thumbprint", thumbprintList != null && thumbprintList.size() == 1)
         }
 
         invalidArns.each { String invalidArn ->
@@ -253,11 +237,11 @@ class TestIAMOpenIDConnectProviders {
             getOpenIDConnectProvider( new GetOpenIDConnectProviderRequest(
                 openIDConnectProviderArn: invalidArn
             ) )
-            assertThat( false, 'Expected get to fail' )
+            Assert.assertTrue('Expected get to fail', false)
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 400, "Expected status code 400, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'ValidationError', "Expected error code ValidationError, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 400, but was: ${e.statusCode}", e.statusCode == 400)
+            Assert.assertTrue("Expected error code ValidationError, but was: ${e.errorCode}", e.errorCode == 'ValidationError')
           }
         }
 
@@ -284,11 +268,11 @@ class TestIAMOpenIDConnectProviders {
                 openIDConnectProviderArn: pathProviderArn,
                 thumbprintList: invalidThumbprintList
             ) )
-            assertThat( false, 'Expected thumbprint update to fail' )
+            Assert.assertTrue('Expected thumbprint update to fail', false)
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 400, "Expected status code 400, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'ValidationError', "Expected error code ValidationError, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 400, but was: ${e.statusCode}", e.statusCode == 400)
+            Assert.assertTrue("Expected error code ValidationError, but was: ${e.errorCode}", e.errorCode == 'ValidationError')
           }
         }
 
@@ -321,11 +305,11 @@ class TestIAMOpenIDConnectProviders {
                 openIDConnectProviderArn: pathProviderArn,
                 clientID: invalidClientId
             ) )
-            assertThat( false, 'Expected adding invalid client id to fail' )
+            Assert.assertTrue('Expected adding invalid client id to fail', false)
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 400, "Expected status code 400, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'ValidationError', "Expected error code ValidationError, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 400, but was: ${e.statusCode}", e.statusCode == 400)
+            Assert.assertTrue("Expected error code ValidationError, but was: ${e.errorCode}", e.errorCode == 'ValidationError')
           }
         }
 
@@ -345,10 +329,10 @@ class TestIAMOpenIDConnectProviders {
         getOpenIDConnectProvider( new GetOpenIDConnectProviderRequest(
             openIDConnectProviderArn: pathProviderArn
         ) ).with {
-          assertThat( thumbprintList != null && thumbprintList.size( ) == 1, "Expected thumbprint" )
-          assertThat( thumbprintList[0] == ( '1' * 40 ), "Expected thumbprint ${'1' * 40}, but was: ${thumbprintList[0]}" )
-          assertThat( clientIDList != null && clientIDList.size( ) == 1, "Expected client id" )
-          assertThat( clientIDList[0] == 'b', "Expected client id 'b', but was: ${clientIDList[0]}" )
+          Assert.assertTrue("Expected thumbprint", thumbprintList != null && thumbprintList.size() == 1)
+          Assert.assertTrue("Expected thumbprint ${'1' * 40}, but was: ${thumbprintList[0]}", thumbprintList[0] == ('1' * 40))
+          Assert.assertTrue("Expected client id", clientIDList != null && clientIDList.size() == 1)
+          Assert.assertTrue("Expected client id 'b', but was: ${clientIDList[0]}", clientIDList[0] == 'b')
         }
 
         pathProviderArn
@@ -436,8 +420,8 @@ class TestIAMOpenIDConnectProviders {
             it.call( )
           } catch( AmazonServiceException e ) {
             N4j.print e.toString( )
-            assertThat( e.statusCode == 403, "Expected status code 403, but was: ${e.statusCode}")
-            assertThat( e.errorCode == 'AccessDenied', "Expected error code AccessDenied, but was: ${e.errorCode}")
+            Assert.assertTrue("Expected status code 403, but was: ${e.statusCode}", e.statusCode == 403)
+            Assert.assertTrue("Expected error code AccessDenied, but was: ${e.errorCode}", e.errorCode == 'AccessDenied')
           }
         }
       }
@@ -514,17 +498,17 @@ class TestIAMOpenIDConnectProviders {
 
         N4j.print "Getting user ${userName} provider ${userProviderArn}"
         getOpenIDConnectProvider( new GetOpenIDConnectProviderRequest( openIDConnectProviderArn: userProviderArn ) ).with {
-          assertThat( url != null , "Expected url" )
-          assertThat( thumbprintList != null && thumbprintList.size( ) == 1, "Expected thumbprint" )
-          assertThat( thumbprintList[0] == ( '3' * 40 ), "Expected thumbprint ${'3' * 40}, but was: ${thumbprintList[0]}" )
-          assertThat( clientIDList != null && clientIDList.size( ) == 1, "Expected client id" )
-          assertThat( clientIDList[0] == 'a', "Expected client id 'a', but was: ${clientIDList[0]}" )
+          Assert.assertTrue("Expected url", url != null)
+          Assert.assertTrue("Expected thumbprint", thumbprintList != null && thumbprintList.size() == 1)
+          Assert.assertTrue("Expected thumbprint ${'3' * 40}, but was: ${thumbprintList[0]}", thumbprintList[0] == ('3' * 40))
+          Assert.assertTrue("Expected client id", clientIDList != null && clientIDList.size() == 1)
+          Assert.assertTrue("Expected client id 'a', but was: ${clientIDList[0]}", clientIDList[0] == 'a')
         }
 
         N4j.print "Listing providers"
         listOpenIDConnectProviders( ).with {
           int found = openIDConnectProviderList?.findAll{ it.arn == userProviderArn }?.size( ) ?: 0
-          assertThat( found == 1, "Expected provider listed once: ${userProviderArn}")
+          Assert.assertTrue("Expected provider listed once: ${userProviderArn}", found == 1)
         }
 
         N4j.print "Deleting provider as user"
@@ -533,7 +517,7 @@ class TestIAMOpenIDConnectProviders {
         N4j.print "Listing providers to verify delete"
         listOpenIDConnectProviders( ).with {
           int found = openIDConnectProviderList?.findAll{ it.arn == userProviderArn }?.size( ) ?: 0
-          assertThat( found == 0, "Expected provider not listed: ${userProviderArn}")
+          Assert.assertTrue("Expected provider not listed: ${userProviderArn}", found == 0)
         }
       }
 
