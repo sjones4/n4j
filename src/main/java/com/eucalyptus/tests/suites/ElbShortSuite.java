@@ -7,6 +7,7 @@ import com.eucalyptus.tests.awssdk.*;
 
 @RunWith(Suite.class)
 @SuiteClasses({
+    TestELBApi.class,
     TestELBAttributes.class,
     TestELBIAMResource.class,
     TestELBTagging.class,
