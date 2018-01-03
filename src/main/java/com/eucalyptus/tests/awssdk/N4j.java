@@ -57,6 +57,7 @@ public class N4j {
     static String LOCAL_INI_FILE = System.getProperty("inifile", "euca-admin.ini");
     static String REMOTE_INI_FILE ="/root/.euca/euca-admin.ini";
     static Logger logger = Logger.getLogger(N4j.class.getCanonicalName());
+    static String SERVICES_ENDPOINT = null;
     static String EC2_ENDPOINT = null;
     static String AS_ENDPOINT = null;
     static String ELB_ENDPOINT = null;
@@ -98,6 +99,7 @@ public class N4j {
       IAM_ENDPOINT = getAttribute(LOCAL_INI_FILE, "iam-url");
       S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
       TOKENS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "sts-url");
+      SERVICES_ENDPOINT = getAttribute(LOCAL_INI_FILE, "bootstrap-url");
       SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
       ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
       ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
