@@ -3,21 +3,16 @@ package com.eucalyptus.tests.suites;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
+import com.eucalyptus.tests.awssdk.*;
 
-/**
- * Quick tests that should be run before merging.
- */
 @RunWith(Suite.class)
 @SuiteClasses({
-    InitializationSuite.class,
-    AutoScalingShortSuite.class,
-    CloudFormationSuite.class,
-    CloudWatchSuite.class,
+    // suites
     Ec2ShortSuite.class,
-    ElbShortSuite.class,
-    IamSuite.class,
-    S3Suite.class,
+
+    // tests
+    TestEC2InstanceBundle.class,
 })
-public class AllShortSuite {
+public class Ec2FullSuite {
   // junit test suite as defined by SuiteClasses annotation
 }

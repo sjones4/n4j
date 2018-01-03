@@ -13,7 +13,7 @@ import org.junit.runners.Suite.SuiteClasses;
     AutoScalingFullSuite.class,
     CloudFormationSuite.class,
     CloudWatchSuite.class,
-    Ec2Suite.class,
+    Ec2FullSuite.class,
     ElbFullSuite.class,
     IamSuite.class,
     S3Suite.class,
