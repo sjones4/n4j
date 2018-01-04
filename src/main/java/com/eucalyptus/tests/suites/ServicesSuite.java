@@ -7,10 +7,8 @@ import com.eucalyptus.tests.awssdk.*;
 
 @RunWith(Suite.class)
 @SuiteClasses({
-    TestEC2Api.class,
-    TestEC2DescribeInstanceStatus.class,
-    TestEC2Ebs.class,
+    TestServicesApi.class,
 })
-public class Ec2ShortSuite {
+public class ServicesSuite {
   // junit test suite as defined by SuiteClasses annotation
 }

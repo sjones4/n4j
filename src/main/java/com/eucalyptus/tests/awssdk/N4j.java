@@ -50,7 +50,6 @@ public class N4j {
     static String CLC_IP = System.getProperty("clcip");
     static String USER = System.getProperty("user", "root");
     static String PASSWORD = System.getProperty("password", "foobar");
-    static String endpointFile = System.getProperty("endpoints");
     static File cacheDir = System.getProperty( "cache" ) == null ?
         new File( "." ) :
         new File( System.getProperty( "cache" ) );
@@ -62,6 +61,7 @@ public class N4j {
     static String AS_ENDPOINT = null;
     static String ELB_ENDPOINT = null;
     static String IAM_ENDPOINT = null;
+    static String CF_ENDPOINT = null;
     static String CW_ENDPOINT = null;
     static String S3_ENDPOINT = null;
     static String TOKENS_ENDPOINT = null;
@@ -69,7 +69,6 @@ public class N4j {
     static String ACCESS_KEY = null;
     static String ACCOUNT_ID = null;
     static String NAME_PREFIX;
-    static String endpoints;
     static AmazonAutoScaling as;
     static AmazonEC2 ec2;
     static AmazonElasticLoadBalancing elb;
@@ -84,17 +83,11 @@ public class N4j {
 
     public static void initEndpoints( ) throws Exception {
       getAdminCreds(CLC_IP, USER, PASSWORD);
-
-      if (endpointFile != null) {
-        endpoints = endpointFile;
-      } else {
-        endpoints = "endpoints.xml";
-      }
-
       print("Getting cloud information from " + LOCAL_INI_FILE);
       EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
       AS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "autoscaling-url");
       ELB_ENDPOINT = getAttribute(LOCAL_INI_FILE, "elasticloadbalancing-url");
+      CF_ENDPOINT = getAttribute(LOCAL_INI_FILE, "cloudformation-url");
       CW_ENDPOINT = getAttribute(LOCAL_INI_FILE, "monitoring-url");
       IAM_ENDPOINT = getAttribute(LOCAL_INI_FILE, "iam-url");
       S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
@@ -103,9 +96,6 @@ public class N4j {
       SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
       ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
       ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
-
-      print("Updating endpoints file");
-      updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
     }
 
     public static void getCloudInfo() throws Exception {
@@ -135,11 +125,6 @@ public class N4j {
     // For ease of use against AWS (mainly) as well as Eucalyptus
     public static void initS3Client() throws Exception {
         getAdminCreds(CLC_IP, USER, PASSWORD);
-        if (endpointFile != null) {
-            endpoints = endpointFile;
-        } else {
-            endpoints = "endpoints.xml";
-        }
 
         print("Getting cloud information from " + LOCAL_INI_FILE);
 
@@ -148,9 +133,6 @@ public class N4j {
 
         SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
         ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
-
-        print("Updating endpoints file");
-        updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
 
         print("Initializing S3 connections");
         s3 = getS3Client(ACCESS_KEY, SECRET_KEY, S3_ENDPOINT);
@@ -163,11 +145,6 @@ public class N4j {
 		// Initialize everything for the first time
 		if (EC2_ENDPOINT == null || S3_ENDPOINT == null || IAM_ENDPOINT == null || ACCESS_KEY == null || SECRET_KEY == null) {
             getAdminCreds(CLC_IP, USER, PASSWORD);
-			if (endpointFile != null) {
-				endpoints = endpointFile;
-			} else {
-				endpoints = "endpoints.xml";
-			}
 
 			print("Getting cloud information from " + LOCAL_INI_FILE);
 
@@ -177,9 +154,6 @@ public class N4j {
 
             SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
             ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
-
-			print("Updating endpoints file");
-			updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
 
 			youAre = getYouAreClient(ACCESS_KEY, SECRET_KEY, IAM_ENDPOINT);
 		}

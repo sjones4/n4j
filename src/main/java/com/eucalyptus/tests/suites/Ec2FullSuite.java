@@ -12,6 +12,9 @@ import com.eucalyptus.tests.awssdk.*;
 
     // tests
     TestEC2InstanceBundle.class,
+    TestEC2InstanceProfile.class,
+    TestEC2InstanceTerminationProtection.class,
+    TestEC2RunInstancesClientToken.class,
 })
 public class Ec2FullSuite {
   // junit test suite as defined by SuiteClasses annotation
