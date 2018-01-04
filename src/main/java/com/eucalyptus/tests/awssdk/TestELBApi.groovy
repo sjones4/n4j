@@ -7,9 +7,10 @@ import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancing
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model.*
 import org.junit.AfterClass
+import org.junit.BeforeClass
 import org.junit.Test
 
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
+import static com.eucalyptus.tests.awssdk.N4j.ELB_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
 
 
@@ -20,37 +21,30 @@ import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
  * - tests describe of example policies
  */
 class TestELBApi {
-  private final String host;
-  private final String testAcct
-  private final AWSCredentialsProvider testAcctAdminCredentials
+  private static String testAcct
+  private static AWSCredentialsProvider testAcctAdminCredentials
 
-  public TestELBApi( ) {
+  @BeforeClass
+  static void init( ){
     N4j.getCloudInfo( )
-    this.host = CLC_IP
     this.testAcct= "${NAME_PREFIX}test-acct"
     N4j.createAccount(testAcct)
     this.testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
   }
 
   @AfterClass
-  public void tearDownAfterClass( ) {
+  static void cleanup( ) {
     N4j.deleteAccount(testAcct)
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
   }
 
   private AmazonElasticLoadBalancing getELBClient( final AWSCredentialsProvider credentials ) {
     final AmazonElasticLoadBalancing elb = new AmazonElasticLoadBalancingClient( credentials )
-    elb.setEndpoint( cloudUri( "/services/LoadBalancing" ) )
+    elb.setEndpoint( ELB_ENDPOINT )
     elb
   }
 
   @Test
-  public void testElbApi( ) throws Exception {
+  void testElbApi( ) throws Exception {
     final AmazonElasticLoadBalancing elb = getELBClient( testAcctAdminCredentials )
     final String elbInvalidName = 'invalid name for a load balancer'
     final List<Runnable> cleanupTasks = [] as List<Runnable>
@@ -106,7 +100,7 @@ class TestELBApi {
         void
       }
 
-      print( "Test complete" )
+      N4j.print( "Test complete" )
     } finally {
       // Attempt to clean up anything we created
       cleanupTasks.reverseEach { Runnable cleanupTask ->

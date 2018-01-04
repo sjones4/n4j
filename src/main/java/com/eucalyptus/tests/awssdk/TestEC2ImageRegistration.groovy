@@ -147,8 +147,8 @@ class TestEC2ImageRegistration {
           Math.min( imageFileName.length(), imageFileName.indexOf('.' ) ) ).toLowerCase( )
       print("Using image name ${imageName}, file ${imageFileName}, etag file ${imageEtagFileName}")
 
-      File imageFile = new File(imageFileName)
-      File imageEtagFile = new File(imageEtagFileName)
+      File imageFile = new File(N4j.cacheDir, imageFileName)
+      File imageEtagFile = new File(N4j.cacheDir, imageEtagFileName)
       String imageEtag = null
       if ( imageEtagFile.exists( ) && imageFile.exists( ) ) {
         imageEtag = Files.toString( imageEtagFile, StandardCharsets.UTF_8 )

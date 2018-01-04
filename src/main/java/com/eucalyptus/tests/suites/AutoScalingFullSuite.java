@@ -20,10 +20,12 @@ import com.eucalyptus.tests.awssdk.*;
     TestAutoScalingEC2InstanceTerminationProtection.class,
     TestAutoScalingELBAddRemoveInstances.class,
     TestAutoScalingELBInstanceHealthMonitoring.class,
+    TestAutoScalingInstanceLifecycle.class,
     TestAutoScalingInstanceProfile.class,
     TestAutoScalingLaunchAndTerminate.class,
     TestAutoScalingMetricsSubmission.class,
     TestAutoScalingMultipleAvailabilityZones.class,
+    TestAutoScalingSetInstanceHealth.class,
     TestAutoScalingSuspendAndResumeProcesses.class,
     TestAutoScalingTerminateInstances.class,
 })

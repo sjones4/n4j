@@ -56,17 +56,21 @@ public class N4j {
     static String CLC_IP = System.getProperty("clcip");
     static String USER = System.getProperty("user", "root");
     static String PASSWORD = System.getProperty("password", "foobar");
-    static String endpointFile = System.getProperty("endpoints");
+    static File cacheDir = System.getProperty( "cache" ) == null ?
+        new File( "." ) :
+        new File( System.getProperty( "cache" ) );
     static String LOCAL_INI_FILE = System.getProperty("inifile", "euca-admin.ini");
     static String REMOTE_INI_FILE ="/root/.euca/euca-admin.ini";
     static String LOCAL_EUCTL_FILE = System.getProperty("euctlfile", "euctl.ini");
     static String REMOTE_EUCTL_FILE ="/root/euctl.ini";
 
     static Logger logger = Logger.getLogger(N4j.class.getCanonicalName());
+    static String SERVICES_ENDPOINT = null;
     static String EC2_ENDPOINT = null;
     static String AS_ENDPOINT = null;
     static String ELB_ENDPOINT = null;
     static String IAM_ENDPOINT = null;
+    static String CF_ENDPOINT = null;
     static String CW_ENDPOINT = null;
     static String S3_ENDPOINT = null;
     static String SQS_ENDPOINT = null;
@@ -75,7 +79,6 @@ public class N4j {
     static String ACCESS_KEY = null;
     static String ACCOUNT_ID = null;
     static String NAME_PREFIX;
-    static String endpoints;
     static AmazonAutoScaling as;
     static AmazonEC2 ec2;
     static AmazonElasticLoadBalancing elb;
@@ -91,27 +94,19 @@ public class N4j {
 
     public static void initEndpoints( ) throws Exception {
       getAdminCreds(CLC_IP, USER, PASSWORD);
-
-      if (endpointFile != null) {
-        endpoints = endpointFile;
-      } else {
-        endpoints = "endpoints.xml";
-      }
-
       print("Getting cloud information from " + LOCAL_INI_FILE);
       EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
       AS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "autoscaling-url");
       ELB_ENDPOINT = getAttribute(LOCAL_INI_FILE, "elasticloadbalancing-url");
+      CF_ENDPOINT = getAttribute(LOCAL_INI_FILE, "cloudformation-url");
       CW_ENDPOINT = getAttribute(LOCAL_INI_FILE, "monitoring-url");
       IAM_ENDPOINT = getAttribute(LOCAL_INI_FILE, "iam-url");
       S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
       TOKENS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "sts-url");
+      SERVICES_ENDPOINT = getAttribute(LOCAL_INI_FILE, "bootstrap-url");
       SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
       ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
       ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
-
-      print("Updating endpoints file");
-      updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
     }
 
     public static void getCloudInfo() throws Exception {
@@ -164,11 +159,6 @@ public class N4j {
     // For ease of use against AWS (mainly) as well as Eucalyptus
     public static void initS3Client() throws Exception {
         getAdminCreds(CLC_IP, USER, PASSWORD);
-        if (endpointFile != null) {
-            endpoints = endpointFile;
-        } else {
-            endpoints = "endpoints.xml";
-        }
 
         print("Getting cloud information from " + LOCAL_INI_FILE);
 
@@ -177,9 +167,6 @@ public class N4j {
 
         SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
         ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
-
-        print("Updating endpoints file");
-        updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
 
         print("Initializing S3 connections");
         s3 = getS3Client(ACCESS_KEY, SECRET_KEY, S3_ENDPOINT);
@@ -192,11 +179,6 @@ public class N4j {
 		// Initialize everything for the first time
 		if (EC2_ENDPOINT == null || S3_ENDPOINT == null || IAM_ENDPOINT == null || ACCESS_KEY == null || SECRET_KEY == null) {
             getAdminCreds(CLC_IP, USER, PASSWORD);
-			if (endpointFile != null) {
-				endpoints = endpointFile;
-			} else {
-				endpoints = "endpoints.xml";
-			}
 
 			print("Getting cloud information from " + LOCAL_INI_FILE);
 
@@ -206,9 +188,6 @@ public class N4j {
 
             SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
             ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
-
-			print("Updating endpoints file");
-			updateEndpoints(endpoints, EC2_ENDPOINT, S3_ENDPOINT);
 
 			youAre = getYouAreClient(ACCESS_KEY, SECRET_KEY, IAM_ENDPOINT);
 		}
@@ -646,7 +625,7 @@ public class N4j {
         List<Instance> instances = Collections.emptyList();
         while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
             Thread.sleep(5000);
-            instances = getInstancesForGroup(groupName, "running", Function.identity( ) );
+            instances = getInstancesForGroup(groupName, Collections.singleton("running"), Function.identity( ) );
             completed =
                 instances.stream( ).filter( instance -> !ignoreIds.contains( instance.getInstanceId( ) ) ).count( ) ==
                     expectedCount;
@@ -658,32 +637,34 @@ public class N4j {
             instances;
     }
 
-    public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
-        if ( asString ) {
-            return getInstancesForGroup( groupName, status, Instance::getInstanceId );
-        } else {
-            return getInstancesForGroup( groupName, status, Function.identity( ) );
-        }
+  public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
+    Set<String> statusSet = status==null ? Collections.emptySet( ) : Collections.singleton( status );
+    if ( asString ) {
+      return getInstancesForGroup( groupName, statusSet, Instance::getInstanceId );
+    } else {
+      return getInstancesForGroup( groupName, statusSet, Function.identity( ) );
     }
+  }
 
-    public static <T> List<T> getInstancesForGroup( final String groupName, final String status,
-                                                    final Function<Instance,T> resultTransform ) {
-        final DescribeInstancesResult instancesResult = ec2
-                .describeInstances(new DescribeInstancesRequest()
-                        .withFilters(new Filter()
-                                .withName("tag:aws:autoscaling:groupName")
-                                .withValues(groupName)));
-        final List<T> instanceIds = new ArrayList<>();
-        for (final Reservation reservation : instancesResult.getReservations()) {
-            for (final Instance instance : reservation.getInstances()) {
-                if (status == null || instance.getState() == null
-                        || status.equals(instance.getState().getName())) {
-                    instanceIds.add(resultTransform.apply(instance));
-                }
-            }
+  public static <T> List<T> getInstancesForGroup( final String groupName, final Set<String> status,
+                                                  final Function<Instance,T> resultTransform ) {
+    final DescribeInstancesResult instancesResult = ec2
+        .describeInstances(new DescribeInstancesRequest()
+            .withFilters(new Filter()
+                .withName("tag:aws:autoscaling:groupName")
+                .withValues(groupName)));
+    final List<T> instanceIds = new ArrayList<>();
+    for (final Reservation reservation : instancesResult.getReservations()) {
+      for (final Instance instance : reservation.getInstances()) {
+        if ( instance.getState() == null
+            || status.isEmpty( )
+            || status.contains(instance.getState().getName())) {
+          instanceIds.add(resultTransform.apply(instance));
         }
-        return instanceIds;
+      }
     }
+    return instanceIds;
+  }
 
     /**
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)

@@ -50,7 +50,7 @@ Run unit tests. To run quick tests use: ./gradlew -Dclcip=CLC_IP_ADDR test \
     testLogging.showStandardStreams =
         Boolean.valueOf( System.getProperty( 'testsToConsole', 'true' ) )
 
-    [ 'clcip', 'user', 'password', 'endpoints', 'inifile' ].each{
+    [ 'clcip', 'user', 'password', 'endpoints', 'inifile', 'cache' ].each{
         if ( System.getProperty( it ) ) systemProperty it, System.getProperty( it )
     }
     systemProperty 'sun.net.http.allowRestrictedHeaders', 'true'

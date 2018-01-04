@@ -7,9 +7,11 @@ import com.eucalyptus.tests.awssdk.*;
 
 @RunWith(Suite.class)
 @SuiteClasses({
-    TestCFAdministration.class,
-    TestCFTemplatesShort.class,
+    TestELBApi.class,
+    TestELBAttributes.class,
+    TestELBIAMResource.class,
+    TestELBTagging.class,
 })
-public class CloudFormationSuite {
+public class ElbShortSuite {
   // junit test suite as defined by SuiteClasses annotation
 }

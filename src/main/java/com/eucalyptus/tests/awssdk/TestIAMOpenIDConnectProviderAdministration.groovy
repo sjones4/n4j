@@ -2,21 +2,19 @@ package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.Request
-import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.handlers.RequestHandler2
 import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAre
+import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
 import com.github.sjones4.youcan.youare.model.PutAccountPolicyRequest
+import org.junit.Assert
+import org.junit.BeforeClass
 import org.junit.Test
-import static com.eucalyptus.tests.awssdk.N4j.minimalInit
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
-import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
-import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 
 /**
  * Tests administrative functionality for IAM OpenID Connect providers.
@@ -26,35 +24,24 @@ import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
  */
 class TestIAMOpenIDConnectProviderAdministration {
 
-
-  public TestIAMOpenIDConnectProviderAdministration( ) {
-    minimalInit()
-    this.host = CLC_IP
-    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-  private final String host
-
-  private final AWSCredentialsProvider credentials
-
-  private String cloudUri( String host, String servicePath ) {
-    URI.create( "http://${host}:8773/" )
-        .resolve( servicePath )
-        .toString( )
+  @BeforeClass
+  static void init( ){
+    N4j.testInfo(TestIAMOpenIDConnectProviderAdministration.simpleName)
+    N4j.getCloudInfo( )
   }
 
-  private YouAre getIamClient(AWSCredentialsProvider credentialsProvider = credentials ) {
-    AWSCredentials creds = credentialsProvider.getCredentials( );
-    N4j.getYouAreClient( creds.AWSAccessKeyId, creds.AWSSecretKey, cloudUri( host, '/services/Euare' ) )
+  private YouAre getIamClient( ) {
+    getIamClient( new AWSStaticCredentialsProvider( new BasicAWSCredentials( N4j.ACCESS_KEY, N4j.SECRET_KEY ) ) )
   }
 
-  private boolean assertThat( boolean condition,
-                              String message ){
-    N4j.assertThat( condition, message )
-    true
+  private YouAre getIamClient( AWSCredentialsProvider credentials ) {
+    final YouAre youAre = new YouAreClient( credentials )
+    youAre.setEndpoint( N4j.IAM_ENDPOINT )
+    youAre
   }
 
   @Test
-  public void testOpenIDConnectProviderAdministration( ) throws Exception {
+  void testOpenIDConnectProviderAdministration( ) throws Exception {
     N4j.testInfo( TestIAMOpenIDConnectProviderAdministration.simpleName )
     final String namePrefix = UUID.randomUUID().toString().substring(0,8) + "-"
     N4j.print "Using resource prefix for test: ${namePrefix}"
@@ -68,7 +55,7 @@ class TestIAMOpenIDConnectProviderAdministration {
         accountNumber = createAccount( new CreateAccountRequest( accountName: accountName ) ).with {
           account?.accountId
         }
-        assertThat( accountNumber != null, "Expected account number" )
+        Assert.assertTrue("Expected account number", accountNumber != null)
         N4j.print( "Created account with number: ${accountNumber}" )
         cleanupTasks.add {
           N4j.print( "Deleting account: ${accountName}" )
@@ -120,16 +107,16 @@ class TestIAMOpenIDConnectProviderAdministration {
           it.openIDConnectProviderArn
         }
         N4j.print "Created provider with arn : ${providerArn}"
-        assertThat(providerArn != null, "Expected provider arn")
+        Assert.assertTrue("Expected provider arn", providerArn != null)
         cleanupTasks.add {
           N4j.print "Deleting provider : ${providerArn}"
           deleteOpenIDConnectProvider(new DeleteOpenIDConnectProviderRequest(
               openIDConnectProviderArn: providerArn
           ))
         }
-        assertThat(providerArn.startsWith('arn:aws:iam:'), "Expected provider arn to match iam service")
-        assertThat(providerArn.contains(':oidc-provider/'), "Expected provider arn to contain resource type")
-        assertThat(providerArn.endsWith('auth.test.com'), "Expected provider arn to end with host/path")
+        Assert.assertTrue("Expected provider arn to match iam service", providerArn.startsWith('arn:aws:iam:'))
+        Assert.assertTrue("Expected provider arn to contain resource type", providerArn.contains(':oidc-provider/'))
+        Assert.assertTrue("Expected provider arn to end with host/path", providerArn.endsWith('auth.test.com'))
 
         try {
           N4j.print "Creating provider to test quota limit"
@@ -180,9 +167,10 @@ class TestIAMOpenIDConnectProviderAdministration {
 
         N4j.print "Listing providers using admin account with delegate to verify deletion"
         listOpenIDConnectProviders( )?.with {
-          assertThat(
-              openIDConnectProviderList== null || openIDConnectProviderList.isEmpty( ),
-              "Expected open id provider deleted by administrator" )
+          Assert.assertTrue(
+              "Expected open id provider deleted by administrator",
+              openIDConnectProviderList == null || openIDConnectProviderList.isEmpty()
+          )
         }
       }
 

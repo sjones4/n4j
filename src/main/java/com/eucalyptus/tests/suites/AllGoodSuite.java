@@ -5,20 +5,19 @@ import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 /**
- * Quick tests that should be run before merging.
+ * Tests that take too long for the short suite
  */
 @RunWith(Suite.class)
 @SuiteClasses({
     InitializationSuite.class,
-    AutoScalingShortSuite.class,
+    AutoScalingFullSuite.class,
     CloudFormationSuite.class,
     CloudWatchSuite.class,
-    Ec2ShortSuite.class,
-    ElbShortSuite.class,
+    Ec2FullSuite.class,
+    ElbFullSuite.class,
     IamSuite.class,
-    ServicesSuite.class,
-    S3ShortSuite.class,
+    S3FullSuite.class,
 })
-public class AllShortSuite {
+public class AllGoodSuite {
   // junit test suite as defined by SuiteClasses annotation
 }
