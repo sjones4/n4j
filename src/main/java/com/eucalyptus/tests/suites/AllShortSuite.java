@@ -17,7 +17,7 @@ import org.junit.runners.Suite.SuiteClasses;
     ElbShortSuite.class,
     IamSuite.class,
     ServicesSuite.class,
-    S3Suite.class,
+    S3ShortSuite.class,
 })
 public class AllShortSuite {
   // junit test suite as defined by SuiteClasses annotation
