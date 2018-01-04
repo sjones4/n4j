@@ -8,6 +8,7 @@ import com.eucalyptus.tests.awssdk.*;
 @RunWith(Suite.class)
 @SuiteClasses({
     TestCFAdministration.class,
+    TestCFTemplatesShort.class,
 })
 public class CloudFormationSuite {
   // junit test suite as defined by SuiteClasses annotation

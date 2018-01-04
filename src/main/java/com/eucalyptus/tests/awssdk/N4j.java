@@ -61,6 +61,7 @@ public class N4j {
     static String AS_ENDPOINT = null;
     static String ELB_ENDPOINT = null;
     static String IAM_ENDPOINT = null;
+    static String CF_ENDPOINT = null;
     static String CW_ENDPOINT = null;
     static String S3_ENDPOINT = null;
     static String TOKENS_ENDPOINT = null;
@@ -86,6 +87,7 @@ public class N4j {
       EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
       AS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "autoscaling-url");
       ELB_ENDPOINT = getAttribute(LOCAL_INI_FILE, "elasticloadbalancing-url");
+      CF_ENDPOINT = getAttribute(LOCAL_INI_FILE, "cloudformation-url");
       CW_ENDPOINT = getAttribute(LOCAL_INI_FILE, "monitoring-url");
       IAM_ENDPOINT = getAttribute(LOCAL_INI_FILE, "iam-url");
       S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
