@@ -10,6 +10,7 @@ import com.eucalyptus.tests.awssdk.*;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
+    UpTest.class,
     InitializationTest.class,
     TestEC2ImageRegistration.class
 })
