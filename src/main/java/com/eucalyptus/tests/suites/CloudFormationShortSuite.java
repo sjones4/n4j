@@ -10,6 +10,6 @@ import com.eucalyptus.tests.awssdk.*;
     TestCFAdministration.class,
     TestCFTemplatesShort.class,
 })
-public class CloudFormationSuite {
+public class CloudFormationShortSuite {
   // junit test suite as defined by SuiteClasses annotation
 }
