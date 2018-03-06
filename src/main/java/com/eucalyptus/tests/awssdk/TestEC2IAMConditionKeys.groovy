@@ -2395,7 +2395,7 @@ class TestEC2IAMConditionKeys {
       try {
         print( "Attempting stop of untagged instance ${instanceId_2} as user" )
         stopInstances( new StopInstancesRequest( instanceIds: [ instanceId_2 ] ) ).with {
-          Assert.assertTrue( stoppingInstances.isEmpty( ), 'Expected instance stop to fail'  )
+          Assert.assertTrue( 'Expected instance stop to fail', stoppingInstances.isEmpty( ) )
         }
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
@@ -2422,7 +2422,7 @@ class TestEC2IAMConditionKeys {
 
       print( "Attempting stop of tagged instance ${instanceId_2} as user" )
       stopInstances( new StopInstancesRequest( instanceIds: [ instanceId_2 ] ) ).with {
-        Assert.assertFalse( stoppingInstances.isEmpty( ), 'Expected stopping instance'  )
+        Assert.assertFalse( 'Expected stopping instance', stoppingInstances.isEmpty( ) )
       }
     }
   }
