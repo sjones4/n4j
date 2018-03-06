@@ -11,7 +11,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({
     InitializationSuite.class,
     AutoScalingFullSuite.class,
-    CloudFormationSuite.class,
+    CloudFormationFullSuite.class,
     CloudWatchSuite.class,
     Ec2FullSuite.class,
     ElbFullSuite.class,
