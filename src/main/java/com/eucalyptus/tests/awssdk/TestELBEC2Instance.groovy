@@ -13,6 +13,7 @@ import com.amazonaws.services.ec2.model.DescribeImagesRequest
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.IpPermission
+import com.amazonaws.services.ec2.model.Placement
 import com.amazonaws.services.ec2.model.RunInstancesRequest
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest
 import com.amazonaws.services.ec2.model.UserIdGroupPair
@@ -269,6 +270,9 @@ class TestELBEC2Instance {
               imageId: imageId,
               keyName: keyName,
               securityGroupIds: [ instanceGroupId ],
+              placement: new Placement(
+                  availabilityZone: availabilityZone
+              ),
               userData: Base64.encoder.encodeToString( userDataText.getBytes( StandardCharsets.UTF_8 ) )
           )).with {
             reservation?.with {
