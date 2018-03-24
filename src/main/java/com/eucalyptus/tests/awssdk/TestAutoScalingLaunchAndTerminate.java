@@ -21,6 +21,7 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.autoscaling.model.*;
+import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.google.common.collect.Sets;
 import org.junit.Test;
@@ -81,7 +82,8 @@ public class TestAutoScalingLaunchAndTerminate {
       cleanupTasks.add(new Runnable() {
         @Override
         public void run() {
-          final List<String> instanceIds = (List<String>) getInstancesForGroupWithStatus(groupName, Collections.emptySet(  ), true);
+          final List<String> instanceIds =
+              (List<String>) getInstancesForGroup(groupName, Collections.emptySet(  ), Instance::getInstanceId);
           print("Terminating instances: " + instanceIds);
           ec2.terminateInstances(new TerminateInstancesRequest()
               .withInstanceIds(instanceIds));
@@ -122,7 +124,10 @@ public class TestAutoScalingLaunchAndTerminate {
       while (!terminated
           && (System.currentTimeMillis() - terminateStartTime) < terminateTimeout) {
         Thread.sleep(5000);
-        final List<String> instanceIds = (List<String>) getInstancesForGroupWithStatus(groupName, Sets.newHashSet( "running", "shutting-down" ), true);
+        final List<String> instanceIds = (List<String>) getInstancesForGroup(
+            groupName,
+            Sets.newHashSet( "running", "shutting-down" ),
+            Instance::getInstanceId);
         terminated = instanceIds.size() == 0;
       }
       assertThat(terminated,
