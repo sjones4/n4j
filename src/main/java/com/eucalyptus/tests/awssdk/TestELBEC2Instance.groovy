@@ -338,6 +338,7 @@ class TestELBEC2Instance {
               getText( connectTimeout: 10000, readTimeout: 10000, useCaches: false, allowUserInteraction: false )
           Assert.assertTrue("Expected instance response Hello, but was: ${instanceResponse}", 'Hello' == instanceResponse)
 
+          N4j.print( "Resolving load balancer host ${balancerHost}" )
           Set<String> dnsHosts = getDnsHosts(getServicesClient(credentials))
           String balancerIp = null
           ( 1..12 ).find {
