@@ -206,6 +206,7 @@ class TestELBEC2Instance {
           final String imageId = describeImages( new DescribeImagesRequest(
               filters: [
                   new Filter( name: "image-type", values: ["machine"] ),
+                  new Filter( name: "is-public", values: ["true"] ),
                   new Filter( name: "root-device-type", values: ["instance-store"] ),
               ]
           ) ).with {
