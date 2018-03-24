@@ -45,6 +45,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class N4j {
     static String CLC_IP = System.getProperty("clcip");
@@ -181,7 +183,6 @@ public class N4j {
         ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
         print("Cloud Discovery Complete");
     }
-
 
     public static void testInfo(String testName) {
         print("*****TEST NAME: " + testName);
@@ -374,11 +375,12 @@ public class N4j {
      * The YouAre interface extends AmazonIdentityManagement so you have the
      * regular IAM actions plus (a few) Euare specific ones.
      */
-    public static YouAre getYouAreClient(String accessKey, String secretKey,
-                                                        String endpoint) {
-        AWSCredentialsProvider awsCredentialsProvider =
-                new StaticCredentialsProvider( new BasicAWSCredentials(accessKey, secretKey));
-        final YouAre youAre = new YouAreClient(awsCredentialsProvider);
+    public static YouAre getYouAreClient(String accessKey, String secretKey, String endpoint) {
+        return getYouAreClient( new BasicAWSCredentials(accessKey, secretKey), endpoint );
+    }
+
+    public static YouAre getYouAreClient(AWSCredentials credentials, String endpoint) {
+        final YouAre youAre = new YouAreClient(credentials);
         youAre.setEndpoint(endpoint);
         return youAre;
     }
@@ -492,74 +494,83 @@ public class N4j {
 
     public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
                                            final boolean asString) throws Exception {
+        return waitForInstances( ec2, timeout, expectedCount, groupName, asString, Collections.emptyList( ) );
+    }
+
+  public static List<?> waitForInstances(final AmazonEC2 ec2, final long timeout, final int expectedCount,
+                                         final String groupName, final boolean asString) throws Exception {
+    return waitForInstances( ec2, timeout, expectedCount, groupName, asString, Collections.emptyList( ) );
+  }
+
+  public static List<?> waitForInstances(final AmazonEC2 ec2, final long timeout, final int expectedCount,
+                                         final String groupName, final boolean asString,
+                                         final Collection<String> ignoreIds) throws Exception {
         final long startTime = System.currentTimeMillis();
         boolean completed = false;
-        if (asString) {
-            List<?> instanceIds = Collections.emptyList();
-            while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
-                Thread.sleep(5000);
-                instanceIds = getInstancesForGroup(groupName, "running", true);
-                completed = instanceIds.size() == expectedCount;
-            }
-            assertThat(completed, "Instances count did not change to " + expectedCount + " within the expected timeout");
-            print("Instance count changed in " + (System.currentTimeMillis() - startTime) + "ms");
-            return instanceIds;
-        } else {
-            List<?> instances = Collections.emptyList();
-            while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
-                Thread.sleep(5000);
-                instances = getInstancesForGroup(groupName, "running", false);
-                completed = instances.size() == expectedCount;
-            }
-            assertThat(completed, "Instances count did not change to " + expectedCount + " within the expected timeout");
-            print("Instance count changed in " + (System.currentTimeMillis() - startTime) + "ms");
-            return instances;
+        List<Instance> instances = Collections.emptyList();
+        while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
+            Thread.sleep(5000);
+            instances = getInstancesForGroup(ec2, groupName, Collections.singleton("running"), Function.identity( ) );
+            completed =
+                instances.stream( ).filter( instance -> !ignoreIds.contains( instance.getInstanceId( ) ) ).count( ) ==
+                    expectedCount;
         }
+        assertThat(completed, "Instances count did not change to " + expectedCount + " within the expected timeout");
+        print("Instance count changed in " + (System.currentTimeMillis() - startTime) + "ms");
+        return asString ?
+            instances.stream( ).map( Instance::getInstanceId ).collect( Collectors.toList( ) ):
+            instances;
     }
 
-    public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
-      return getInstancesForGroupWithStatus(
-          groupName,
-          status==null ? Collections.emptySet( ) : Collections.singleton( status ),
-          asString );
-    }
+  public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
+      return getInstancesForGroup( ec2, groupName, status, asString );
+  }
 
-    public static List<?> getInstancesForGroupWithStatus(final String groupName, final Set<String> status, final boolean asString) {
-        final DescribeInstancesResult instancesResult = ec2
-                .describeInstances(new DescribeInstancesRequest()
-                        .withFilters(new Filter()
-                                .withName("tag:aws:autoscaling:groupName")
-                                .withValues(groupName)));
-        if (asString) {
-            final List<String> instanceIds = new ArrayList<String>();
-            for (final Reservation reservation : instancesResult.getReservations()) {
-                for (final Instance instance : reservation.getInstances()) {
-                    if ( instance.getState() == null
-                            || status.isEmpty( )
-                            || status.contains(instance.getState().getName())) {
-                        instanceIds.add(instance.getInstanceId());
-                    }
-                }
-            }
-            return instanceIds;
-        } else {
-            final List<Instance> instances = new ArrayList<Instance>();
-            for (final Reservation reservation : instancesResult.getReservations()) {
-                for (final Instance instance : reservation.getInstances()) {
-                    if (status == null || instance.getState() == null
-                            || status.equals(instance.getState().getName())) {
-                        instances.add(instance);
-                    }
-                }
-            }
-            return instances;
-        }
+  public static List<?> getInstancesForGroup(final AmazonEC2 ec2, final String groupName, final String status, final boolean asString) {
+    Set<String> statusSet = status==null ? Collections.emptySet( ) : Collections.singleton( status );
+    if ( asString ) {
+      return getInstancesForGroup( ec2, groupName, statusSet, Instance::getInstanceId );
+    } else {
+      return getInstancesForGroup( ec2, groupName, statusSet, Function.identity( ) );
     }
+  }
+
+  public static <T> List<T> getInstancesForGroup( final String groupName, final Set<String> status,
+                                                  final Function<Instance,T> resultTransform ) {
+    return getInstancesForGroup( ec2, groupName, status, resultTransform );
+  }
+
+  public static <T> List<T> getInstancesForGroup( final AmazonEC2 ec2, final String groupName, final Set<String> status,
+                                                  final Function<Instance,T> resultTransform ) {
+    final DescribeInstancesResult instancesResult = ec2
+        .describeInstances(new DescribeInstancesRequest()
+            .withFilters(new Filter()
+                .withName("tag:aws:autoscaling:groupName")
+                .withValues(groupName)));
+    final List<T> instanceIds = new ArrayList<>();
+    for (final Reservation reservation : instancesResult.getReservations()) {
+      for (final Instance instance : reservation.getInstances()) {
+        if ( instance.getState() == null
+            || status.isEmpty( )
+            || status.contains(instance.getState().getName())) {
+          instanceIds.add(resultTransform.apply(instance));
+        }
+      }
+    }
+    return instanceIds;
+  }
 
     /**
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
      */
     public static void waitForInstances(final long timeout) {
+        waitForInstances(ec2,timeout);
+    }
+
+    /**
+     * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
+     */
+    public static void waitForInstances(final AmazonEC2 ec2, final long timeout) {
         final long startTime = System.currentTimeMillis();
         withWhile:
         while (true) {

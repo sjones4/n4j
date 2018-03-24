@@ -24,6 +24,9 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.model.CreateAutoScalingGroupRequest;
+import com.amazonaws.services.autoscaling.model.CreateLaunchConfigurationRequest;
+import com.amazonaws.services.autoscaling.model.DeleteAutoScalingGroupRequest;
+import com.amazonaws.services.autoscaling.model.DeleteLaunchConfigurationRequest;
 import com.amazonaws.services.autoscaling.model.SetDesiredCapacityRequest;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
@@ -102,20 +105,23 @@ public class TestAutoScalingMultipleAvailabilityZones {
 		final List<Runnable> cleanupTasks = new ArrayList<Runnable>();
 		try {
 			// Create launch configuration
-            final String launchConfig = namePrefix + "MultipleZones";
-      N4j.print("Creating launch configuration: " +  launchConfig);
-      N4j.createLaunchConfig(launchConfig,N4j.IMAGE_ID,N4j.INSTANCE_TYPE,null,null,null,null,null,null,null,null);
+			final String launchConfig = namePrefix + "MultipleZones";
+			N4j.print("Creating launch configuration: " +  launchConfig);
+			as.createLaunchConfiguration(new CreateLaunchConfigurationRequest()
+					.withLaunchConfigurationName(launchConfig)
+					.withImageId(N4j.IMAGE_ID)
+					.withInstanceType(N4j.INSTANCE_TYPE));
 			cleanupTasks.add(new Runnable() {
 				@Override
 				public void run() {
-          N4j.print("Deleting launch configuration: " + launchConfig);
-          N4j.deleteLaunchConfig(launchConfig);
+					N4j.print("Deleting launch configuration: " + launchConfig);
+					as.deleteLaunchConfiguration(new DeleteLaunchConfigurationRequest().withLaunchConfigurationName(launchConfig));
 				}
 			});
 
 			// Create scaling group
 			final String groupName = namePrefix + "MultipleZones";
-      N4j.print("Creating auto scaling group: " + groupName);
+			N4j.print("Creating auto scaling group: " + groupName);
 			as.createAutoScalingGroup(new CreateAutoScalingGroupRequest()
 					.withAutoScalingGroupName(groupName)
 					.withLaunchConfigurationName(launchConfig)
@@ -128,15 +134,16 @@ public class TestAutoScalingMultipleAvailabilityZones {
 			cleanupTasks.add(new Runnable() {
 				@Override
 				public void run() {
-          N4j.print("Deleting group: " + groupName);
-          N4j.deleteAutoScalingGroup(groupName, true);
+					N4j.print("Deleting group: " + groupName);
+					as.setDesiredCapacity(new SetDesiredCapacityRequest().withDesiredCapacity(0).withAutoScalingGroupName(groupName));
+					as.deleteAutoScalingGroup(new DeleteAutoScalingGroupRequest().withAutoScalingGroupName(groupName).withForceDelete(true));
 				}
 			});
 
 			// Wait for instances to launch
       N4j.print("Waiting for 2 instances to launch");
 			final long timeout = TimeUnit.MINUTES.toMillis(15);
-			List<Instance> instances = (List<Instance>) N4j.waitForInstances(timeout, 2, groupName, false);
+			List<Instance> instances = (List<Instance>) N4j.waitForInstances(ec2, timeout, 2, groupName, false);
 			assertBalanced(instances, availabilityZone1, availabilityZone2);
 
 			// Update group desired capacity and wait for instances to launch
@@ -146,7 +153,7 @@ public class TestAutoScalingMultipleAvailabilityZones {
 
 			// Wait for instances to launch
       N4j.print("Waiting for 2 instances to launch");
-			instances = (List<Instance>) N4j.waitForInstances(timeout, 4, groupName, false);
+			instances = (List<Instance>) N4j.waitForInstances(ec2, timeout, 4, groupName, false);
 			assertBalanced(instances, availabilityZone1, availabilityZone2);
 
 			// Update group desired capacity and wait for instances to launch
@@ -156,7 +163,7 @@ public class TestAutoScalingMultipleAvailabilityZones {
 
 			// Wait for instances to terminate
       N4j.print("Waiting for 2 instances to terminate");
-			instances = (List<Instance>) N4j.waitForInstances(timeout, 2, groupName, false);
+			instances = (List<Instance>) N4j.waitForInstances(ec2, timeout, 2, groupName, false);
 			assertBalanced(instances, availabilityZone1, availabilityZone2);
 
 			// Update group desired capacity and wait for instances to terminate
@@ -166,7 +173,7 @@ public class TestAutoScalingMultipleAvailabilityZones {
 
 			// Wait for instances to terminate
       N4j.print("Waiting for 2 instances to terminate");
-      N4j.waitForInstances(timeout, 0, groupName, false);
+      N4j.waitForInstances(ec2, timeout, 0, groupName, false);
 
 			// Update group desired capacity and wait for instances to launch
       N4j.print("Setting desired capacity to 4 for group: " + groupName);
@@ -175,7 +182,7 @@ public class TestAutoScalingMultipleAvailabilityZones {
 
 			// Wait for instances to launch
       N4j.print("Waiting for 4 instances to launch");
-			instances = (List<Instance>) N4j.waitForInstances(timeout, 4,
+			instances = (List<Instance>) N4j.waitForInstances(ec2, timeout, 4,
 					groupName, false);
 			assertBalanced(instances, availabilityZone1, availabilityZone2);
 
