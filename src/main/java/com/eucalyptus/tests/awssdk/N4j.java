@@ -58,30 +58,31 @@ public class N4j {
     static String LOCAL_INI_FILE = System.getProperty("inifile", "euca-admin.ini");
     static String REMOTE_INI_FILE ="/root/.euca/euca-admin.ini";
     static Logger logger = Logger.getLogger(N4j.class.getCanonicalName());
-    static String SERVICES_ENDPOINT = null;
-    static String EC2_ENDPOINT = null;
-    static String AS_ENDPOINT = null;
-    static String ELB_ENDPOINT = null;
-    static String IAM_ENDPOINT = null;
-    static String CF_ENDPOINT = null;
-    static String CW_ENDPOINT = null;
-    static String S3_ENDPOINT = null;
-    static String TOKENS_ENDPOINT = null;
-    static String SECRET_KEY = null;
-    static String ACCESS_KEY = null;
-    static String ACCOUNT_ID = null;
-    static String NAME_PREFIX;
-    static AmazonAutoScaling as;
-    static AmazonEC2 ec2;
-    static AmazonElasticLoadBalancing elb;
-    static AmazonCloudWatch cw;
-    static AmazonS3 s3;
-    static YouAre youAre;
-    static String IMAGE_ID = null;
-    static String KERNEL_ID = null;
-    static String RAMDISK_ID = null;
-    static String AVAILABILITY_ZONE = null;
-    static String INSTANCE_TYPE = "m1.small";
+
+    public static String SERVICES_ENDPOINT = null;
+    public static String EC2_ENDPOINT = null;
+    public static String AS_ENDPOINT = null;
+    public static String ELB_ENDPOINT = null;
+    public static String IAM_ENDPOINT = null;
+    public static String CF_ENDPOINT = null;
+    public static String CW_ENDPOINT = null;
+    public static String S3_ENDPOINT = null;
+    public static String TOKENS_ENDPOINT = null;
+    public static String SECRET_KEY = null;
+    public static String ACCESS_KEY = null;
+    public static String ACCOUNT_ID = null;
+    public static String NAME_PREFIX;
+    public static AmazonAutoScaling as;
+    public static AmazonEC2 ec2;
+    public static AmazonElasticLoadBalancing elb;
+    public static AmazonCloudWatch cw;
+    public static AmazonS3 s3;
+    public static YouAre youAre;
+    public static String IMAGE_ID = null;
+    public static String KERNEL_ID = null;
+    public static String RAMDISK_ID = null;
+    public static String AVAILABILITY_ZONE = null;
+    public static String INSTANCE_TYPE = "m1.small";
 
     public static void initEndpoints( ) throws Exception {
       getAdminCreds(CLC_IP, USER, PASSWORD);
@@ -578,7 +579,7 @@ public class N4j {
                 throw new IllegalStateException("Instance wait timed out");
             }
             try {
-                Thread.sleep(2000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -820,6 +821,13 @@ public class N4j {
      * @param instanceIds
      */
     public static void terminateInstances(List<String> instanceIds) {
+      terminateInstances(ec2, instanceIds);
+    }
+
+    /**
+     * @param instanceIds
+     */
+    public static void terminateInstances(final AmazonEC2 ec2, List<String> instanceIds) {
         TerminateInstancesRequest terminateInstancesRequest = new TerminateInstancesRequest(instanceIds);
         ec2.terminateInstances(terminateInstancesRequest);
         for (String instance : instanceIds) {
@@ -1171,7 +1179,7 @@ public class N4j {
         start = newKeys.lastIndexOf("SecretAccessKey:") + 17;
         end = newKeys.lastIndexOf(",CreateDate:");
         String secretKey = newKeys.substring(start, end);
-        print("Secret Key: " + secretKey);
+        print("Secret Key: " + secretKey.substring( 0, 3 ) + "..." + secretKey.substring( secretKey.length() - 3 ) );
 
         return new BasicAWSCredentials(accessKey, secretKey);
     }
