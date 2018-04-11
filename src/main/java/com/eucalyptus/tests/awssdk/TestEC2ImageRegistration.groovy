@@ -165,7 +165,7 @@ class TestEC2ImageRegistration {
         String urlEtag = imageUrlConnection.getHeaderField( 'ETag' )
         if ( urlEtag ) {
           print( "Downloading image with etag ${urlEtag}" )
-          Files.write( urlEtag, imageEtagFile, StandardCharsets.UTF_8, false )
+          Files.asCharSink(imageEtagFile, StandardCharsets.UTF_8).write(urlEtag)
         } else {
           print( "Downloading image with no etag, caching disabled" )
           imageEtagFile.delete( )
