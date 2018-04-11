@@ -46,6 +46,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class N4j {
@@ -563,7 +564,32 @@ public class N4j {
     return instanceIds;
   }
 
-    /**
+  /**
+   * Wait for something
+   *
+   * @param what What are we waiting for?
+   * @param callback True if complete, false to wait
+   * @param timeout The wait timeout in millis
+   */
+  public static void waitForIt(final String what, final Predicate<Long> callback, final long timeout) {
+    final long startTime = System.currentTimeMillis();
+    while (true) {
+      if ((System.currentTimeMillis() - startTime) > timeout) {
+        throw new IllegalStateException(what + " wait timed out");
+      }
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      if ( !callback.test( System.currentTimeMillis() - startTime ) ) {
+        continue;
+      }
+      break;
+    }
+  }
+
+  /**
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
      */
     public static void waitForInstances(final long timeout) {
@@ -574,77 +600,61 @@ public class N4j {
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
      */
     public static void waitForInstances(final AmazonEC2 ec2, final long timeout) {
-        final long startTime = System.currentTimeMillis();
-        withWhile:
-        while (true) {
-            if ((System.currentTimeMillis() - startTime) > timeout) {
-                throw new IllegalStateException("Instance wait timed out");
+        waitForIt( "Instance", time -> {
+          DescribeInstancesResult result = ec2.describeInstances();
+          for (final Reservation reservation : result.getReservations()) {
+            for (final Instance instance : reservation.getInstances()) {
+              switch (instance.getState().getCode()) {
+                case 0:
+                case 32:
+                case 64:
+                  return false;
+              }
             }
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            DescribeInstancesResult result = ec2.describeInstances();
-            for (final Reservation reservation : result.getReservations()) {
-                for (final Instance instance : reservation.getInstances()) {
-                    switch (instance.getState().getCode()) {
-                        case 0:
-                        case 32:
-                        case 64:
-                            continue withWhile;
-                    }
-                }
-            }
-            break;
-        }
+          }
+          return true;
+        }, timeout );
     }
 
     /**
      * Wait for volume steady state (no creating, no deleting)
      */
     public static void waitForVolumes(final long timeout) {
-        final long startTime = System.currentTimeMillis();
-        withWhile:
-        while (true) {
-            if ((System.currentTimeMillis() - startTime) > timeout) {
-                throw new IllegalStateException("Volume wait timed out");
-            }
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            final DescribeVolumesResult result = ec2.describeVolumes();
-            for (final Volume volume : result.getVolumes()) {
-                if ("creating".equals(volume.getState()) ||
-                        "deleting".equals(volume.getState())) continue withWhile;
-            }
-            break;
-        }
+        waitForVolumes( ec2, timeout );
+    }
+
+    /**
+     * Wait for volume steady state (no creating, no deleting)
+     */
+    public static void waitForVolumes(final AmazonEC2 ec2, final long timeout) {
+        waitForIt( "Volume", time -> {
+          final DescribeVolumesResult result = ec2.describeVolumes();
+          for (final Volume volume : result.getVolumes()) {
+            if ("creating".equals(volume.getState()) ||
+                "deleting".equals(volume.getState())) return false;
+          }
+          return true;
+        }, timeout );
     }
 
     /**
      * Wait for snapshot steady state (no pending)
      */
     public static void waitForSnapshots(final long timeout) {
-        final long startTime = System.currentTimeMillis();
-        withWhile:
-        while (true) {
-            if ((System.currentTimeMillis() - startTime) > timeout) {
-                throw new IllegalStateException("Snapshot wait timed out");
-            }
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            final DescribeSnapshotsResult result = ec2.describeSnapshots();
-            for (final Snapshot snapshot : result.getSnapshots()) {
-                if ("pending".equals(snapshot.getState())) continue withWhile;
-            }
-            break;
-        }
+      waitForSnapshots(ec2, timeout);
+    }
+
+    /**
+     * Wait for snapshot steady state (no pending)
+     */
+    public static void waitForSnapshots(final AmazonEC2 ec2, final long timeout) {
+        waitForIt( "Snapshot", time -> {
+          final DescribeSnapshotsResult result = ec2.describeSnapshots();
+          for (final Snapshot snapshot : result.getSnapshots()) {
+            if ("pending".equals(snapshot.getState())) return false;
+          }
+          return true;
+        }, timeout );
     }
 
     public static String findImage() {
