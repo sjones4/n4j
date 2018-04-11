@@ -8,6 +8,7 @@ import com.eucalyptus.tests.load.ObjectChurnLoadTest;
 
 @RunWith(Suite.class)
 @SuiteClasses({
+    InitializationSuite.class,
     InstanceChurnLoadTest.class,
     ObjectChurnLoadTest.class,
 })

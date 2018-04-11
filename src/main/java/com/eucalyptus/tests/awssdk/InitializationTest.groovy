@@ -54,6 +54,7 @@ class InitializationTest {
   void configureCloudProperties( ) {
     Map<String,String> props = [
         'authentication.access_keys_limit': '100',
+        'objectstorage.queue_timeout': '3', // EUCA-11320
     ]
     getPropertiesClient( ).with{
       props.forEach{ key, value ->
@@ -74,7 +75,7 @@ class InitializationTest {
     getComputeClient( ).with{
       modifyInstanceTypeAttribute( new ModifyInstanceTypeAttributeRequest(
           name: 'm1.small',
-          disk: 11
+          disk: 10
       ) ).with {
         N4j.print( "Modified m1.small disk, now ${instanceType}" )
       }
