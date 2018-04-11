@@ -6,6 +6,7 @@ import org.junit.runners.Suite.SuiteClasses;
 import com.eucalyptus.tests.load.InstanceChurnLoadTest;
 import com.eucalyptus.tests.load.LoadBalancerChurnLoadTest;
 import com.eucalyptus.tests.load.ObjectChurnLoadTest;
+import com.eucalyptus.tests.load.StackChurnLoadTest;
 
 @RunWith(Suite.class)
 @SuiteClasses({
@@ -16,6 +17,7 @@ import com.eucalyptus.tests.load.ObjectChurnLoadTest;
     InstanceChurnLoadTest.class,
     LoadBalancerChurnLoadTest.class,
     ObjectChurnLoadTest.class,
+    StackChurnLoadTest.class,
 })
 public class LoadSuite {
   // junit test suite as defined by SuiteClasses annotation
