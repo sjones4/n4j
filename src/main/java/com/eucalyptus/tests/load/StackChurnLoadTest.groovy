@@ -2,8 +2,8 @@ package com.eucalyptus.tests.load
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 import com.amazonaws.services.cloudformation.model.CreateStackRequest
 import com.amazonaws.services.cloudformation.model.DeleteStackRequest
@@ -246,8 +246,8 @@ class StackChurnLoadTest {
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}stack-churn-load"
     N4j.createAccount( testAcct )
-    testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
-    cloudAdminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    cloudAdminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
   }
 
   @AfterClass

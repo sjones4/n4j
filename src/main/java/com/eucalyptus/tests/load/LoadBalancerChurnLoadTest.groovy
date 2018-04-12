@@ -2,8 +2,8 @@ package com.eucalyptus.tests.load
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.model.Address
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
@@ -69,8 +69,8 @@ class LoadBalancerChurnLoadTest {
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}loadbalancer-churn-load"
     N4j.createAccount( testAcct )
-    testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
-    cloudAdminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    cloudAdminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
   }
 
   @AfterClass
@@ -391,6 +391,9 @@ class LoadBalancerChurnLoadTest {
                     } catch ( e ) {
                       if ( e.message.contains( '503' ) ) { // check for 503 http status code and retry
                         N4j.print("[${thread}] Service unavailable, will retry in 5s accessing instance ${instanceId} via load balancer ${count}/${elbIterations} ${balancerUrl}")
+                        sleep 5000
+                      } else if ( e.message.contains('Connection refused' ) ) { // retry
+                        N4j.print("[${thread}] Connection refused, will retry in 5s accessing instance ${instanceId} via load balancer ${count}/${elbIterations} ${balancerUrl}")
                         sleep 5000
                       } else {
                         throw e

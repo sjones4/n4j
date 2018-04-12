@@ -3,8 +3,8 @@ package com.eucalyptus.tests.load
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.model.Address
 import com.amazonaws.services.ec2.model.DescribeAddressesRequest
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult
@@ -57,9 +57,9 @@ class InstanceChurnLoadTest {
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}instance-churn-load"
     N4j.createAccount( testAcct )
-    testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
     ec2Client = getEC2Client( testAcctAdminCredentials )
-    cloudAdminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
+    cloudAdminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
   }
 
   @AfterClass

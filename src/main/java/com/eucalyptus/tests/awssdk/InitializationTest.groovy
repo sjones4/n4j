@@ -55,6 +55,7 @@ class InitializationTest {
     Map<String,String> props = [
         'authentication.access_keys_limit': '100',
         'objectstorage.queue_timeout': '3', // EUCA-11320
+        'storage.global_total_snapshot_size_limit_gb': '100'
     ]
     getPropertiesClient( ).with{
       props.forEach{ key, value ->

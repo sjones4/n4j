@@ -2,8 +2,8 @@ package com.eucalyptus.tests.load
 
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
@@ -39,9 +39,9 @@ class ObjectChurnLoadTest {
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}object-churn-load"
     N4j.createAccount( testAcct )
-    testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
     s3Client = getS3Client( testAcctAdminCredentials )
-    cloudAdminCredentials = new StaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
+    cloudAdminCredentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) )
   }
 
   @AfterClass
