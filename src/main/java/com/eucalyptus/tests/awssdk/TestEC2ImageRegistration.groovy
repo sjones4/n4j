@@ -54,12 +54,13 @@ import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
 import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.S3_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SERVICES_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.TOKENS_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.initEndpoints
 import static com.eucalyptus.tests.awssdk.N4j.print
 
 /**
- * This test covers uploading, registering and running instances for an image.
+ * This test covers uploading and registering an hvm instance-store image.
  */
 class TestEC2ImageRegistration {
 
@@ -97,18 +98,8 @@ class TestEC2ImageRegistration {
 
   YouServ getServicesClient( AWSCredentialsProvider clientCredentials = credentials ) {
     YouServClient youServ = new YouServClient( clientCredentials )
-    youServ.setEndpoint( deriveEndpoint( EC2_ENDPOINT, '/services/Empyrean' ) )
+    youServ.setEndpoint( SERVICES_ENDPOINT )
     youServ
-  }
-
-  String deriveEndpoint( String baseUri, String servicePath ) {
-    final URI uri = URI.create( baseUri )
-    final String host = uri.getHost()
-    final int port = uri.getPort( )
-    final String endpoint = uri.getScheme( ) + "://" +
-        InetAddress.getByName( host ).getHostAddress( ) +
-        (port > 0 ? ":" + port : "")
-    return "${endpoint}${servicePath}"
   }
 
   @SuppressWarnings("ChangeToOperator")
@@ -165,7 +156,7 @@ class TestEC2ImageRegistration {
         String urlEtag = imageUrlConnection.getHeaderField( 'ETag' )
         if ( urlEtag ) {
           print( "Downloading image with etag ${urlEtag}" )
-          Files.write( urlEtag, imageEtagFile, StandardCharsets.UTF_8, false )
+          Files.asCharSink(imageEtagFile, StandardCharsets.UTF_8).write(urlEtag)
         } else {
           print( "Downloading image with no etag, caching disabled" )
           imageEtagFile.delete( )

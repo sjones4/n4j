@@ -50,6 +50,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class N4j {
@@ -65,32 +66,34 @@ public class N4j {
     static String REMOTE_EUCTL_FILE ="/root/euctl.ini";
 
     static Logger logger = Logger.getLogger(N4j.class.getCanonicalName());
-    static String SERVICES_ENDPOINT = null;
-    static String EC2_ENDPOINT = null;
-    static String AS_ENDPOINT = null;
-    static String ELB_ENDPOINT = null;
-    static String IAM_ENDPOINT = null;
-    static String CF_ENDPOINT = null;
-    static String CW_ENDPOINT = null;
-    static String S3_ENDPOINT = null;
-    static String SQS_ENDPOINT = null;
-    static String TOKENS_ENDPOINT = null;
-    static String SECRET_KEY = null;
-    static String ACCESS_KEY = null;
-    static String ACCOUNT_ID = null;
-    static String NAME_PREFIX;
-    static AmazonAutoScaling as;
-    static AmazonEC2 ec2;
-    static AmazonElasticLoadBalancing elb;
-    static AmazonCloudWatch cw;
-    static AmazonS3 s3;
-    static AmazonSQS sqs;
-    static YouAre youAre;
-    static String IMAGE_ID = null;
-    static String KERNEL_ID = null;
-    static String RAMDISK_ID = null;
-    static String AVAILABILITY_ZONE = null;
-    static String INSTANCE_TYPE = "m1.small";
+
+    public static String PROPERTIES_ENDPOINT = null;
+    public static String SERVICES_ENDPOINT = null;
+    public static String EC2_ENDPOINT = null;
+    public static String AS_ENDPOINT = null;
+    public static String ELB_ENDPOINT = null;
+    public static String IAM_ENDPOINT = null;
+    public static String CF_ENDPOINT = null;
+    public static String CW_ENDPOINT = null;
+    public static String S3_ENDPOINT = null;
+    public static String SQS_ENDPOINT = null;
+    public static String TOKENS_ENDPOINT = null;
+    public static String SECRET_KEY = null;
+    public static String ACCESS_KEY = null;
+    public static String ACCOUNT_ID = null;
+    public static String NAME_PREFIX;
+    public static AmazonAutoScaling as;
+    public static AmazonEC2 ec2;
+    public static AmazonElasticLoadBalancing elb;
+    public static AmazonCloudWatch cw;
+    public static AmazonS3 s3;
+    public static AmazonSQS sqs;
+    public static YouAre youAre;
+    public static String IMAGE_ID = null;
+    public static String KERNEL_ID = null;
+    public static String RAMDISK_ID = null;
+    public static String AVAILABILITY_ZONE = null;
+    public static String INSTANCE_TYPE = "m1.small";
 
     public static void initEndpoints( ) throws Exception {
       getAdminCreds(CLC_IP, USER, PASSWORD);
@@ -104,6 +107,7 @@ public class N4j {
       S3_ENDPOINT = getAttribute(LOCAL_INI_FILE, "s3-url");
       TOKENS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "sts-url");
       SERVICES_ENDPOINT = getAttribute(LOCAL_INI_FILE, "bootstrap-url");
+      PROPERTIES_ENDPOINT = getAttribute(LOCAL_INI_FILE, "properties-url");
       SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
       ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
       ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
@@ -613,19 +617,54 @@ public class N4j {
         return healthStatus;
     }
 
-    public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
+  /**
+   * Wait for something
+   *
+   * @param what What are we waiting for?
+   * @param callback True if complete, false to wait
+   * @param timeout The wait timeout in millis
+   */
+  public static void waitForIt(final String what, final Predicate<Long> callback, final long timeout) {
+    final long startTime = System.currentTimeMillis();
+    while (true) {
+      if ((System.currentTimeMillis() - startTime) > timeout) {
+        throw new IllegalStateException(what + " wait timed out");
+      }
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      if ( !callback.test( System.currentTimeMillis() - startTime ) ) {
+        continue;
+      }
+      break;
+    }
+  }
+
+  public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
+                                         final boolean asString) throws Exception {
+    return waitForInstances( ec2, timeout, expectedCount, groupName, asString, Collections.emptyList( ) );
+  }
+
+  public static List<?> waitForInstances(final AmazonEC2 ec2, final long timeout, final int expectedCount, final String groupName,
                                            final boolean asString) throws Exception {
-        return waitForInstances( timeout, expectedCount, groupName, asString, Collections.emptyList( ) );
+        return waitForInstances( ec2, timeout, expectedCount, groupName, asString, Collections.emptyList( ) );
     }
 
-    public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
-                                           final boolean asString, final Collection<String> ignoreIds) throws Exception {
+  public static List<?> waitForInstances(final long timeout, final int expectedCount, final String groupName,
+                                         final boolean asString, final Collection<String> ignoreIds) throws Exception {
+    return waitForInstances( ec2, timeout, expectedCount, groupName, asString, ignoreIds );
+  }
+
+  public static List<?> waitForInstances(final AmazonEC2 ec2, final long timeout, final int expectedCount, final String groupName,
+                                         final boolean asString, final Collection<String> ignoreIds) throws Exception {
         final long startTime = System.currentTimeMillis();
         boolean completed = false;
         List<Instance> instances = Collections.emptyList();
         while (!completed && (System.currentTimeMillis() - startTime) < timeout) {
             Thread.sleep(5000);
-            instances = getInstancesForGroup(groupName, Collections.singleton("running"), Function.identity( ) );
+            instances = getInstancesForGroup(ec2, groupName, Collections.singleton("running"), Function.identity( ) );
             completed =
                 instances.stream( ).filter( instance -> !ignoreIds.contains( instance.getInstanceId( ) ) ).count( ) ==
                     expectedCount;
@@ -635,18 +674,27 @@ public class N4j {
         return asString ?
             instances.stream( ).map( Instance::getInstanceId ).collect( Collectors.toList( ) ):
             instances;
-    }
+  }
 
   public static List<?> getInstancesForGroup(final String groupName, final String status, final boolean asString) {
+    return getInstancesForGroup( ec2, groupName, status, asString );
+  }
+
+  public static List<?> getInstancesForGroup(final AmazonEC2 ec2, final String groupName, final String status, final boolean asString) {
     Set<String> statusSet = status==null ? Collections.emptySet( ) : Collections.singleton( status );
     if ( asString ) {
-      return getInstancesForGroup( groupName, statusSet, Instance::getInstanceId );
+      return getInstancesForGroup( ec2, groupName, statusSet, Instance::getInstanceId );
     } else {
-      return getInstancesForGroup( groupName, statusSet, Function.identity( ) );
+      return getInstancesForGroup( ec2, groupName, statusSet, Function.identity( ) );
     }
   }
 
   public static <T> List<T> getInstancesForGroup( final String groupName, final Set<String> status,
+                                                  final Function<Instance,T> resultTransform ) {
+    return getInstancesForGroup( ec2, groupName, status, resultTransform );
+  }
+
+  public static <T> List<T> getInstancesForGroup( final AmazonEC2 ec2, final String groupName, final Set<String> status,
                                                   final Function<Instance,T> resultTransform ) {
     final DescribeInstancesResult instancesResult = ec2
         .describeInstances(new DescribeInstancesRequest()
@@ -677,30 +725,20 @@ public class N4j {
      * Wait for instance steady state (no PENDING, no STOPPING, no SHUTTING-DOWN)
      */
     public static void waitForInstances(final AmazonEC2 ec2, final long timeout) {
-        final long startTime = System.currentTimeMillis();
-        withWhile:
-        while (true) {
-            if ((System.currentTimeMillis() - startTime) > timeout) {
-                throw new IllegalStateException("Instance wait timed out");
-            }
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        waitForIt( "Instance", time -> {
             DescribeInstancesResult result = ec2.describeInstances();
             for (final Reservation reservation : result.getReservations()) {
-                for (final Instance instance : reservation.getInstances()) {
-                    switch (instance.getState().getCode()) {
-                        case 0:
-                        case 32:
-                        case 64:
-                            continue withWhile;
-                    }
+              for ( final Instance instance : reservation.getInstances( ) ) {
+                switch ( instance.getState( ).getCode( ) ) {
+                  case 0:
+                  case 32:
+                  case 64:
+                    return false;
                 }
+              }
             }
-            break;
-        }
+            return true;
+        }, timeout );
     }
 
     /**
@@ -738,24 +776,21 @@ public class N4j {
      * Wait for volume steady state (no creating, no deleting)
      */
     public static void waitForVolumes(final long timeout) {
-        final long startTime = System.currentTimeMillis();
-        withWhile:
-        while (true) {
-            if ((System.currentTimeMillis() - startTime) > timeout) {
-                throw new IllegalStateException("Volume wait timed out");
-            }
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            final DescribeVolumesResult result = ec2.describeVolumes();
-            for (final Volume volume : result.getVolumes()) {
-                if ("creating".equals(volume.getState()) ||
-                        "deleting".equals(volume.getState())) continue withWhile;
-            }
-            break;
-        }
+        waitForVolumes( ec2, timeout );
+    }
+
+    /**
+     * Wait for volume steady state (no creating, no deleting)
+     */
+    public static void waitForVolumes(final AmazonEC2 ec2, final long timeout) {
+        waitForIt( "Volume", time -> {
+          final DescribeVolumesResult result = ec2.describeVolumes();
+          for (final Volume volume : result.getVolumes()) {
+            if ("creating".equals(volume.getState()) ||
+                "deleting".equals(volume.getState())) return false;
+          }
+          return true;
+        }, timeout );
     }
 
     /**
@@ -769,23 +804,13 @@ public class N4j {
      * Wait for snapshot steady state (no pending)
      */
     public static void waitForSnapshots(final AmazonEC2 ec2, final long timeout) {
-        final long startTime = System.currentTimeMillis();
-        withWhile:
-        while (true) {
-            if ((System.currentTimeMillis() - startTime) > timeout) {
-                throw new IllegalStateException("Snapshot wait timed out");
-            }
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        waitForIt( "Snapshot", time -> {
             final DescribeSnapshotsResult result = ec2.describeSnapshots();
             for (final Snapshot snapshot : result.getSnapshots()) {
-                if ("pending".equals(snapshot.getState())) continue withWhile;
+            if ("pending".equals(snapshot.getState())) return false;
             }
-            break;
-        }
+          return true;
+        }, timeout );
     }
 
     public static String findImage() {
@@ -964,6 +989,13 @@ public class N4j {
      * @param instanceIds
      */
     public static void terminateInstances(List<String> instanceIds) {
+      terminateInstances(ec2, instanceIds);
+    }
+
+    /**
+     * @param instanceIds
+     */
+    public static void terminateInstances(final AmazonEC2 ec2, List<String> instanceIds) {
         TerminateInstancesRequest terminateInstancesRequest = new TerminateInstancesRequest(instanceIds);
         ec2.terminateInstances(terminateInstancesRequest);
         for (String instance : instanceIds) {
@@ -1334,7 +1366,7 @@ public class N4j {
         start = newKeys.lastIndexOf("SecretAccessKey:") + 17;
         end = newKeys.lastIndexOf(",CreateDate:");
         String secretKey = newKeys.substring(start, end);
-        print("Secret Key: " + secretKey);
+        print("Secret Key: " + secretKey.substring( 0, 3 ) + "..." + secretKey.substring( secretKey.length() - 3 ) );
 
         return new BasicAWSCredentials(accessKey, secretKey);
     }
