@@ -347,14 +347,19 @@ public class N4j {
 
     /**
      * create ec2 connection based with supplied accessKey and secretKey
-     *
-     * @param accessKey
-     * @param secretKey
      */
     static AmazonEC2 getEc2Client(String accessKey, String secretKey,
                                   String endpoint) {
         AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
-        final AmazonEC2 ec2 = new AmazonEC2Client(creds);
+        return getEc2Client(creds, endpoint);
+    }
+
+    /**
+     * create ec2 connection based with supplied credentials
+     */
+    static AmazonEC2 getEc2Client(AWSCredentials credentials,
+                                  String endpoint) {
+        final AmazonEC2 ec2 = new AmazonEC2Client(credentials);
         ec2.setEndpoint(endpoint);
         return ec2;
     }
