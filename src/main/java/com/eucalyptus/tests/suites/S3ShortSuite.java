@@ -15,6 +15,7 @@ import com.eucalyptus.tests.awssdk.*;
     S3ObjectACLTests.class,
     S3ObjectMultiDeleteTests.class,
     S3ObjectTests.class,
+    S3QuotaTest.class,
 })
 public class S3ShortSuite {
   // junit test suite as defined by SuiteClasses annotation
