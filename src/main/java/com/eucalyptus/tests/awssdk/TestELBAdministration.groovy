@@ -28,14 +28,12 @@ import org.junit.Test
  * - deletion of an elb in another account using the dns name
  */
 class TestELBAdministration {
-  private final String host;
   private final AWSCredentialsProvider credentials;
   private final String testAcct
   private final AWSCredentialsProvider testAcctAdminCredentials
 
   public TestELBAdministration( ) {
     N4j.getCloudInfo( )
-    this.host = N4j.CLC_IP
     this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( N4j.ACCESS_KEY, N4j.SECRET_KEY ) )
 
     this.testAcct= "${N4j.NAME_PREFIX}test-acct"
@@ -48,20 +46,14 @@ class TestELBAdministration {
     N4j.deleteAccount(testAcct)
   }
 
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
-  }
-
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( cloudUri( "/services/compute" ) )
+    ec2.setEndpoint( N4j.EC2_ENDPOINT )
     ec2
   }
   private AmazonElasticLoadBalancing getELBClient( final AWSCredentialsProvider credentials ) {
     final AmazonElasticLoadBalancing elb = new AmazonElasticLoadBalancingClient( credentials )
-    elb.setEndpoint( cloudUri( "/services/LoadBalancing" ) )
+    elb.setEndpoint( N4j.ELB_ENDPOINT )
     elb
   }
 

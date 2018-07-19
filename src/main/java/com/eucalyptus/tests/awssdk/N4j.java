@@ -189,11 +189,7 @@ public class N4j {
 	}
 
     public static void minimalInit() throws Exception {
-        getAdminCreds(CLC_IP, USER, PASSWORD);
-        EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
-        print("HOST = " + CLC_IP);
-        SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
-        ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
+        initEndpoints( );
         print("Cloud Discovery Complete");
     }
 
@@ -208,6 +204,10 @@ public class N4j {
     public static void getAdminCreds(String clcip, String user, String password) {
         print("CLC IP: " + clcip);
         SftpATTRS attrs = null;
+
+        if ( clcip == null || clcip.isEmpty( ) ) {
+            return;
+        }
 
         try {
             JSch jsch = new JSch();
