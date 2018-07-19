@@ -205,6 +205,10 @@ public class N4j {
         print("CLC IP: " + clcip);
         SftpATTRS attrs = null;
 
+        if ( clcip == null || clcip.isEmpty( ) ) {
+            return;
+        }
+
         try {
             JSch jsch = new JSch();
             Session session = jsch.getSession(user, clcip, 22);
