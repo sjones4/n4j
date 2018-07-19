@@ -569,7 +569,7 @@ public class N4j {
     public static String getEucalyptusVersion( ) {
         AtomicReference<String> version = new AtomicReference<String>(  );
         AmazonEC2 client = AmazonEC2Client.builder()
-            .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+            .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
             .withCredentials( new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) ) )
             .withRequestHandlers( new RequestHandler2( ) {
               @Override
