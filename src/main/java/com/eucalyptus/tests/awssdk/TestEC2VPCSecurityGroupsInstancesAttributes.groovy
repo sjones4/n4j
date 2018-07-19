@@ -31,7 +31,6 @@ import com.amazonaws.services.ec2.model.*
 import org.junit.Test
 
 import static N4j.ACCESS_KEY
-import static N4j.CLC_IP
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
 
@@ -47,7 +46,6 @@ import static N4j.minimalInit
  */
 class TestEC2VPCSecurityGroupsInstancesAttributes {
 
-  private final String host
   private final AWSCredentialsProvider credentials
   private final List<String> imageOwners
 
@@ -57,21 +55,14 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
 
   public TestEC2VPCSecurityGroupsInstancesAttributes() {
       minimalInit()
-      this.host=CLC_IP
       this.credentials = new StaticCredentialsProvider(new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY))
       this.imageOwners = imageOwners
   }
 
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
-  }
-
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    if ( host ) {
-      ec2.setEndpoint( cloudUri("/services/compute") )
+    if ( N4j.EC2_ENDPOINT ) {
+      ec2.setEndpoint( N4j.EC2_ENDPOINT )
     } else {
       ec2.setRegion( com.amazonaws.regions.Region.getRegion( Regions.US_WEST_1 ) )
     }
