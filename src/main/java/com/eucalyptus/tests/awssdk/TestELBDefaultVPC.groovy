@@ -26,7 +26,6 @@ import com.amazonaws.services.elasticloadbalancing.model.Listener
 import org.junit.Test;
 
 import static N4j.ACCESS_KEY
-import static N4j.CLC_IP
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
 import static com.eucalyptus.tests.awssdk.N4j.isVPC
@@ -36,7 +35,6 @@ import static com.eucalyptus.tests.awssdk.N4j.isVPC
  */
 class TestELBDefaultVPC {
 
-  private final String host;
   private final AWSCredentialsProvider credentials;
 
   public static void main( String[] args ) throws Exception {
@@ -45,20 +43,13 @@ class TestELBDefaultVPC {
 
   public TestELBDefaultVPC() {
     minimalInit()
-    this.host=CLC_IP
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
   }
 
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    if ( host ) {
-      ec2.setEndpoint( cloudUri( "/services/compute" ) )
+    if ( N4j.EC2_ENDPOINT ) {
+      ec2.setEndpoint( N4j.EC2_ENDPOINT )
     } else {
       ec2.setRegion(Region.getRegion( Regions.US_WEST_1 ) )
     }
@@ -67,8 +58,8 @@ class TestELBDefaultVPC {
 
   private AmazonElasticLoadBalancing getELBClient( final AWSCredentialsProvider credentials ) {
     final AmazonElasticLoadBalancing elb = new AmazonElasticLoadBalancingClient( credentials )
-    if ( host ) {
-      elb.setEndpoint( cloudUri( "/services/LoadBalancing" ) )
+    if ( N4j.ELB_ENDPOINT ) {
+      elb.setEndpoint( N4j.ELB_ENDPOINT )
     } else {
       elb.setRegion(Region.getRegion( Regions.US_WEST_1 ) )
     }

@@ -129,7 +129,7 @@ class TestELBEC2Instance {
         createLoadBalancer( new CreateLoadBalancerRequest(
             loadBalancerName: loadBalancerName,
             listeners: [ new Listener(
-                loadBalancerPort: 9999,
+                loadBalancerPort: 80,
                 protocol: 'HTTP',
                 instancePort: 9999,
                 instanceProtocol: 'HTTP'
@@ -347,7 +347,7 @@ class TestELBEC2Instance {
           }
           Assert.assertNotNull('Expected ip for load balancer', balancerIp)
           N4j.print( "Resolved load balancer host ${balancerHost} to ${balancerIp}" )
-          String balancerUrl = "http://${balancerIp}:9999/"
+          String balancerUrl = "http://${balancerIp}/"
           N4j.print( "Accessing instance via load balancer ${balancerUrl}" )
           String balancerResponse = new URL( balancerUrl ).
               getText( connectTimeout: 10000, readTimeout: 10000, useCaches: false, allowUserInteraction: false )

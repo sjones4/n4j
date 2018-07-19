@@ -5,6 +5,7 @@ import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 import com.amazonaws.services.cloudformation.model.CreateStackRequest
 import com.amazonaws.services.cloudformation.model.DeleteStackRequest
+import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest
 import com.amazonaws.services.cloudformation.model.Parameter
 import com.amazonaws.services.cloudformation.model.Stack
@@ -160,8 +161,8 @@ class TestCFTemplatesShort {
             "CidrIp": "0.0.0.0/0",
             "FromPort": "22",
             "ToPort": "22",
-            "GroupName": {
-              "Ref": "SecurityGroup"
+            "GroupId": {
+              "Fn::GetAtt": [ "SecurityGroup", "GroupId" ]
             },
             "IpProtocol": "tcp"
           }
@@ -277,6 +278,12 @@ class TestCFTemplatesShort {
                 } else if ( lastStatus == 'CREATE_IN_PROGRESS' ) {
                   null
                 } else {
+                  N4j.print( "Unexpected status ${lastStatus}, dumping stack events" )
+                  describeStackEvents( new DescribeStackEventsRequest( stackName: stackId ) ).with {
+                    stackEvents?.each {
+                      N4j.print( it.toString( ) )
+                    }
+                  }
                   Assert.fail( "Unexpected status ${lastStatus}" )
                 }
               }

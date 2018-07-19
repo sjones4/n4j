@@ -4,6 +4,7 @@ import static org.junit.Assert.fail;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
+import com.amazonaws.Response;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -38,6 +39,7 @@ import com.github.sjones4.youcan.youare.YouAre;
 import com.github.sjones4.youcan.youare.YouAreClient;
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
+import com.google.common.base.MoreObjects;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
 import org.junit.Assume;
@@ -49,8 +51,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class N4j {
@@ -94,6 +98,7 @@ public class N4j {
     public static String RAMDISK_ID = null;
     public static String AVAILABILITY_ZONE = null;
     public static String INSTANCE_TYPE = "m1.small";
+    public static String EUCALYPTUS_VERSION = null;
 
     public static void initEndpoints( ) throws Exception {
       getAdminCreds(CLC_IP, USER, PASSWORD);
@@ -124,6 +129,7 @@ public class N4j {
         s3 = getS3Client(ACCESS_KEY, SECRET_KEY, S3_ENDPOINT);
         youAre = getYouAreClient(ACCESS_KEY, SECRET_KEY, IAM_ENDPOINT);
         IMAGE_ID = findImage();
+        EUCALYPTUS_VERSION = getEucalyptusVersion( );
 
         if (!isHVM()) {
             KERNEL_ID = findKernel();
@@ -212,11 +218,7 @@ public class N4j {
 	}
 
     public static void minimalInit() throws Exception {
-        getAdminCreds(CLC_IP, USER, PASSWORD);
-        EC2_ENDPOINT = getAttribute(LOCAL_INI_FILE, "ec2-url");
-        print("HOST = " + CLC_IP);
-        SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
-        ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
+        initEndpoints( );
         print("Cloud Discovery Complete");
     }
 
@@ -231,6 +233,10 @@ public class N4j {
     public static void getAdminCreds(String clcip, String user, String password) {
         print("CLC IP: " + clcip);
         SftpATTRS attrs = null;
+
+        if ( clcip == null || clcip.isEmpty( ) ) {
+            return;
+        }
 
         try {
             JSch jsch = new JSch();
@@ -558,6 +564,44 @@ public class N4j {
         content = content.replaceAll("EC2_URL", ec2Endpoint);
         content = content.replaceAll("WALRUS_URL", s3Endpoint);
         Files.write(path, content.getBytes(charset));
+    }
+
+    public static String getEucalyptusVersion( ) {
+        AtomicReference<String> version = new AtomicReference<String>(  );
+        AmazonEC2 client = AmazonEC2Client.builder()
+            .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+            .withCredentials( new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY) ) )
+            .withRequestHandlers( new RequestHandler2( ) {
+              @Override
+              public void afterResponse( final Request<?> request, final Response<?> response ) {
+                String server = response.getHttpResponse().getHeader( "server" );
+                if (server.startsWith( "Eucalyptus/" )) {
+                  version.set( server.substring( 11 ) );
+                }
+              }
+            } )
+            .build();
+        client.describeRegions();
+        return MoreObjects.firstNonNull( version.get(), "" );
+    }
+
+    public static boolean isAtLeastEucalyptusVersion(String version) {
+      int detected = versionAsInt(EUCALYPTUS_VERSION);
+      int required = versionAsInt(version);
+      return detected >= required;
+    }
+
+    private static int versionAsInt(String version) {
+      int versionInt = 0;
+      String[] versions = version.split(Pattern.quote("."), 4);
+      int multiplier = 1_000_000;
+      for (int v=0; v<3; v++) {
+        if (versions.length > v) {
+          versionInt += Integer.parseInt(versions[v]) * multiplier;
+        }
+        multiplier /= 1000;
+      }
+      return versionInt;
     }
 
     public static String eucaUUID() {

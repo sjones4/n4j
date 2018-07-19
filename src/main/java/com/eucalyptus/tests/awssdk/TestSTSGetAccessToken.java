@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.tests.awssdk;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +51,6 @@ import com.github.sjones4.youcan.youtoken.model.GetAccessTokenResult;
 import org.junit.Test;
 
 import static com.eucalyptus.tests.awssdk.N4j.minimalInit;
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP;
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY;
 import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY;
 
@@ -63,7 +61,6 @@ import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY;
  */
 public class TestSTSGetAccessToken {
 
-  private final String host;
   private final String accessKey;
   private final String secretKey;
 
@@ -74,20 +71,12 @@ public class TestSTSGetAccessToken {
 
   public TestSTSGetAccessToken( ) throws Exception {
     minimalInit();
-    this.host = CLC_IP;
     this.accessKey = ACCESS_KEY;
     this.secretKey = SECRET_KEY;
   }
 
   private AWSCredentials credentials() {
     return new BasicAWSCredentials( accessKey, secretKey );
-  }
-
-  private String cloudUri( String servicePath ) {
-    return
-        URI.create( "http://" + host + ":8773/" )
-            .resolve( servicePath )
-            .toString();
   }
 
   private AmazonEC2 getEc2ClientUsingToken( final String accountAlias,
@@ -101,7 +90,7 @@ public class TestSTSGetAccessToken {
             userName,
             password.toCharArray()
         ) );
-        sts.setEndpoint( cloudUri( "/services/Tokens" ) );
+        sts.setEndpoint( N4j.TOKENS_ENDPOINT );
         final GetAccessTokenResult sessionTokenResult = sts.getAccessToken();
 
         return new BasicSessionCredentials(
@@ -115,7 +104,7 @@ public class TestSTSGetAccessToken {
       public void refresh() {
       }
     } );
-    ec2.setEndpoint( cloudUri( "/services/Eucalyptus/" ) );
+    ec2.setEndpoint( N4j.EC2_ENDPOINT );
     return ec2;
   }
 
@@ -123,13 +112,13 @@ public class TestSTSGetAccessToken {
     final AmazonEC2 ec2 = new AmazonEC2Client( new BasicAWSCredentials(
         accessKey.getAccessKeyId(),
         accessKey.getSecretAccessKey() ) );
-    ec2.setEndpoint( cloudUri( "/services/Eucalyptus" ) );
+    ec2.setEndpoint( N4j.EC2_ENDPOINT );
     return ec2;
   }
 
   private YouAreClient getYouAreClient( ) {
     final YouAreClient euare = new YouAreClient( credentials( ) );
-    euare.setEndpoint( cloudUri( "/services/Euare" ) );
+    euare.setEndpoint( N4j.IAM_ENDPOINT );
     return euare;
   }
 
@@ -140,7 +129,7 @@ public class TestSTSGetAccessToken {
         request.addParameter( "DelegateAccount", asAccount );
       }
     } );
-    euare.setEndpoint( cloudUri( "/services/Euare" ) );
+    euare.setEndpoint( N4j.IAM_ENDPOINT );
     return euare;
   }
 
@@ -155,7 +144,7 @@ public class TestSTSGetAccessToken {
             userName,
             password.toCharArray()
         ) );
-        sts.setEndpoint( cloudUri( "/services/Tokens" ) );
+        sts.setEndpoint( N4j.TOKENS_ENDPOINT );
         final GetAccessTokenResult sessionTokenResult = sts.getAccessToken();
 
         return new BasicSessionCredentials(
@@ -169,7 +158,7 @@ public class TestSTSGetAccessToken {
       public void refresh() {
       }
     } );
-    euare.setEndpoint( cloudUri( "/services/Euare" ) );
+    euare.setEndpoint( N4j.IAM_ENDPOINT );
     return euare;
   }
 
