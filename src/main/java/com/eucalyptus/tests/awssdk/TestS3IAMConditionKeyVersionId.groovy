@@ -27,7 +27,6 @@ import org.junit.Test
 import java.nio.charset.StandardCharsets
 
 import static N4j.minimalInit;
-import static N4j.CLC_IP;
 import static N4j.ACCESS_KEY;
 import static N4j.SECRET_KEY;
 
@@ -42,25 +41,17 @@ import static N4j.SECRET_KEY;
  */
 class TestS3IAMConditionKeyVersionId {
 
-  private final String host
   private final AWSCredentialsProvider credentials
 
   TestS3IAMConditionKeyVersionId( ) {
     minimalInit()
-    this.host = CLC_IP
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String host, String servicePath ) {
-    URI.create( "http://${host}:8773/" )
-        .resolve( servicePath )
-        .toString( )
   }
 
   private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials  ) {
     final YouAreClient euare = new YouAreClient( credentials )
-    if ( host ) {
-      euare.setEndpoint( cloudUri( host, '/services/Euare' ) )
+    if ( N4j.IAM_ENDPOINT ) {
+      euare.setEndpoint( N4j.IAM_ENDPOINT )
     } else {
       euare.setRegion( Region.getRegion( Regions.US_EAST_1 ) )
     }
@@ -71,8 +62,8 @@ class TestS3IAMConditionKeyVersionId {
     final ClientConfiguration clientConfiguration = new ClientConfiguration( )
     clientConfiguration.signerOverride = 'S3SignerType'
     final AmazonS3Client s3 = new AmazonS3Client( credentials, clientConfiguration )
-    if ( host ) {
-      s3.setEndpoint( cloudUri( host, '/services/objectstorage' ) )
+    if ( N4j.S3_ENDPOINT ) {
+      s3.setEndpoint( N4j.S3_ENDPOINT )
       s3.setS3ClientOptions( new S3ClientOptions( ).withPathStyleAccess( true ) )
     }
     return s3;
