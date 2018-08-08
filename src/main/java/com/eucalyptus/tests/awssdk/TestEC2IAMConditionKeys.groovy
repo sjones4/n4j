@@ -1365,7 +1365,7 @@ class TestEC2IAMConditionKeys {
       }
 
       print( "Waiting for snapshot to complete ${snapshotId}" )
-      waitForSnapshots( it, TimeUnit.SECONDS.toMillis( 60L ) )
+      waitForSnapshots( it, TimeUnit.MINUTES.toMillis( 5L ) )
     }
 
     AmazonEC2 userEc2 = AmazonEC2Client.builder( )
