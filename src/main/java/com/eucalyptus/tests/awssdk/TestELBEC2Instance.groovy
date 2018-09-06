@@ -287,7 +287,7 @@ class TestELBEC2Instance {
             terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
 
             N4j.print( "Waiting for instance ${instanceId} to terminate" )
-            ( 1..25 ).find{
+            ( 1..24 ).find{
               sleep 5000
               N4j.print( "Waiting for instance ${instanceId} to terminate, waited ${it*5}s" )
               describeInstances( new DescribeInstancesRequest(
@@ -301,7 +301,7 @@ class TestELBEC2Instance {
 
           String instancePublicIp
           N4j.print( "Waiting for instance ${instanceId} to start" )
-          ( 1..25 ).find{
+          ( 1..60 ).find{
             sleep 5000
             N4j.print( "Waiting for instance ${instanceId} to start, waited ${it*5}s" )
             describeInstances( new DescribeInstancesRequest(
@@ -321,7 +321,7 @@ class TestELBEC2Instance {
           ) )
 
           N4j.print( "Waiting for instance ${instanceId} to be healthy" )
-          ( 1..50 ).find{
+          ( 1..60 ).find{
             sleep 5000
             N4j.print( "Waiting for instance ${instanceId} to be healthy, waited ${it*5}s" )
             describeInstanceHealth( new DescribeInstanceHealthRequest(
