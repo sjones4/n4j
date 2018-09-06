@@ -135,7 +135,7 @@ class TestEC2EbsImageRegistration {
         ec2.getConsoleOutput(new GetConsoleOutputRequest(instanceId: instanceId)).with {
           getDecodedOutput( ).contains("SSH HOST KEY KEYS")
         }
-      }, TimeUnit.MINUTES.toMillis(10) )
+      }, TimeUnit.MINUTES.toMillis(15) )
 
       // terminate instance
       N4j.print("Terminating instance ${instanceId}")
