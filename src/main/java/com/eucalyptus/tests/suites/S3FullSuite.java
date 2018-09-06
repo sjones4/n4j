@@ -9,6 +9,7 @@ import com.eucalyptus.tests.awssdk.S3CorsTests;
 import com.eucalyptus.tests.awssdk.S3ListObjectsTests;
 import com.eucalyptus.tests.awssdk.S3ListVersionsTests;
 import com.eucalyptus.tests.awssdk.S3ObjectLifecycleTests;
+import com.eucalyptus.tests.awssdk.S3SignatureTests;
 
 @RunWith(Suite.class)
 @SuiteClasses({
@@ -22,6 +23,7 @@ import com.eucalyptus.tests.awssdk.S3ObjectLifecycleTests;
     S3ListObjectsTests.class,
     S3ListVersionsTests.class,
     S3ObjectLifecycleTests.class,
+    S3SignatureTests.class,
 })
 public class S3FullSuite {
   // junit test suite as defined by SuiteClasses annotation
