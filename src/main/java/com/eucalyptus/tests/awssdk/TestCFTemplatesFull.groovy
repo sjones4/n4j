@@ -1,8 +1,11 @@
 package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.client.builder.AwsClientBuilder
+import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
+import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException
 import com.amazonaws.services.cloudformation.model.CreateStackRequest
 import com.amazonaws.services.cloudformation.model.DeleteStackRequest
 import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest
@@ -14,6 +17,7 @@ import com.amazonaws.services.simpleworkflow.model.TypeDeprecatedException
 import com.github.sjones4.youcan.youserv.YouServ
 import com.github.sjones4.youcan.youserv.YouServClient
 import com.github.sjones4.youcan.youserv.model.DescribeServicesRequest
+import com.github.sjones4.youcan.youserv.model.Filter
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -33,12 +37,13 @@ class TestCFTemplatesFull {
 
   private static String testAcct
   private static AWSCredentialsProvider testAcctAdminCredentials
-  private static AmazonCloudFormationClient cfClient
+  private static AmazonCloudFormation cfClient
 
-  private static AmazonCloudFormationClient getCloudFormationClient( final AWSCredentialsProvider credentials ) {
-    final AmazonCloudFormationClient cf = new AmazonCloudFormationClient( credentials )
-    cf.setEndpoint( N4j.CF_ENDPOINT )
-    cf
+  private static AmazonCloudFormation getCloudFormationClient( final AWSCredentialsProvider credentials ) {
+    AmazonCloudFormationClient.builder( )
+        .withCredentials( credentials )
+        .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( N4j.CF_ENDPOINT, 'eucalyptus' ) )
+        .build()
   }
 
   @BeforeClass
@@ -47,7 +52,7 @@ class TestCFTemplatesFull {
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}cf-templates"
     N4j.createAccount( testAcct )
-    testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
     cfClient = getCloudFormationClient( testAcctAdminCredentials )
   }
 
@@ -66,7 +71,7 @@ class TestCFTemplatesFull {
   private Set<String> getDnsHosts( final YouServ youServ ) {
     youServ.describeServices( new DescribeServicesRequest(
         filters: [
-            new com.github.sjones4.youcan.youserv.model.Filter(
+            new Filter(
                 name: 'service-type',
                 values: [ 'dns' ]
             )
@@ -102,11 +107,46 @@ class TestCFTemplatesFull {
   }
 
   /**
-   * Test for vpc metadata (no instances so good with any network mode)
+   * Test basic IAM resources
    */
   @Test
   void testIamTemplate( ) {
     stackCreateDelete( 'iam', ['CAPABILITY_IAM'] )
+    try {
+      stackCreateDelete( 'iam_names' )
+      Assert.fail('Expected failure due to missing CAPABILITY_IAM')
+    } catch( AmazonCloudFormationException cfe ) {
+      N4j.print( "Create failed with exception, verifying error code/status: ${cfe}" )
+      Assert.assertEquals('Error code', 'InsufficientCapabilities', cfe.errorCode )
+      Assert.assertEquals('Status code', 400, cfe.statusCode )
+    }
+  }
+
+  /**
+   * Test IAM resources with specified names
+   */
+  @Test
+  void testIamNamesTemplate( ) {
+    // CAPABILITY_IAM is not needed here but should be allowed
+    stackCreateDelete( 'iam_names', ['CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM'] )
+    try {
+      stackCreateDelete( 'iam_names', ['CAPABILITY_IAM'] )
+      Assert.fail('Expected failure due to missing CAPABILITY_NAMED_IAM')
+    } catch( AmazonCloudFormationException cfe ) {
+      N4j.print( "Create failed with exception, verifying error code/status: ${cfe}" )
+      Assert.assertEquals('Error code', 'InsufficientCapabilities', cfe.errorCode )
+      Assert.assertEquals('Status code', 400, cfe.statusCode )
+    }
+  }
+
+  /**
+   * Test IAM template with managed policies / policy attachment
+   */
+  @Test
+  void testIamManagedPoliciesTemplate( ) {
+    // CAPABILITY_NAMED_IAM not needed but used in place of CAPABILITY_IAM
+    //TODO:STEVE: add name support for managed policy resource : "ManagedPolicyName": "managedpolicy1",
+    stackCreateDelete( 'iam_managed_policies', ['CAPABILITY_NAMED_IAM'] )
   }
 
   /**
@@ -123,6 +163,14 @@ class TestCFTemplatesFull {
   @Test
   void testS3BucketsTemplate( ) {
     stackCreateDelete( 's3_buckets' )
+  }
+
+  /**
+   * Test for s3 bucket policy
+   */
+  @Test
+  void testS3BucketPolicyTemplate( ) {
+    stackCreateDelete( 's3_bucket_policy' )
   }
 
   /**
@@ -178,7 +226,7 @@ class TestCFTemplatesFull {
       final String stackTemplateId,
       final List<String> capabilities = [ ],
       final Map<String,String> parameters = [:],
-      final Closure<Stack> createdCallback = null
+      final Closure<Object> createdCallback = null
   ) {
     final String stackName = stackTemplateId.replace('_','-')
     final String stackTemplate =
@@ -224,7 +272,11 @@ class TestCFTemplatesFull {
                     }
                   }
                   Assert.fail( "Unexpected status ${lastStatus}" )
+                  null
                 }
+              } else {
+                Assert.fail( "Unexpected stack ${stack.stackId}" )
+                null
               }
             }
           }
@@ -277,7 +329,11 @@ class TestCFTemplatesFull {
                     }
                   }
                   Assert.fail( "Unexpected status ${lastStatus}" )
+                  null
                 }
+              } else {
+                Assert.fail( "Unexpected stack ${stack.stackId}" )
+                null
               }
             }
           }

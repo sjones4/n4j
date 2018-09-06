@@ -1,0 +1,66 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Resources" : {
+
+    "ManagedPolicy" : {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "Description": "A customer managed policy",
+        "Path": "/path/",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Action": [ "*" ],
+            "Effect": "Allow",
+            "Resource": [ "*" ]
+          }]
+        },
+        "Users":  [{"Ref": "User"}],
+        "Groups": [{"Ref": "Group"}],
+        "Roles":  [{"Ref": "Role"}]
+      }
+    },
+
+    "User" : {
+      "Type": "AWS::IAM::User"
+    },
+
+    "Group" : {
+      "Type" : "AWS::IAM::Group"
+    },
+
+    "InstanceProfile" : {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ { "Ref": "Role" } ]
+      }
+    },
+
+    "Role" : {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "ec2.amazonaws.com" ]
+            },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        }
+      }
+    },
+
+    "AccessKey" : {
+      "Type": "AWS::IAM::AccessKey",
+      "Properties": {
+        "Status": "Active",
+        "UserName": { "Ref": "User" }
+      }
+    }
+  }
+}
+
+
