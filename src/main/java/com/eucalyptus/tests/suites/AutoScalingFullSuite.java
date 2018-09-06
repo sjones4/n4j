@@ -22,6 +22,7 @@ import com.eucalyptus.tests.awssdk.*;
     TestAutoScalingELBInstanceHealthMonitoring.class,
     TestAutoScalingInstanceLifecycle.class,
     TestAutoScalingInstanceProfile.class,
+    TestAutoScalingInstanceProtection.class,
     TestAutoScalingLaunchAndTerminate.class,
     TestAutoScalingMetricsSubmission.class,
     TestAutoScalingMultipleAvailabilityZones.class,
