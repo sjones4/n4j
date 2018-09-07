@@ -107,6 +107,14 @@ class TestCFTemplatesFull {
   }
 
   /**
+   * Test for ec2 cfn-signal
+   */
+  @Test
+  void testEc2SignalResourceTemplate( ) {
+    stackCreateDelete( 'ec2_signal_resource', [ ], [ 'ImageId': N4j.IMAGE_ID ] )
+  }
+
+  /**
    * Test basic IAM resources
    */
   @Test
