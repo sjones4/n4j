@@ -25,15 +25,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSListDeadLetterSourceQueues {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSListDeadLetterSourceQueues.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -46,15 +46,15 @@ public class TestSQSListDeadLetterSourceQueues {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSListDeadLetterSourceQueues.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -76,7 +76,7 @@ public class TestSQSListDeadLetterSourceQueues {
   }
 
   @Test
-  public void testListDeadLetterSourceQueuesOtherAccount() throws Exception {
+  public void testListDeadLetterSourceQueuesOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testListDeadLetterSourceQueuesOtherAccount");
     String queueName = "queue_name_list_dl_source_queues_other_account";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -111,7 +111,7 @@ public class TestSQSListDeadLetterSourceQueues {
   }
 
   @Test
-  public void testListDeadLetterSourceQueuesNonExistentQueue() throws Exception {
+  public void testListDeadLetterSourceQueuesNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testListDeadLetterSourceQueuesNonExistentQueue");
     String queueName = "queue_name_list_dl_source_queues_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -126,7 +126,7 @@ public class TestSQSListDeadLetterSourceQueues {
   }
 
   @Test
-  public void testListDeadLetterSourceQueuesRandomSample() throws Exception {
+  public void testListDeadLetterSourceQueuesRandomSample() {
     testInfo(this.getClass().getSimpleName() + " - testListDeadLetterSourceQueuesRandomSample");
     List<String> queueUrls = Lists.newArrayList();
     List<String> queueArns = Lists.newArrayList();

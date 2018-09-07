@@ -1,7 +1,6 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClient;
@@ -31,7 +30,6 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -40,16 +38,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSAnonymousAccess {
 
+  private static String account;
+  private static long authorizationExpiryMs;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS anonymousSQSClient;
 
-  private String account;
-  private long authorizationExpiryMs;
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS anonymousSQSClient;
-
-  private long parseInterval(String interval, long defaultValueMS) {
+  private static long parseInterval(String interval, long defaultValueMS) {
     try {
       String timePart;
-      TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+      TimeUnit timeUnit;
       if (interval.endsWith("ms")) {
         timePart = interval.substring(0, interval.length() - 2);
         timeUnit = TimeUnit.MILLISECONDS;
@@ -77,8 +74,8 @@ public class TestSQSAnonymousAccess {
   }
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init( ) throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSAnonymousAccess.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -91,15 +88,15 @@ public class TestSQSAnonymousAccess {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown( ) {
+    print("### POST SUITE CLEANUP - " + TestSQSAnonymousAccess.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -112,7 +109,7 @@ public class TestSQSAnonymousAccess {
   }
 
   @Test
-  public void testCreateQueue() throws Exception {
+  public void testCreateQueue( ) {
     testInfo(this.getClass().getSimpleName() + " - testCreateQueue");
     String queueName = "queue_name_create";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -238,7 +235,7 @@ public class TestSQSAnonymousAccess {
   }
 
   @Test
-  public void testListQueues() throws Exception {
+  public void testListQueues() {
     testInfo(this.getClass().getSimpleName() + " - testListQueues");
     accountSQSClient.listQueues();
 

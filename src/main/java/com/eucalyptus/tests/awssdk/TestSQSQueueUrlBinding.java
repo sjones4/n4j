@@ -46,15 +46,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSQueueUrlBinding {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSQueueUrlBinding.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -67,15 +67,15 @@ public class TestSQSQueueUrlBinding {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSQueueUrlBinding.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -97,7 +97,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlBindingDeleteQueue() throws Exception {
+  public void testQueueUrlBindingDeleteQueue() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlBindingDeleteQueue");
     String queueName1 = "queue_name_test_binding_delete_queue_1";
     String queueUrl1 = accountSQSClient.createQueue(queueName1).getQueueUrl();
@@ -190,7 +190,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlBindingSendMessage() throws Exception {
+  public void testQueueUrlBindingSendMessage() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlBindingSendMessage");
     String queueName = "queue_name_test_binding_send_message";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -211,7 +211,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlBindingSendMessageBatch() throws Exception {
+  public void testQueueUrlBindingSendMessageBatch() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlBindingSendMessageBatch");
     String queueName = "queue_name_test_binding_send_message_batch";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -480,7 +480,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlBindingListDeadLetterSourceQueues() throws Exception {
+  public void testQueueUrlBindingListDeadLetterSourceQueues() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlBindingListDeadLetterSourceQueues");
     String queueName = "queue_name_test_binding_dead_letter_source";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -510,7 +510,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlBindingPurgeQueue() throws Exception {
+  public void testQueueUrlBindingPurgeQueue() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlBindingPurgeQueue");
     String queueName = "queue_name_test_binding_purge_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -620,7 +620,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlGetAttribute() throws Exception {
+  public void testQueueUrlGetAttribute() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlGetAttribute");
     String queueName = "queue_name_test_binding_get_attribute";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -640,7 +640,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlSetAttribute() throws Exception {
+  public void testQueueUrlSetAttribute() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlSetAttribute");
     String queueName = "queue_name_test_binding_set_attribute";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -661,7 +661,7 @@ public class TestSQSQueueUrlBinding {
   }
 
   @Test
-  public void testQueueUrlRequestParameterWins() throws Exception {
+  public void testQueueUrlRequestParameterWins() {
     testInfo(this.getClass().getSimpleName() + " - testQueueUrlRequestParameterWins");
     String queueName1 = "queue_name_test_binding_request_parameter_wins_1";
     String queueUrl1 = accountSQSClient.createQueue(queueName1).getQueueUrl();

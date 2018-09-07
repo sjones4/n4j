@@ -42,7 +42,7 @@ import static com.eucalyptus.tests.awssdk.N4j.youAre
 class TestSQSQueuePolicy {
 
   @BeforeClass
-  void init() throws Exception {
+  static void init() throws Exception {
     print("### PRE SUITE SETUP - ${this.getClass().simpleName}")
     getCloudInfoAndSqs( )
   }

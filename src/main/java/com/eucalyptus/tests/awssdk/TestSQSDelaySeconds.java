@@ -25,16 +25,16 @@ import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
  */
 public class TestSQSDelaySeconds {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
-  private int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
+  private static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSDelaySeconds.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -48,15 +48,15 @@ public class TestSQSDelaySeconds {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSDelaySeconds.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -170,7 +170,7 @@ public class TestSQSDelaySeconds {
         "Message " + messageId + " should have clock skew ranges near each other");
     }
   }
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

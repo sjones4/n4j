@@ -19,15 +19,15 @@ import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
  * Created by ethomas on 10/6/16.
  */
 public class TestSQSDeadLetterQueue {
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSDeadLetterQueue.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -47,8 +47,8 @@ public class TestSQSDeadLetterQueue {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSDeadLetterQueue.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
