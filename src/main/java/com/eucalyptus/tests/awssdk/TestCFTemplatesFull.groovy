@@ -48,7 +48,7 @@ class TestCFTemplatesFull {
 
   @BeforeClass
   static void init( ){
-    N4j.testInfo( TestCFTemplatesShort.simpleName )
+    N4j.testInfo( TestCFTemplatesFull.simpleName )
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}cf-templates"
     N4j.createAccount( testAcct )
@@ -171,6 +171,14 @@ class TestCFTemplatesFull {
   @Test
   void testS3BucketPolicyTemplate( ) {
     stackCreateDelete( 's3_bucket_policy' )
+  }
+
+  /**
+   * Test for sqs resources
+   */
+  @Test
+  void testSQSTemplate( ) {
+    stackCreateDelete( 'sqs' )
   }
 
   /**
