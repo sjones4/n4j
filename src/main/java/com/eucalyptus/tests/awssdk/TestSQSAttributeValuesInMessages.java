@@ -2,7 +2,6 @@ package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.sqs.AmazonSQS;
@@ -13,7 +12,6 @@ import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -30,17 +28,17 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSAttributeValuesInMessages {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonIdentityManagement accountIAMClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonIdentityManagement accountIAMClient;
 
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init( ) throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSAttributeValuesInMessages.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -62,15 +60,15 @@ public class TestSQSAttributeValuesInMessages {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown()  {
+    print("### POST SUITE CLEANUP - " + TestSQSAttributeValuesInMessages.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();

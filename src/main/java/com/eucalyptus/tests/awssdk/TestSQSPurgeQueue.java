@@ -14,7 +14,6 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.util.List;
-import java.util.UUID;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -23,15 +22,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSPurgeQueue {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSPurgeQueue.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -44,15 +43,15 @@ public class TestSQSPurgeQueue {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSPurgeQueue.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -74,7 +73,7 @@ public class TestSQSPurgeQueue {
   }
 
   @Test
-  public void testPurgeQueueOtherAccount() throws Exception {
+  public void testPurgeQueueOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testPurgeQueueOtherAccount");
     String queueName = "queue_name_purge_other_account";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -110,7 +109,7 @@ public class TestSQSPurgeQueue {
   }
 
   @Test
-  public void testPurgeNonExistentQueue() throws Exception {
+  public void testPurgeNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testPurgeNonExistentQueue");
     String queueName = "queue_name_purge_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -125,7 +124,7 @@ public class TestSQSPurgeQueue {
   }
 
   @Test
-  public void testPurgeQueue() throws Exception {
+  public void testPurgeQueue() {
     testInfo(this.getClass().getSimpleName() + " - testPurgeQueue");
     String queueName = "queue_name_purge";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();

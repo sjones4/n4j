@@ -35,19 +35,19 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSDeleteMessageBatch {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
-  private int MAX_NUM_BATCH_ENTRIES;
-  private int MAX_BATCH_ID_LENGTH;
-  private int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
+  private static int MAX_NUM_BATCH_ENTRIES;
+  private static int MAX_BATCH_ID_LENGTH;
+  private static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSDeleteMessageBatch.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -70,8 +70,8 @@ public class TestSQSDeleteMessageBatch {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSDeleteMessageBatch.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -330,7 +330,7 @@ public class TestSQSDeleteMessageBatch {
     String queueName = "queue_name_delete_message_batch_success";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
-    createQueueRequest.getAttributes().put("VisibilityTimeout", "0");
+    createQueueRequest.getAttributes().put("VisibilityTimeout", "5");
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
 
     Set<String> messageIds = Sets.newHashSet();
@@ -342,7 +342,7 @@ public class TestSQSDeleteMessageBatch {
     receiveMessageRequest.setQueueUrl(queueUrl);
     receiveMessageRequest.setMaxNumberOfMessages(MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES);
     long startTimeFirstLoop = System.currentTimeMillis();
-    while (receiptHandles.size() < MAX_NUM_BATCH_ENTRIES && System.currentTimeMillis() - startTimeFirstLoop < 120000L) {
+    while (receiptHandles.size() < MAX_NUM_BATCH_ENTRIES && System.currentTimeMillis() - startTimeFirstLoop < 15_000L) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
         for (Message message : receiveMessageResult.getMessages()) {
@@ -369,7 +369,7 @@ public class TestSQSDeleteMessageBatch {
       "Should have successfully deleted all messages");
 
     long startTimeSecondLoop = System.currentTimeMillis();
-    long timeout = 120000L;
+    long timeout = 30_000L;
     while (System.currentTimeMillis() - startTimeSecondLoop < timeout) {
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
@@ -379,7 +379,7 @@ public class TestSQSDeleteMessageBatch {
           }
         }
       }
-      Thread.sleep(1000L);
+      Thread.sleep(5_000L);
     }
   }
 
@@ -411,7 +411,7 @@ public class TestSQSDeleteMessageBatch {
     return null;
   }
 
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

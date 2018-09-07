@@ -18,6 +18,7 @@ import org.junit.runners.Suite.SuiteClasses;
     IamSuite.class,
     ServicesSuite.class,
     S3ShortSuite.class,
+    SQSShortSuite.class,
 })
 public class AllShortSuite {
   // junit test suite as defined by SuiteClasses annotation

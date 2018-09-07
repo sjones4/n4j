@@ -6,15 +6,10 @@ import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.util.Collections;
-import java.util.Map;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -23,15 +18,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSVisibilityTimeout {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSVisibilityTimeout.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -44,15 +39,15 @@ public class TestSQSVisibilityTimeout {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSVisibilityTimeout.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -79,7 +74,7 @@ public class TestSQSVisibilityTimeout {
     String queueName = "queue_name_message_delay";
     int errorSecs = 5;
 
-    int baseDelay = 15;
+    int baseDelay = 10;
     // start with a delay seconds of base_delay seconds
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
@@ -107,7 +102,7 @@ public class TestSQSVisibilityTimeout {
 
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long fifthReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(baseDelay - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around " + (2 * baseDelay) + " secs after the fourth");
+    assertThat(Math.abs(baseDelay - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around " + (baseDelay) + " secs after the fourth");
 
     // test change message visibility
     accountSQSClient.changeMessageVisibility(queueUrl, receiptHandle, 3 * baseDelay);

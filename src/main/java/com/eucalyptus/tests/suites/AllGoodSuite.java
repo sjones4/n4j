@@ -17,6 +17,7 @@ import org.junit.runners.Suite.SuiteClasses;
     ElbFullSuite.class,
     IamSuite.class,
     S3FullSuite.class,
+    SQSFullSuite.class,
 })
 public class AllGoodSuite {
   // junit test suite as defined by SuiteClasses annotation

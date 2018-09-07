@@ -26,7 +26,6 @@ import org.junit.Test;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -35,52 +34,23 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSIAMPolicies {
 
-
-  private String account;
-  private String otherAccount;
-  private long authorizationExpiryMs;
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS accountUserSQSClient;
-  private AmazonSQS otherAccountSQSClient;
-  private AmazonSQS otherAccountUserSQSClient;
-
-  private long parseInterval(String interval, long defaultValueMS) {
-    try {
-      String timePart;
-      TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-      if (interval.endsWith("ms")) {
-        timePart = interval.substring(0, interval.length() - 2);
-        timeUnit = TimeUnit.MILLISECONDS;
-      } else if (interval.endsWith("s")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.SECONDS;
-      } else if (interval.endsWith("m")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.MINUTES;
-      } else if (interval.endsWith("h")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.HOURS;
-      } else if (interval.endsWith("d")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.DAYS;
-      } else {
-        timePart = interval;
-        timeUnit = TimeUnit.MILLISECONDS;
-      }
-      return timeUnit.toMillis(Long.parseLong(timePart));
-    } catch (Exception e) {
-      print("Error parsing interval " + interval + ", using " + defaultValueMS);
-      return defaultValueMS;
-    }
-  }
+  private static String account;
+  private static String otherAccount;
+  private static long authorizationExpiryMs;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS accountUserSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS otherAccountUserSQSClient;
+  private static Runnable restoreAuthorizationCache;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSIAMPolicies.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
-      authorizationExpiryMs = parseInterval(getConfigProperty(LOCAL_EUCTL_FILE, "authentication.authorization_expiry"), 5000L);
+      authorizationExpiryMs = 0;
+      restoreAuthorizationCache = disableAuthorizationCache();
       account = "sqs-account-iam-a-" + System.currentTimeMillis();
       synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
@@ -96,15 +66,15 @@ public class TestSQSIAMPolicies {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + TestSQSIAMPolicies.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -122,6 +92,9 @@ public class TestSQSIAMPolicies {
         }
       }
       synchronizedDeleteAccount(otherAccount);
+    }
+    if ( restoreAuthorizationCache != null ) {
+      restoreAuthorizationCache.run( );
     }
   }
 
@@ -269,11 +242,8 @@ public class TestSQSIAMPolicies {
   }
 
 
-  private static AWSOperation NOOP = new AWSOperation() {
-    @Override
-    public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-      ;
-    }
+  private static AWSOperation NOOP = sqsClient -> {
+    ;
   };
 
   private static class SendMessageAndGetReceiptHandle implements AWSOperation {
@@ -327,12 +297,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:AddPermission",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.addPermission(queueUrl, "label", Collections.singletonList(accountId), Collections.singletonList("DeleteMessage"));
-        }
-      },
+        sqsClient -> sqsClient.addPermission(queueUrl, "label", Collections.singletonList(accountId), Collections.singletonList("DeleteMessage")),
       403);
   }
 
@@ -350,12 +315,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:ChangeMessageVisibility",
       sendMessageAndGetReceiptHandle,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.changeMessageVisibility(queueUrl, sendMessageAndGetReceiptHandle.getReceiptHandle(), 30);
-        }
-      },
+        sqsClient -> sqsClient.changeMessageVisibility(queueUrl, sendMessageAndGetReceiptHandle.getReceiptHandle(), 30),
       403);
   }
 
@@ -372,9 +332,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:ChangeMessageVisibility",
       sendMessageAndGetReceiptHandle,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
+        sqsClient -> {
           ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest = new ChangeMessageVisibilityBatchRequest();
           changeMessageVisibilityBatchRequest.setQueueUrl(queueUrl);
           ChangeMessageVisibilityBatchRequestEntry entry = new ChangeMessageVisibilityBatchRequestEntry();
@@ -383,8 +341,7 @@ public class TestSQSIAMPolicies {
           entry.setReceiptHandle(sendMessageAndGetReceiptHandle.getReceiptHandle());
           changeMessageVisibilityBatchRequest.getEntries().add(entry);
           sqsClient.changeMessageVisibilityBatch(changeMessageVisibilityBatchRequest);
-        }
-      },
+        },
       403);
   }
 
@@ -401,12 +358,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:DeleteMessage",
       sendMessageAndGetReceiptHandle,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.deleteMessage(queueUrl, sendMessageAndGetReceiptHandle.getReceiptHandle());
-        }
-      },
+        sqsClient -> sqsClient.deleteMessage(queueUrl, sendMessageAndGetReceiptHandle.getReceiptHandle()),
       403);
   }
 
@@ -423,9 +375,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:DeleteMessage",
       sendMessageAndGetReceiptHandle,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
+        sqsClient -> {
           DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest();
           deleteMessageBatchRequest.setQueueUrl(queueUrl);
           DeleteMessageBatchRequestEntry entry = new DeleteMessageBatchRequestEntry();
@@ -433,8 +383,7 @@ public class TestSQSIAMPolicies {
           entry.setReceiptHandle(sendMessageAndGetReceiptHandle.getReceiptHandle());
           deleteMessageBatchRequest.getEntries().add(entry);
           sqsClient.deleteMessageBatch(deleteMessageBatchRequest);
-        }
-      },
+        },
       403);
   }
 
@@ -449,12 +398,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:GetQueueAttributes",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
-        }
-      },
+        sqsClient -> sqsClient.getQueueAttributes(queueUrl, Collections.singletonList("All")),
       403);
   }
 
@@ -473,15 +417,12 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:GetQueueUrl",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
+        sqsClient -> {
           GetQueueUrlRequest getQueueUrlRequest = new GetQueueUrlRequest();
           getQueueUrlRequest.setQueueOwnerAWSAccountId(accountId);
           getQueueUrlRequest.setQueueName(queueName);
           sqsClient.getQueueUrl(getQueueUrlRequest);
-        }
-      },
+        },
       400);
   }
 
@@ -505,14 +446,11 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:ListDeadLetterSourceQueues",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
+        sqsClient -> {
           ListDeadLetterSourceQueuesRequest listDeadLetterSourceQueuesRequest = new ListDeadLetterSourceQueuesRequest();
           listDeadLetterSourceQueuesRequest.setQueueUrl(queueUrl);
           sqsClient.listDeadLetterSourceQueues(listDeadLetterSourceQueuesRequest);
-        }
-      },
+        },
       403);
   }
 
@@ -574,14 +512,11 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:PurgeQueue",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
+        sqsClient -> {
           PurgeQueueRequest purgeQueueRequest = new PurgeQueueRequest();
           purgeQueueRequest.setQueueUrl(queueUrl);
           sqsClient.purgeQueue(purgeQueueRequest);
-        }
-      },
+        },
       403);
   }
 
@@ -596,12 +531,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:ReceiveMessage",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.receiveMessage(queueUrl);
-        }
-      },
+        sqsClient -> sqsClient.receiveMessage(queueUrl),
       403);
   }
 
@@ -618,18 +548,8 @@ public class TestSQSIAMPolicies {
     accountSQSClient.deleteQueue(queueUrl);
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:RemovePermission",
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.addPermission(queueUrl, "label", Collections.singletonList(accountId), Collections.singletonList("DeleteMessage"));
-        }
-      },
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.removePermission(queueUrl, "label");
-        }
-      },
+        sqsClient -> sqsClient.addPermission(queueUrl, "label", Collections.singletonList(accountId), Collections.singletonList("DeleteMessage")),
+        sqsClient -> sqsClient.removePermission(queueUrl, "label"),
       403);
   }
 
@@ -644,12 +564,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:SendMessage",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.sendMessage(queueUrl, "hi");
-        }
-      },
+        sqsClient -> sqsClient.sendMessage(queueUrl, "hi"),
       403);
   }
 
@@ -664,9 +579,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:SendMessage",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
+        sqsClient -> {
           SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest();
           sendMessageBatchRequest.setQueueUrl(queueUrl);
           SendMessageBatchRequestEntry entry = new SendMessageBatchRequestEntry();
@@ -674,8 +587,7 @@ public class TestSQSIAMPolicies {
           entry.setMessageBody("hello");
           sendMessageBatchRequest.getEntries().add(entry);
           sqsClient.sendMessageBatch(sendMessageBatchRequest);
-        }
-      },
+        },
       403);
   }
 
@@ -690,12 +602,7 @@ public class TestSQSIAMPolicies {
 
     testQueueAction(queueName, queueUrl, queueArn, "sqs:SetQueueAttributes",
       NOOP,
-      new AWSOperation() {
-        @Override
-        public void perform(AmazonSQS sqsClient) throws AmazonServiceException {
-          sqsClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds","30"));
-        }
-      },
+        sqsClient -> sqsClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds","30")),
       403);
   }
 

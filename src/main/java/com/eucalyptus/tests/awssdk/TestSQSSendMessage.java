@@ -38,20 +38,20 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
 public class TestSQSSendMessage {
 
 
-  private int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH;
-  private int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH;
-  private int MAX_DELAY_SECONDS;
-  private int MAX_MAXIMUM_MESSAGE_SIZE;
+  private static int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH;
+  private static int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH;
+  private static int MAX_DELAY_SECONDS;
+  private static int MAX_MAXIMUM_MESSAGE_SIZE;
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSSendMessage.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -68,15 +68,15 @@ public class TestSQSSendMessage {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSSendMessage.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -115,7 +115,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testSendMessageOtherAccount() throws Exception {
+  public void testSendMessageOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageOtherAccount");
     String queueName = "queue_name_send_message_other_account";
     String otherAccountQueueUrl = otherAccountSQSClient.createQueue(queueName).getQueueUrl();
@@ -128,7 +128,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testSendMessageNonExistentQueue() throws Exception {
+  public void testSendMessageNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageNonExistentQueue");
     String queueName = "queue_name_send_message_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -197,7 +197,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testAttributeName() throws Exception {
+  public void testAttributeName() {
     testInfo(this.getClass().getSimpleName() + " - testAttributeName");
     String queueName = "queue_name_send_message_attribute_name";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -295,7 +295,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testAttributeValue() throws Exception {
+  public void testAttributeValue() {
     testInfo(this.getClass().getSimpleName() + " - testAttributeValue");
     String queueName = "queue_name_send_message_attribute_value";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -457,14 +457,14 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testBody() throws Exception {
+  public void testBody() {
     testInfo(this.getClass().getSimpleName() + " - testBody");
     String queueName = "queue_name_send_message_body";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
 
     // null body
     try {
-      accountSQSClient.sendMessage(queueUrl, (String) null);
+      accountSQSClient.sendMessage(queueUrl, null );
       assertThat(false, "Should fail sending a message with a null body");
     } catch (AmazonServiceException e) {
       assertThat(e.getStatusCode() == 400, "Correctly fail sending a message with a null body");
@@ -489,7 +489,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testTooLongMessage() throws Exception {
+  public void testTooLongMessage() {
     testInfo(this.getClass().getSimpleName() + " - testTooLongMessage");
     String queueName = "queue_name_send_message_length";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -533,7 +533,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testSendMessageSuccess() throws Exception {
+  public void testSendMessageSuccess() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageSuccess");
     String queueName = "queue_name_send_message_success";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -596,7 +596,7 @@ public class TestSQSSendMessage {
   }
 
   @Test
-  public void testMessagesMatch() throws Exception {
+  public void testMessagesMatch() {
     Message M_BODY_ONLY_1 = makeMessage("Body 1");
     Message M_BODY_ONLY_2 = makeMessage("Body 2");
     Message M_STRING_ATTR_1 = makeMessage("Body", "MA1", "String", "String value 1");
@@ -688,7 +688,7 @@ public class TestSQSSendMessage {
     return sendMessageRequest;
   }
 
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

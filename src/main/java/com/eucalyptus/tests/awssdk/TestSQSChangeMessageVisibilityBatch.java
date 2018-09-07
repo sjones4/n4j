@@ -35,19 +35,19 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSChangeMessageVisibilityBatch {
 
-  private int MAX_VISIBILITY_TIMEOUT;
-  private int MAX_NUM_BATCH_ENTRIES;
-  private int MAX_BATCH_ID_LENGTH;
-  private int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
-  private String account;
-  private String otherAccount;
+  private static int MAX_VISIBILITY_TIMEOUT;
+  private static int MAX_NUM_BATCH_ENTRIES;
+  private static int MAX_BATCH_ID_LENGTH;
+  private static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSChangeMessageVisibilityBatch.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -64,15 +64,15 @@ public class TestSQSChangeMessageVisibilityBatch {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSChangeMessageVisibilityBatch.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -444,8 +444,8 @@ public class TestSQSChangeMessageVisibilityBatch {
     }
     assertThat(receiptHandles.size() == numBatchEntries && lastReceivedTimes.size() == numBatchEntries, "We should receive all the messages in a timely manner");
 
-    int spacingSecs = 15;
-    Map<String, Long> visibilityTimeouts = Maps.newHashMap();
+    int spacingSecs = 5;
+    Map<String, Integer> visibilityTimeouts = Maps.newHashMap();
     ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest = new ChangeMessageVisibilityBatchRequest();
     changeMessageVisibilityBatchRequest.setQueueUrl(queueUrl);
     int i = 0;
@@ -453,7 +453,7 @@ public class TestSQSChangeMessageVisibilityBatch {
       ChangeMessageVisibilityBatchRequestEntry e = new ChangeMessageVisibilityBatchRequestEntry();
       i++;
       e.setVisibilityTimeout(i * spacingSecs);
-      visibilityTimeouts.put(mapEntry.getKey(), i * spacingSecs * 1L);
+      visibilityTimeouts.put(mapEntry.getKey(), i * spacingSecs);
       e.setReceiptHandle(mapEntry.getValue());
       e.setId(mapEntry.getKey());
       changeMessageVisibilityBatchRequest.getEntries().add(e);
@@ -485,7 +485,7 @@ public class TestSQSChangeMessageVisibilityBatch {
     }
   }
 
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

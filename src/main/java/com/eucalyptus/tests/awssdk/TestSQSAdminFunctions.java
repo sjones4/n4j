@@ -2,32 +2,13 @@ package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequest;
-import com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequestEntry;
-import com.amazonaws.services.sqs.model.CreateQueueRequest;
-import com.amazonaws.services.sqs.model.DeleteMessageBatchRequest;
-import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
-import com.amazonaws.services.sqs.model.GetQueueUrlRequest;
-import com.amazonaws.services.sqs.model.ListDeadLetterSourceQueuesRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
-import com.amazonaws.services.sqs.model.Message;
-import com.amazonaws.services.sqs.model.PurgeQueueRequest;
-import com.amazonaws.services.sqs.model.ReceiveMessageResult;
-import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
-import com.amazonaws.services.sqs.model.SendMessageBatchRequestEntry;
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.net.URL;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -36,15 +17,14 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSAdminFunctions {
 
+  private static String account;
+  private static String otherAccount;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
-  private String account;
-  private String otherAccount;
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
-  private AmazonSQS otherAccountUserSQSClient;
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSAdminFunctions.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -54,19 +34,17 @@ public class TestSQSAdminFunctions {
       otherAccount = "sqs-account-admf-b-" + System.currentTimeMillis();
       synchronizedCreateAccount(otherAccount);
       otherAccountSQSClient = getSqsClientWithNewAccount(otherAccount, "admin");
-      synchronizedCreateUser(otherAccount, "user");
-      otherAccountUserSQSClient = getSqsClientWithNewAccount(otherAccount, "user");
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @Test
-  public void testAdminFunctions() throws Exception {
+  public void testAdminFunctions( ) {
     testInfo(this.getClass().getSimpleName() + " - testAdminFunctions");
     String queueName = "queue_name_admin_functions";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -88,8 +66,8 @@ public class TestSQSAdminFunctions {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown( ) {
+    print("### POST SUITE CLEANUP - " + TestSQSAdminFunctions.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -109,6 +87,5 @@ public class TestSQSAdminFunctions {
       synchronizedDeleteAccount(otherAccount);
     }
   }
-
 
 }

@@ -1,7 +1,6 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClient;
@@ -30,8 +29,6 @@ import org.junit.Test;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -40,49 +37,20 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSAnonymousAccess {
 
-
-  private String account;
-  private long authorizationExpiryMs;
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS anonymousSQSClient;
-
-  private long parseInterval(String interval, long defaultValueMS) {
-    try {
-      String timePart;
-      TimeUnit timeUnit = TimeUnit.MILLISECONDS;
-      if (interval.endsWith("ms")) {
-        timePart = interval.substring(0, interval.length() - 2);
-        timeUnit = TimeUnit.MILLISECONDS;
-      } else if (interval.endsWith("s")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.SECONDS;
-      } else if (interval.endsWith("m")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.MINUTES;
-      } else if (interval.endsWith("h")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.HOURS;
-      } else if (interval.endsWith("d")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.DAYS;
-      } else {
-        timePart = interval;
-        timeUnit = TimeUnit.MILLISECONDS;
-      }
-      return timeUnit.toMillis(Long.parseLong(timePart));
-    } catch (Exception e) {
-      print("Error parsing interval " + interval + ", using " + defaultValueMS);
-      return defaultValueMS;
-    }
-  }
+  private static String account;
+  private static long authorizationExpiryMs;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS anonymousSQSClient;
+  private static Runnable restoreAuthorizationCache;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init( ) throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSAnonymousAccess.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
-      authorizationExpiryMs = parseInterval(getConfigProperty(LOCAL_EUCTL_FILE, "authentication.authorization_expiry"), 5000L);
+      authorizationExpiryMs = 0;
+      restoreAuthorizationCache = disableAuthorizationCache();
       account = "sqs-account-iam-a-" + System.currentTimeMillis();
       synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
@@ -91,15 +59,15 @@ public class TestSQSAnonymousAccess {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown( ) {
+    print("### POST SUITE CLEANUP - " + TestSQSAnonymousAccess.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -109,10 +77,13 @@ public class TestSQSAnonymousAccess {
       }
       synchronizedDeleteAccount(account);
     }
+    if ( restoreAuthorizationCache != null ) {
+      restoreAuthorizationCache.run( );
+    }
   }
 
   @Test
-  public void testCreateQueue() throws Exception {
+  public void testCreateQueue( ) {
     testInfo(this.getClass().getSimpleName() + " - testCreateQueue");
     String queueName = "queue_name_create";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -238,7 +209,7 @@ public class TestSQSAnonymousAccess {
   }
 
   @Test
-  public void testListQueues() throws Exception {
+  public void testListQueues() {
     testInfo(this.getClass().getSimpleName() + " - testListQueues");
     accountSQSClient.listQueues();
 
