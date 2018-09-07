@@ -74,7 +74,7 @@ public class TestSQSVisibilityTimeout {
     String queueName = "queue_name_message_delay";
     int errorSecs = 5;
 
-    int baseDelay = 15;
+    int baseDelay = 10;
     // start with a delay seconds of base_delay seconds
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setQueueName(queueName);
@@ -102,7 +102,7 @@ public class TestSQSVisibilityTimeout {
 
     receiptHandle = waitUntilReceiveMessage(accountSQSClient, queueUrl, messageId);
     long fifthReceiveTime = System.currentTimeMillis() / 1000L;
-    assertThat(Math.abs(baseDelay - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around " + (2 * baseDelay) + " secs after the fourth");
+    assertThat(Math.abs(baseDelay - (fifthReceiveTime - fourthReceiveTime)) < errorSecs, "Should receive the fifth time around " + (baseDelay) + " secs after the fourth");
 
     // test change message visibility
     accountSQSClient.changeMessageVisibility(queueUrl, receiptHandle, 3 * baseDelay);

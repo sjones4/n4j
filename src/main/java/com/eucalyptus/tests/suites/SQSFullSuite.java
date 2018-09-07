@@ -38,7 +38,6 @@ import com.eucalyptus.tests.awssdk.TestSQSVisibilityTimeout;
     TestSQSAnonymousAccess.class,
     TestSQSAttributeValuesInMessages.class,
     TestSQSChangeMessageVisibilityBatch.class,
-    TestSQSCloudWatchMetrics.class,
     TestSQSCrossAccountStackPolicies.class,
     TestSQSDeadLetterQueue.class,
     TestSQSDelaySeconds.class,

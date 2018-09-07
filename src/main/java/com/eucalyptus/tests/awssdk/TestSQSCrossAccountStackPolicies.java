@@ -25,7 +25,6 @@ import org.junit.Test;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
@@ -41,36 +40,7 @@ public class TestSQSCrossAccountStackPolicies {
   private static AmazonSQS otherAccountSQSClient;
   private static AmazonSQS otherAccountUserSQSClient;
   private static String otherAccountId;
-
-  private static long parseInterval(String interval, long defaultValueMS) {
-    try {
-      String timePart;
-      TimeUnit timeUnit;
-      if (interval.endsWith("ms")) {
-        timePart = interval.substring(0, interval.length() - 2);
-        timeUnit = TimeUnit.MILLISECONDS;
-      } else if (interval.endsWith("s")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.SECONDS;
-      } else if (interval.endsWith("m")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.MINUTES;
-      } else if (interval.endsWith("h")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.HOURS;
-      } else if (interval.endsWith("d")) {
-        timePart = interval.substring(0, interval.length() - 1);
-        timeUnit = TimeUnit.DAYS;
-      } else {
-        timePart = interval;
-        timeUnit = TimeUnit.MILLISECONDS;
-      }
-      return timeUnit.toMillis(Long.parseLong(timePart));
-    } catch (Exception e) {
-      print("Error parsing interval " + interval + ", using " + defaultValueMS);
-      return defaultValueMS;
-    }
-  }
+  private static Runnable restoreAuthorizationCache;
 
   @BeforeClass
   public static void init() throws Exception {
@@ -78,7 +48,8 @@ public class TestSQSCrossAccountStackPolicies {
 
     try {
       getCloudInfoAndSqs();
-      authorizationExpiryMs = parseInterval(getConfigProperty(LOCAL_EUCTL_FILE, "authentication.authorization_expiry"), 5000L);
+      authorizationExpiryMs = 0;
+      restoreAuthorizationCache = disableAuthorizationCache();
       account = "sqs-account-casp-a-" + System.currentTimeMillis();
       synchronizedCreateAccount(account);
       accountSQSClient = getSqsClientWithNewAccount(account, "admin");
@@ -119,6 +90,9 @@ public class TestSQSCrossAccountStackPolicies {
         }
       }
       synchronizedDeleteAccount(otherAccount);
+    }
+    if ( restoreAuthorizationCache != null ) {
+      restoreAuthorizationCache.run( );
     }
   }
 

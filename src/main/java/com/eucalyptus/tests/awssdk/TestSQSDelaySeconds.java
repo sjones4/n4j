@@ -84,8 +84,8 @@ public class TestSQSDelaySeconds {
     // send messages out with a bit of spacing between delays
     // give yourself a little error time (5 seconds may be too little?)
     int errorSecs = 5;
-    int skewErrorSecs = 10; // number of seconds between client and server?
-    int spacingSecs = 15;
+    int skewErrorSecs = 5; // number of seconds between client and server?
+    int spacingSecs = 10;
     int totalTime = spacingSecs * 6;
 
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();

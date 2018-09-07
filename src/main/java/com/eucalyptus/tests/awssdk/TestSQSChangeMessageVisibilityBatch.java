@@ -444,8 +444,8 @@ public class TestSQSChangeMessageVisibilityBatch {
     }
     assertThat(receiptHandles.size() == numBatchEntries && lastReceivedTimes.size() == numBatchEntries, "We should receive all the messages in a timely manner");
 
-    int spacingSecs = 15;
-    Map<String, Long> visibilityTimeouts = Maps.newHashMap();
+    int spacingSecs = 5;
+    Map<String, Integer> visibilityTimeouts = Maps.newHashMap();
     ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest = new ChangeMessageVisibilityBatchRequest();
     changeMessageVisibilityBatchRequest.setQueueUrl(queueUrl);
     int i = 0;
@@ -453,7 +453,7 @@ public class TestSQSChangeMessageVisibilityBatch {
       ChangeMessageVisibilityBatchRequestEntry e = new ChangeMessageVisibilityBatchRequestEntry();
       i++;
       e.setVisibilityTimeout(i * spacingSecs);
-      visibilityTimeouts.put(mapEntry.getKey(), i * spacingSecs * 1L);
+      visibilityTimeouts.put(mapEntry.getKey(), i * spacingSecs);
       e.setReceiptHandle(mapEntry.getValue());
       e.setId(mapEntry.getKey());
       changeMessageVisibilityBatchRequest.getEntries().add(e);

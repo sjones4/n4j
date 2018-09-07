@@ -39,6 +39,11 @@ import com.github.sjones4.youcan.youare.YouAre;
 import com.github.sjones4.youcan.youare.YouAreClient;
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest;
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
+import com.github.sjones4.youcan.youprop.YouProp;
+import com.github.sjones4.youcan.youprop.YouPropClient;
+import com.github.sjones4.youcan.youprop.model.DescribePropertiesRequest;
+import com.github.sjones4.youcan.youprop.model.DescribePropertiesResult;
+import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest;
 import com.google.common.base.MoreObjects;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
@@ -428,6 +433,25 @@ public class N4j {
         }
     }
 
+    public static Runnable disableAuthorizationCache( ) {
+      final long expiry = getAuthorizationExpiry( );
+      setAuthorizationExpiry(0);
+      return () -> setAuthorizationExpiry( expiry / 1000 );
+    }
+
+    public static long getAuthorizationExpiry( ) {
+      final DescribePropertiesResult result = getPropertiesClient( getAdminCredentialsProvider( ) )
+          .describeProperties( new DescribePropertiesRequest(  ).withProperties( "authentication.authorization_expiry" ) );
+      return parseInterval( result.getProperties( ).get( 0 ).getValue( ), 5000L );
+    }
+
+    public static void setAuthorizationExpiry( long seconds ) {
+      getPropertiesClient( getAdminCredentialsProvider( ) )
+          .modifyPropertyValue( new ModifyPropertyValueRequest(  )
+              .withName( "authentication.authorization_expiry" )
+              .withValue( seconds + "s" ) );
+    }
+
     /**
      * create ec2 connection based with supplied accessKey and secretKey
      */
@@ -532,6 +556,16 @@ public class N4j {
             .withClientConfiguration( new ClientConfiguration( ).withSignerOverride("AWSS3V4SignerType") )
             .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( endpoint, "eucalyptus" ) )
             .build( );
+    }
+
+    public static YouProp getPropertiesClient( final AWSCredentialsProvider credentials ) {
+      return getPropertiesClient( credentials, N4j.PROPERTIES_ENDPOINT );
+    }
+
+    public static YouProp getPropertiesClient( final AWSCredentialsProvider credentials, final String endpoint ) {
+      final YouPropClient youProp = new YouPropClient( credentials );
+      youProp.setEndpoint( endpoint );
+      return youProp;
     }
 
     /**
@@ -1468,11 +1502,14 @@ public class N4j {
         print("Created new user " + userName + " in account " + accountName);
     }
 
+    public static AWSCredentialsProvider getAdminCredentialsProvider( ) {
+      return new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+    }
 
     public static Map<String, String> getUserKeys(final String accountName, String userName){
         Map<String, String> keys = new HashMap<>();
 
-        AWSCredentialsProvider awsCredentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY));
+        AWSCredentialsProvider awsCredentialsProvider = getAdminCredentialsProvider( );
         final YouAreClient youAre = new YouAreClient(awsCredentialsProvider);
         youAre.setEndpoint(IAM_ENDPOINT);
 
@@ -1526,4 +1563,33 @@ public class N4j {
         return checkVPC;
     }
 
+     public static long parseInterval( final String interval, final long defaultValueMS ) {
+      try {
+        String timePart;
+        TimeUnit timeUnit;
+        if (interval.endsWith("ms")) {
+          timePart = interval.substring(0, interval.length() - 2);
+          timeUnit = TimeUnit.MILLISECONDS;
+        } else if (interval.endsWith("s")) {
+          timePart = interval.substring(0, interval.length() - 1);
+          timeUnit = TimeUnit.SECONDS;
+        } else if (interval.endsWith("m")) {
+          timePart = interval.substring(0, interval.length() - 1);
+          timeUnit = TimeUnit.MINUTES;
+        } else if (interval.endsWith("h")) {
+          timePart = interval.substring(0, interval.length() - 1);
+          timeUnit = TimeUnit.HOURS;
+        } else if (interval.endsWith("d")) {
+          timePart = interval.substring(0, interval.length() - 1);
+          timeUnit = TimeUnit.DAYS;
+        } else {
+          timePart = interval;
+          timeUnit = TimeUnit.MILLISECONDS;
+        }
+        return timeUnit.toMillis(Long.parseLong(timePart));
+      } catch (Exception e) {
+        print("Error parsing interval " + interval + ", using " + defaultValueMS);
+        return defaultValueMS;
+      }
+    }
 }

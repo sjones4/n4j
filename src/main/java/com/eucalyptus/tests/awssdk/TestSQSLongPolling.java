@@ -95,20 +95,6 @@ public class TestSQSLongPolling {
   }
 
   @Test
-  public void testPollingTimeoutNoMessagesReceiveMessage10() throws Exception {
-    testInfo(this.getClass().getSimpleName() + " - testPollingTimeoutNoMessagesReceiveMessage10");
-    assertThat("true".equalsIgnoreCase(getConfigProperty(LOCAL_EUCTL_FILE, "services.simplequeue.enable_long_polling")), "Metric collection needs to be enabled");
-    testPollingTimeoutNoMessagesReceiptDelay(10);
-  }
-
-  @Test
-  public void testPollingTimeoutNoMessagesReceiveMessage15() throws Exception {
-    testInfo(this.getClass().getSimpleName() + " - testPollingTimeoutNoMessagesReceiveMessage15");
-    assertThat("true".equalsIgnoreCase(getConfigProperty(LOCAL_EUCTL_FILE, "services.simplequeue.enable_long_polling")), "Metric collection needs to be enabled");
-    testPollingTimeoutNoMessagesReceiptDelay(15);
-  }
-
-  @Test
   public void testPollingTimeoutNoMessagesReceiveMessage20() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testPollingTimeoutNoMessagesReceiveMessage20");
     assertThat("true".equalsIgnoreCase(getConfigProperty(LOCAL_EUCTL_FILE, "services.simplequeue.enable_long_polling")), "Metric collection needs to be enabled");
@@ -279,17 +265,17 @@ public class TestSQSLongPolling {
     createQueueRequest.setQueueName(queueName);
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
     int DELAY_1 = 5;
-    int MAX_DELAY = 20; // second message will not be received
+    int MAX_DELAY = 10; // second message will not be received
     long startTime = System.currentTimeMillis();
     Future<ReceiveMessageResult> receiveMessageResultFuture1 = pool.submit( ( ) -> {
       ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setWaitTimeSeconds(MAX_DELAY);
       receiveMessageRequest.setQueueUrl(queueUrl);
       return accountSQSClient.receiveMessage(receiveMessageRequest);
     } );
     Future<ReceiveMessageResult> receiveMessageResultFuture2 = pool.submit( ( ) -> {
       ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setWaitTimeSeconds(MAX_DELAY);
       receiveMessageRequest.setQueueUrl(queueUrl);
       return accountSQSClient.receiveMessage(receiveMessageRequest);
     } );

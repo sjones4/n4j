@@ -78,7 +78,7 @@ public class TestSQSMessageExpirationPeriod {
 
     Map<String, String> attributeMap = new HashMap<String, String>();
     attributeMap.put("VisibilityTimeout","0");
-    attributeMap.put("MessageRetentionPeriod", "75");
+    attributeMap.put("MessageRetentionPeriod", "70");
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setAttributes(attributeMap);
     createQueueRequest.setQueueName(queueName);
@@ -92,8 +92,8 @@ public class TestSQSMessageExpirationPeriod {
     long endTime1Secs = startTime1Secs;
     long endTime2Secs = startTime2Secs;
 
-    // Poll for 90 seconds
-    for (int i = 0; i < 90; i++) {
+    // Poll for 80 seconds
+    for (int i = 0; i < 75; i++) {
       long startTimeLoop = System.currentTimeMillis();
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(queueUrl);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
@@ -111,7 +111,7 @@ public class TestSQSMessageExpirationPeriod {
     }
 
     // first message should have been gone after 75 seconds, and the second one gone after 60 seconds
-    assertThat(Math.abs(75 - (endTime1Secs - startTime1Secs)) < errorSecs, "First message should be gone after 75 seconds");
+    assertThat(Math.abs(70 - (endTime1Secs - startTime1Secs)) < errorSecs, "First message should be gone after 70 seconds");
     assertThat(Math.abs(60 - (endTime2Secs - startTime2Secs)) < errorSecs, "Second message should be gone after 60 seconds");
   }
 
