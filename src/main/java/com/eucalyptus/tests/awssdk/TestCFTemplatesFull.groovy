@@ -12,6 +12,10 @@ import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest
 import com.amazonaws.services.cloudformation.model.Parameter
 import com.amazonaws.services.cloudformation.model.Stack
+import com.amazonaws.services.cloudwatch.AmazonCloudWatch
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
+import com.amazonaws.services.cloudwatch.model.DimensionFilter
+import com.amazonaws.services.cloudwatch.model.ListMetricsRequest
 import com.amazonaws.services.simpleworkflow.model.DomainDeprecatedException
 import com.amazonaws.services.simpleworkflow.model.TypeDeprecatedException
 import com.github.sjones4.youcan.youserv.YouServ
@@ -38,11 +42,19 @@ class TestCFTemplatesFull {
   private static String testAcct
   private static AWSCredentialsProvider testAcctAdminCredentials
   private static AmazonCloudFormation cfClient
+  private static AmazonCloudWatch cwClient
 
   private static AmazonCloudFormation getCloudFormationClient( final AWSCredentialsProvider credentials ) {
     AmazonCloudFormationClient.builder( )
         .withCredentials( credentials )
         .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( N4j.CF_ENDPOINT, 'eucalyptus' ) )
+        .build()
+  }
+
+  private static AmazonCloudWatch getCloudWatchClient(final AWSCredentialsProvider credentials ) {
+    AmazonCloudWatchClient.builder( )
+        .withCredentials( credentials )
+        .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration( N4j.CW_ENDPOINT, 'eucalyptus' ) )
         .build()
   }
 
@@ -54,11 +66,13 @@ class TestCFTemplatesFull {
     N4j.createAccount( testAcct )
     testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
     cfClient = getCloudFormationClient( testAcctAdminCredentials )
+    cwClient = getCloudWatchClient( testAcctAdminCredentials )
   }
 
   @AfterClass
   static void cleanup( ) {
     if ( cfClient ) cfClient.shutdown( )
+    if ( cwClient ) cwClient.shutdown( )
     N4j.deleteAccount( testAcct )
   }
 
@@ -198,6 +212,12 @@ class TestCFTemplatesFull {
       String urlText = stack?.outputs?.getAt( 0 )?.outputValue
       Assert.assertNotNull( 'stack url output', urlText )
 
+      String elbName = stack?.outputs?.getAt( 1 )?.outputValue
+      Assert.assertNotNull( 'stack elb name output', elbName )
+
+      String asgName = stack?.outputs?.getAt( 2 )?.outputValue
+      Assert.assertNotNull( 'stack asg name output', asgName )
+
       URL url = new URL( urlText )
       String balancerHost = url.host
 
@@ -212,7 +232,7 @@ class TestCFTemplatesFull {
       url = new URL( urlText.replace( balancerHost, balancerIp ) )
       N4j.print( "Resolved load balancer host ${balancerHost} to ${balancerIp}, url is ${url}" )
 
-      ( 1..60 ).find{
+      Object foundResponse = ( 1..60 ).find{
         if ( it > 1 ) N4j.sleep 5
         N4j.print( "Attempting request via elb ${it}" )
         try {
@@ -227,6 +247,57 @@ class TestCFTemplatesFull {
           null
         }
       }
+      Assert.assertNotNull('Expected response from load balancer', foundResponse )
+
+      N4j.print( 'Verifying load balancer cookie present' )
+      String setCookieHeader = url.openConnection( ).getHeaderField( 'Set-Cookie' )
+      N4j.print( "Set-Cookie: ${setCookieHeader}" )
+      Assert.assertNotNull('Expected cookie header', setCookieHeader )
+
+      N4j.print( 'Verifying cloudwatch metrics for load balancer' )
+      Object foundMetric = ( 1..40 ).find {
+        if ( it > 1 ) N4j.sleep 15
+        N4j.print( "Listing metrics for elb ${it}" )
+        cwClient.listMetrics(new ListMetricsRequest(
+            namespace: 'AWS/ELB',
+            metricName: 'HealthyHostCount',
+            dimensions: [
+                new DimensionFilter(
+                  name: 'LoadBalancerName',
+                  value: elbName
+                )
+            ]
+        )).with {
+          metrics?.getAt(0)?.metricName
+        }
+      }
+      Assert.assertNotNull('Expected cloudwatch metric for load balancer', foundMetric )
+
+//TODO enable when MetricsCollection supported for auto scaling group resource type
+//      // "MetricsCollection" : [ {
+//      //   "Granularity": "1Minute",
+//      //   "Metrics": [ "GroupInServiceInstances" ]
+//      // } ]
+//      N4j.print( 'Verifying cloudwatch metrics for auto scaling group' )
+//      Object foundGroupMetric = ( 1..40 ).find {
+//        if ( it > 1 ) N4j.sleep 15
+//        N4j.print( "Listing metrics for auto scaling group ${it}" )
+//        cwClient.listMetrics(new ListMetricsRequest(
+//            namespace: 'AWS/AutoScaling',
+//            metricName: 'GroupInServiceInstances',
+//            dimensions: [
+//                new DimensionFilter(
+//                    name: 'AutoScalingGroupName',
+//                    value: asgName
+//                )
+//            ]
+//        )).with {
+//          metrics?.getAt(0)?.metricName
+//        }
+//      }
+//      Assert.assertNotNull('Expected cloudwatch metric for auto scaling group', foundGroupMetric )
+
+      null
     }
   }
 
