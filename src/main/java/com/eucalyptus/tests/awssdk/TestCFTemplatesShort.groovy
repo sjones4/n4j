@@ -300,7 +300,7 @@ class TestCFTemplatesShort {
         N4j.print( "Waiting for stack ${stackName} deletion" )
         ( 1..25 ).find{
           N4j.sleep 5
-          N4j.print( "Waiting for stack ${stackName} creation, waited ${it*5}s" )
+          N4j.print( "Waiting for stack ${stackName} deletion, waited ${it*5}s" )
           describeStacks( new DescribeStacksRequest(
               stackName: stackId
           ) ).with {
