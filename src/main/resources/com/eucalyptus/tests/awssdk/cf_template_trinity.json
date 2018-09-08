@@ -143,18 +143,23 @@
       "Properties" : {
         "AvailabilityZones" : { "Fn::GetAZs" : "" },
         "CrossZone" : "true",
-        "Listeners" : [ {
-          "LoadBalancerPort" : "80",
-          "InstancePort" : "80",
-          "Protocol" : "HTTP"
-        } ],
         "HealthCheck" : {
           "Target" : "HTTP:80/",
           "HealthyThreshold" : "3",
           "UnhealthyThreshold" : "5",
           "Interval" : "30",
           "Timeout" : "5"
-        }
+        },
+        "LBCookieStickinessPolicy": [ {
+          "CookieExpirationPeriod": "60",
+          "PolicyName": "CookiePolicy"
+        } ],
+        "Listeners" : [ {
+          "LoadBalancerPort" : "80",
+          "InstancePort" : "80",
+          "Protocol" : "HTTP",
+          "PolicyNames": [ "CookiePolicy" ]
+        } ]
       }
     },
 
@@ -183,6 +188,14 @@
     "URL" : {
       "Description" : "The URL of the website",
       "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}]]}
+    },
+    "LoadBalancerName" : {
+      "Description" : "Name of the Elastic Load Balancer",
+      "Value" :  { "Ref": "ElasticLoadBalancer" }
+    },
+    "WebServerGroupName" : {
+      "Description" : "Name of the web server Auto Scaling Group",
+      "Value" :  { "Ref": "WebServerGroup" }
     }
   }
 }
