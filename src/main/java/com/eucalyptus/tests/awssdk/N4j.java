@@ -523,6 +523,10 @@ public class N4j {
     }
 
     public static AmazonS3 getS3Client(AWSCredentials credentials, String endpoint) {
+        return getS3Client(new AWSStaticCredentialsProvider(credentials), endpoint);
+    }
+
+    public static AmazonS3 getS3Client(AWSCredentialsProvider credentials, String endpoint) {
         final AmazonS3 s3 =
             new AmazonS3Client(credentials, new ClientConfiguration( ).withSignerOverride("S3SignerType"));
         s3.setEndpoint(endpoint);
@@ -1457,12 +1461,13 @@ public class N4j {
     public static synchronized void synchronizedCreateAccount(String accountName) {
         createAccount(accountName);
     }
-    public static void createAccount(String accountName) {
+    public static String createAccount(String accountName) {
         int numAccountsBefore = youAre.listAccounts().getAccounts().size();
         CreateAccountRequest createAccountRequest = new CreateAccountRequest().withAccountName(accountName);
-        youAre.createAccount(createAccountRequest);
+        String accountId = youAre.createAccount(createAccountRequest).getAccount().getAccountId();
         assertThat((numAccountsBefore < youAre.listAccounts().getAccounts().size()),"Failed to create account " + accountName);
-        print("Created account: " + accountName);
+        print("Created account: " + accountName + " [" + accountId + "]");
+        return accountId;
     }
 
     public static synchronized void synchronizedDeleteAccount(String accountName) {
