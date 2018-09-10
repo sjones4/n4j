@@ -4,6 +4,11 @@
   "Description" : "Load balanced and auto scaled web site. Auto-scaled based on the CPU utilization of the web servers. Instances are load balanced with a simple health check against the default web page.",
 
   "Parameters" : {
+    "ElbAccountId" : {
+      "Description" : "Elastic load balancing account id for the region",
+      "Type" : "String"
+    },
+
     "InstanceType" : {
       "Description" : "WebServer EC2 instance type",
       "Type" : "String",
@@ -31,6 +36,29 @@
   },
 
   "Resources" : {
+    "Bucket": {
+      "Type": "AWS::S3::Bucket"
+    },
+
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "Bucket"},
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Statement": [ {
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [ "", [ "arn:aws:s3:::", { "Ref": "Bucket" }, "/AWSLogs/", { "Ref": "AWS::AccountId" }, "/*" ] ]
+              },
+              "Principal": { "AWS": { "Ref": "ElbAccountId" } },
+              "Action": [ "s3:PutObject" ]
+            }
+          ]
+        }
+      }
+    },
+
     "WebServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
@@ -140,7 +168,13 @@
 
     "ElasticLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "DependsOn": "BucketPolicy",
       "Properties" : {
+        "AccessLoggingPolicy" : {
+          "EmitInterval" : 60,
+          "Enabled" : true,
+          "S3BucketName" : { "Ref" : "Bucket" }
+        },
         "AvailabilityZones" : { "Fn::GetAZs" : "" },
         "CrossZone" : "true",
         "HealthCheck" : {
@@ -196,6 +230,10 @@
     "WebServerGroupName" : {
       "Description" : "Name of the web server Auto Scaling Group",
       "Value" :  { "Ref": "WebServerGroup" }
+    },
+    "BucketName": {
+      "Description" : "Name of the bucket used for ELB access logs",
+      "Value" :  { "Ref": "Bucket" }
     }
   }
 }

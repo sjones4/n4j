@@ -40,6 +40,7 @@ import static com.eucalyptus.tests.awssdk.N4j.SERVICES_ENDPOINT
 class TestCFTemplatesFull {
 
   private static String testAcct
+  private static String testAcctId
   private static AWSCredentialsProvider testAcctAdminCredentials
   private static AmazonCloudFormation cfClient
   private static AmazonCloudWatch cwClient
@@ -63,7 +64,7 @@ class TestCFTemplatesFull {
     N4j.testInfo( TestCFTemplatesFull.simpleName )
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}cf-templates"
-    N4j.createAccount( testAcct )
+    testAcctId = N4j.createAccount( testAcct )
     testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
     cfClient = getCloudFormationClient( testAcctAdminCredentials )
     cwClient = getCloudWatchClient( testAcctAdminCredentials )
@@ -208,7 +209,15 @@ class TestCFTemplatesFull {
    */
   @Test
   void testTrinityTemplate( ) {
-    stackCreateDelete( 'trinity', [ ], [ 'Image': N4j.IMAGE_ID ] ) { Stack stack ->
+    String elbAccountId = getServicesClient(testAcctAdminCredentials).with{
+      describeServices(new DescribeServicesRequest(
+          filters: [ new Filter( name: 'service-type', values: ['loadbalancing'] ) ]
+      ) ).with {
+        serviceStatuses?.getAt(0)?.serviceAccounts?.getAt(0)?.number
+      }
+    };
+    Assert.assertNotNull('Elastic load balancing account', elbAccountId )
+    stackCreateDelete( 'trinity', [ ], [ 'Image': N4j.IMAGE_ID, 'ElbAccountId': elbAccountId ] ) { Stack stack ->
       String urlText = stack?.outputs?.getAt( 0 )?.outputValue
       Assert.assertNotNull( 'stack url output', urlText )
 
@@ -217,6 +226,20 @@ class TestCFTemplatesFull {
 
       String asgName = stack?.outputs?.getAt( 2 )?.outputValue
       Assert.assertNotNull( 'stack asg name output', asgName )
+
+      String bucketName = stack?.outputs?.getAt( 3 )?.outputValue
+      Assert.assertNotNull( 'stack bucket name output', bucketName )
+
+      N4j.getS3Client( testAcctAdminCredentials, N4j.S3_ENDPOINT ).with {
+        String testFileKey = "AWSLogs/${testAcctId}/ELBAccessLogTestFile"
+        N4j.print( "Verifying access log test file present: ${testFileKey}" )
+        String content = getObjectAsString( bucketName, testFileKey )
+        N4j.print( "ELBAccessLogTestFile contents: ${content}" )
+        Assert.assertNotNull('ELBAccessLogTestFile content', content )
+
+        N4j.print( "Deleting access log test file: ${testFileKey}" )
+        deleteObject( bucketName, testFileKey )
+      }
 
       URL url = new URL( urlText )
       String balancerHost = url.host
