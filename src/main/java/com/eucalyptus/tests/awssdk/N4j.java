@@ -9,6 +9,7 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
@@ -457,8 +458,7 @@ public class N4j {
      */
     static AmazonEC2 getEc2Client(String accessKey, String secretKey,
                                   String endpoint) {
-        AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
-        return getEc2Client(creds, endpoint);
+        return getEc2Client( new BasicAWSCredentials(accessKey, secretKey), endpoint);
     }
 
     /**
@@ -466,9 +466,18 @@ public class N4j {
      */
     static AmazonEC2 getEc2Client(AWSCredentials credentials,
                                   String endpoint) {
-        final AmazonEC2 ec2 = new AmazonEC2Client(credentials);
-        ec2.setEndpoint(endpoint);
-        return ec2;
+      return getEc2Client( new AWSStaticCredentialsProvider( credentials ), endpoint);
+    }
+
+    /**
+     * create ec2 connection based with supplied credentials
+     */
+    static AmazonEC2 getEc2Client(AWSCredentialsProvider credentials,
+                                  String endpoint) {
+        return AmazonEC2Client.builder( )
+            .withCredentials( credentials )
+            .withEndpointConfiguration( new EndpointConfiguration( endpoint, "eucalyptus" ) )
+            .build( );
     }
 
     public static AmazonAutoScaling getAutoScalingClient(String accessKey,
@@ -527,10 +536,12 @@ public class N4j {
     }
 
     public static AmazonS3 getS3Client(AWSCredentialsProvider credentials, String endpoint) {
-        final AmazonS3 s3 =
-            new AmazonS3Client(credentials, new ClientConfiguration( ).withSignerOverride("S3SignerType"));
-        s3.setEndpoint(endpoint);
-        return s3;
+        return AmazonS3Client.builder( )
+            .withCredentials( credentials )
+            .withClientConfiguration( new ClientConfiguration( ).withSignerOverride("S3SignerType") )
+            .withEndpointConfiguration( new EndpointConfiguration( endpoint, "eucalyptus" ) )
+            .withPathStyleAccessEnabled( endpoint.endsWith( "/services/objectstorage" ) )
+            .build( );
     }
 
     public static String getConfigProperty(String configPath, String field) throws IOException {
