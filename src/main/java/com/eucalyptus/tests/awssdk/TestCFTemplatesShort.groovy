@@ -1,7 +1,9 @@
 package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.client.builder.AwsClientBuilder
+import com.amazonaws.services.cloudformation.AmazonCloudFormation
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 import com.amazonaws.services.cloudformation.model.CreateStackRequest
 import com.amazonaws.services.cloudformation.model.DeleteStackRequest
@@ -23,12 +25,13 @@ class TestCFTemplatesShort {
 
   private static String testAcct
   private static AWSCredentialsProvider testAcctAdminCredentials
-  private static AmazonCloudFormationClient cfClient
+  private static AmazonCloudFormation cfClient
 
-  private static AmazonCloudFormationClient getCloudFormationClient( final AWSCredentialsProvider credentials ) {
-    final AmazonCloudFormationClient cf = new AmazonCloudFormationClient( credentials )
-    cf.setEndpoint( N4j.CF_ENDPOINT )
-    cf
+  private static AmazonCloudFormation getCloudFormationClient(final AWSCredentialsProvider credentials ) {
+    AmazonCloudFormationClient.builder( )
+      .withCredentials( credentials )
+      .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration(N4j.CF_ENDPOINT, 'eucalyptus') )
+      .build( )
   }
 
   @BeforeClass
@@ -37,7 +40,7 @@ class TestCFTemplatesShort {
     N4j.getCloudInfo( )
     testAcct = "${N4j.NAME_PREFIX}cf-templates"
     N4j.createAccount( testAcct )
-    testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
     cfClient = getCloudFormationClient( testAcctAdminCredentials )
   }
 
@@ -239,6 +242,55 @@ class TestCFTemplatesShort {
     stackCreateDelete( 's3-bucket-stack', s3Template )
   }
 
+  @Test
+  void testCloudFormationTemplate( ) {
+    String cfTemplate = '''\
+    {
+        "AWSTemplateFormatVersion" : "2010-09-09",
+        "Description" : "CloudFormation pseduo params / conditional args / outputs template.",
+        "Parameters" : {
+          "BucketName" : {
+            "Description" : "Optional name for the bucket",
+            "Type" : "String",
+            "Default" : ""
+          }
+        },
+        "Conditions" : {
+          "UseBucketNameParameter" : {"Fn::Not": [{"Fn::Equals" : [{"Ref" : "BucketName"}, ""]}]}
+        },
+        "Resources" : {
+            "Bucket" : {
+                "Type" : "AWS::S3::Bucket",
+                "Properties" : {
+                  "BucketName" : { "Fn::If" : [
+                    "UseBucketNameParameter",
+                    { "Fn::Join" : ["-", [
+                      {"Ref" : "BucketName"},
+                      {"Ref" : "AWS::Partition"}
+                    ] ] },
+                    { "Ref" : "AWS::NoValue" }
+                  ] },
+                  "Tags": [ {
+                    "Key" : "urlsuffix",
+                    "Value" : {"Ref" : "AWS::URLSuffix"}
+                  }, {
+                    "Key" : "urlsuffixb64",
+                    "Value" : { "Fn::Base64" : {"Ref" : "AWS::URLSuffix"} }
+                  } ]
+                }
+            }
+        },
+        "Outputs" : {
+          "BucketName": {
+            "Description" : "Name of the created bucket",
+            "Value" :  { "Ref": "Bucket" }
+          }
+        }
+    }
+    '''.stripIndent( )
+    stackCreateDelete( 'cloudformation-stack', cfTemplate, [], ['BucketName': 'test'] )
+  }
+
   private void stackCreateDelete(
       final String stackName,
       final String stackTemplate,
@@ -285,12 +337,24 @@ class TestCFTemplatesShort {
                     }
                   }
                   Assert.fail( "Unexpected status ${lastStatus}" )
+                  null
                 }
+              } else {
+                null
               }
             }
           }
         }
         Assert.assertEquals( 'Stack status', 'CREATE_COMPLETE', lastStatus )
+
+        String outputs = describeStacks( new DescribeStacksRequest(
+            stackName: stackId
+        ) ).with {
+          stacks?.getAt(0)?.with { Stack stack ->
+            String.valueOf( stack.getOutputs( ) )
+          }
+        }
+        N4j.print( "Stack outputs ${stackName}[${stackId}]: ${outputs}")
 
         N4j.print( "Deleting stack ${stackName}[${stackId}]" )
         deleteStack( new DeleteStackRequest(
@@ -313,7 +377,10 @@ class TestCFTemplatesShort {
                   null
                 } else {
                   Assert.fail( "Unexpected status ${lastStatus}" )
+                  null
                 }
+              } else {
+                null
               }
             }
           }
