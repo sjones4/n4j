@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !yaml! tag:yaml.org,2002:
+%BLAH
+---
+# Yes, this works in AWS...
+AWSTemplateFormatVersion: '2010-09-09'
+Description: !!str Simple stack with a security group
+Resources:
+  ServerSecurityGroup:
+    Type: !yaml!str AWS::EC2::SecurityGroup
+    Properties: !!map
+      GroupDescription: allow connections from specified CIDR ranges
+      SecurityGroupIngress: !!seq
+        - IpProtocol: !!str tcp
+          FromPort: !!int 80
+          ToPort: !!int 80
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 192.168.1.1/32
+...

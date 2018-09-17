@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Stack testing the short forms for intrinsic functions
+#
+# !Base64 valueToEncode
+# !Cidr [ ipBlock, count, cidrBits ]
+# !FindInMap [ MapName, TopLevelKey, SecondLevelKey ]
+# !GetAtt logicalNameOfResource.attributeName
+# !GetAZs region
+# !Join [ delimiter, [ comma-delimited list of values ] ]
+# !Select [ index, listOfObjects ]
+# !Split [ delimiter, source string ]
+# !Sub
+#   - String
+#   - { Var1Name: Var1Value, Var2Name: Var2Value }
+# !Ref logicalName
+# !And [condition]
+# !Equals [value_1, value_2]
+# !If [condition_name, value_if_true, value_if_false]
+# !Not [condition]
+# !Or [condition, ...]
+#
+Parameters:
+  Optional:
+    Description: A parameter that may or may not be provided
+    Type: String
+    Default: NOVALUE
+Conditions:
+  UseOptionalParameter: !Not [ !Equals [ !Ref Optional, NOVALUE ] ]
+Mappings:
+  Mapping01:
+    Key01:
+      Name: Value01
+Resources:
+  Group:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !If [ UseOptionalParameter, !Ref Optional, !Ref 'AWS::NoValue' ]
+  GroupTwo:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Sub
+        - ${Var1}RegionalName
+        - Var1: !Join [ '', [ !Ref 'AWS::Region', !FindInMap [Mapping01, Key01, Name] ] ]
+Outputs:
+  GroupArn:
+    Description: The arn of the group
+    Value: !GetAtt Group.Arn
+  GroupTwoArn:
+    Description: The arn of the second group
+    Value: !GetAtt GroupTwo.Arn

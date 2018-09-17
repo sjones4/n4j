@@ -239,6 +239,20 @@ class TestCFTemplatesShort {
     stackCreateDelete( 's3-bucket-stack', s3Template )
   }
 
+  @Test
+  void testS3YamlTemplate( ) {
+    String s3Template = '''\
+    AWSTemplateFormatVersion: 2010-09-09
+    Description: S3 bucket template.
+    Resources:
+      bucket:
+        Type: AWS::S3::Bucket
+        Properties:
+          BucketName: bucket-2
+    '''.stripIndent( )
+    stackCreateDelete( 's3-bucket-yaml-stack', s3Template )
+  }
+
   private void stackCreateDelete(
       final String stackName,
       final String stackTemplate,
