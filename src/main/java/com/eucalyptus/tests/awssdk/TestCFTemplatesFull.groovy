@@ -114,6 +114,22 @@ class TestCFTemplatesFull {
   }
 
   /**
+   * Test for YAML template format
+   */
+  @Test
+  void testYamlSyntaxTemplate( ) {
+    stackCreateDelete( 'syntax' )
+  }
+
+  /**
+   * Test for YAML short form intrinsic functions
+   */
+  @Test
+  void testYamlShortIntrinsicsTemplate( ) {
+    stackCreateDelete( 'shortform', ['CAPABILITY_NAMED_IAM'] )
+  }
+
+  /**
    * Test for ec2 metadata (no instances)
    */
   @Test
@@ -339,8 +355,11 @@ class TestCFTemplatesFull {
       final Closure<Object> createdCallback = null
   ) {
     final String stackName = stackTemplateId.replace('_','-')
-    final String stackTemplate =
-        TestCFTemplatesFull.getResource( "cf_template_${stackTemplateId}.json" ).getText("utf-8")
+    URL templateUrl = TestCFTemplatesFull.getResource( "cf_template_${stackTemplateId}.json" )
+    if ( templateUrl == null ) {
+      templateUrl = TestCFTemplatesFull.getResource( "cf_template_${stackTemplateId}.yaml" )
+    }
+    final String stackTemplate = templateUrl.getText("utf-8")
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
       cfClient.with{
