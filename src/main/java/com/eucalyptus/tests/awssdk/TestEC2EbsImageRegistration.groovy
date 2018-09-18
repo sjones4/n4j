@@ -1,23 +1,13 @@
 package com.eucalyptus.tests.awssdk
 
-import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.S3ClientOptions
 import org.junit.Assert
 import org.junit.Test
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-
-import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
-import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 
 /**
  * This test covers creating a snapshot and registering an hvm ebs image.
@@ -31,23 +21,11 @@ class TestEC2EbsImageRegistration {
 
   TestEC2EbsImageRegistration( ){
     N4j.initEndpoints( )
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    this.credentials = N4j.getAdminCredentialsProvider( )
   }
 
   AmazonEC2 getEC2Client( AWSCredentialsProvider clientCredentials = credentials ) {
-    final AmazonEC2Client ec2 = new AmazonEC2Client( clientCredentials )
-    ec2.setEndpoint( N4j.EC2_ENDPOINT )
-    ec2
-  }
-
-  AmazonS3 getS3Client( AWSCredentialsProvider clientCredentials = credentials ) {
-    final AmazonS3Client s3 =
-        new AmazonS3Client( clientCredentials, new ClientConfiguration( ).withSignerOverride("S3SignerType") )
-    s3.setEndpoint( N4j.S3_ENDPOINT )
-    s3.setS3ClientOptions( new S3ClientOptions( ).builder( )
-        .setPathStyleAccess( N4j.S3_ENDPOINT.endsWith( '/services/objectstorage' ) )
-        .build( ) )
-    s3
+    N4j.getEc2Client(clientCredentials, N4j.EC2_ENDPOINT )
   }
 
   @SuppressWarnings("ChangeToOperator")
@@ -55,7 +33,6 @@ class TestEC2EbsImageRegistration {
   void testEbsHvmImageRegistration( ) throws Exception {
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
-      AmazonS3Client s3 = getS3Client()
       AmazonEC2 ec2 = getEC2Client()
 
       // Find a zone to use
@@ -149,7 +126,7 @@ class TestEC2EbsImageRegistration {
       }
       N4j.print("Created snapshot ${snapshotId} for volume ${volumeId}")
       N4j.print("Wating for snapshot ${snapshotId}")
-      N4j.waitForSnapshots(ec2, TimeUnit.MINUTES.toMillis(10))
+      N4j.waitForSnapshots(ec2, TimeUnit.MINUTES.toMillis(15))
 
       // register image
       ec2.describeImages( new DescribeImagesRequest(
@@ -164,6 +141,7 @@ class TestEC2EbsImageRegistration {
               imageId: emi
           ) )
         }
+        null
       }
       N4j.print( "Registering image for snapshot ${snapshotId}" )
       String emi = ec2.registerImage( new RegisterImageRequest(
