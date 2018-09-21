@@ -44,8 +44,6 @@ public class TestAutoScalingAdministration {
         testInfo(this.getClass().getSimpleName());
         getCloudInfo();
 
-
-
         // End discovery, start test
         final List<Runnable> cleanupTasks = new ArrayList<Runnable>();
         try {
@@ -72,7 +70,7 @@ public class TestAutoScalingAdministration {
             print( "Creating launch configuration: " + launchConfigurationName );
             as_user.createLaunchConfiguration(new CreateLaunchConfigurationRequest()
                     .withImageId(IMAGE_ID)
-                    .withInstanceType("m1.small")
+                    .withInstanceType(N4j.INSTANCE_TYPE)
                     .withLaunchConfigurationName(launchConfigurationName)
             );
             cleanupTasks.add( new Runnable() {

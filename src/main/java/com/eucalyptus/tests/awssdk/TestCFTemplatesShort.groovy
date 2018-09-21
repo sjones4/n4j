@@ -58,7 +58,7 @@ class TestCFTemplatesShort {
           "Description" : "EC2 instance type",
           "Type" : "String",
           "Default" : "m1.small",
-          "AllowedValues" : [ "t1.micro", "m1.small", "m1.medium" ],
+          "AllowedValues" : [ "t1.micro", "t2.nano", "t2.micro", "t2.small", "m1.small", "m1.medium" ],
           "ConstraintDescription" : "must be a valid EC2 instance type."
         },
         "Image" : {
@@ -106,7 +106,7 @@ class TestCFTemplatesShort {
       }
     }
     '''.stripIndent( )
-    stackCreateDelete( 'as-stack', asTemplate, [ ], [ 'Image': N4j.IMAGE_ID ] )
+    stackCreateDelete( 'as-stack', asTemplate, [ ], [ 'Image': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE ] )
   }
 
   @Test

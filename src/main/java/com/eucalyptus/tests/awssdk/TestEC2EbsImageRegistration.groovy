@@ -20,7 +20,7 @@ class TestEC2EbsImageRegistration {
       'http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.raw.tar.gz' )
 
   TestEC2EbsImageRegistration( ){
-    N4j.initEndpoints( )
+    N4j.getCloudInfo( )
     this.credentials = N4j.getAdminCredentialsProvider( )
   }
 
@@ -87,7 +87,7 @@ class TestEC2EbsImageRegistration {
       String instanceId = ec2.runInstances(new RunInstancesRequest(
           minCount: 1,
           maxCount: 1,
-          instanceType: 'm1.small',
+          instanceType: N4j.INSTANCE_TYPE,
           imageId: imageId,
           placement: new Placement(
               availabilityZone: availabilityZone

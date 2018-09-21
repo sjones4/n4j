@@ -17,7 +17,7 @@ import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
 import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.S3_ENDPOINT
-import static com.eucalyptus.tests.awssdk.N4j.initEndpoints
+import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
 import static com.eucalyptus.tests.awssdk.N4j.print
 import static org.junit.Assert.*
 
@@ -32,7 +32,7 @@ class TestEC2InstanceBundle {
   @BeforeClass
   static void init( ) {
     print("### SETUP - ${TestEC2InstanceBundle.class.simpleName}")
-    initEndpoints( )
+    getCloudInfo( )
     ec2 = N4j.getEc2Client( ACCESS_KEY, SECRET_KEY, EC2_ENDPOINT )
     s3 = N4j.getS3Client( ACCESS_KEY, SECRET_KEY, S3_ENDPOINT )
   }
@@ -68,7 +68,7 @@ class TestEC2InstanceBundle {
     assertNotNull( 'Image not found', imageId )
     print( "Using image: ${imageId}" )
 
-    String instanceType = 'm1.small'
+    String instanceType = N4j.INSTANCE_TYPE
     print( "Using instance type ${instanceType} and availability zone ${availabilityZone}" )
 
     // Find a key pair

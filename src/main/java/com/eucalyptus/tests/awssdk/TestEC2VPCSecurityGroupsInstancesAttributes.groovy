@@ -32,7 +32,7 @@ import org.junit.Test
 
 import static N4j.ACCESS_KEY
 import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
 import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
@@ -55,7 +55,7 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
   }
 
   public TestEC2VPCSecurityGroupsInstancesAttributes() {
-      minimalInit()
+      getCloudInfo()
       this.credentials = new AWSStaticCredentialsProvider(new BasicAWSCredentials(ACCESS_KEY, SECRET_KEY))
       this.imageOwners = imageOwners
   }
@@ -183,7 +183,7 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
           String instanceId = runInstances(new RunInstancesRequest(
               minCount: 1,
               maxCount: 1,
-              instanceType: 'm1.small',
+              instanceType: N4j.INSTANCE_TYPE,
               imageId: imageId,
               securityGroupIds: [securityGroupId1],
               networkInterfaces: [
@@ -210,7 +210,7 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
           String instanceId = runInstances(new RunInstancesRequest(
               minCount: 1,
               maxCount: 1,
-              instanceType: 'm1.small',
+              instanceType: N4j.INSTANCE_TYPE,
               imageId: imageId,
               subnetId: subnetId,
               networkInterfaces: [
@@ -237,7 +237,7 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
           String instanceId = runInstances(new RunInstancesRequest(
               minCount: 1,
               maxCount: 1,
-              instanceType: 'm1.small',
+              instanceType: N4j.INSTANCE_TYPE,
               imageId: imageId,
               privateIpAddress: '172.30.0.10',
               networkInterfaces: [
@@ -265,7 +265,7 @@ class TestEC2VPCSecurityGroupsInstancesAttributes {
         String instanceId = runInstances(new RunInstancesRequest(
             minCount: 1,
             maxCount: 1,
-            instanceType: 'm1.small',
+            instanceType: N4j.INSTANCE_TYPE,
             imageId: imageId,
             networkInterfaces: [
                 new InstanceNetworkInterfaceSpecification(
