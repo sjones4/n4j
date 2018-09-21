@@ -34,6 +34,7 @@ import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersRe
 import com.amazonaws.services.identitymanagement.model.*;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.github.sjones4.youcan.youare.YouAre;
@@ -540,12 +541,10 @@ public class N4j {
     }
 
     public static AmazonS3 getS3Client(AWSCredentialsProvider credentials, String endpoint) {
-        return AmazonS3Client.builder( )
-            .withCredentials( credentials )
-            .withClientConfiguration( new ClientConfiguration( ).withSignerOverride("S3SignerType") )
-            .withEndpointConfiguration( new EndpointConfiguration( endpoint, "eucalyptus" ) )
-            .withPathStyleAccessEnabled( endpoint.endsWith( "/services/objectstorage" ) )
-            .build( );
+        AmazonS3Client client = new AmazonS3Client( credentials, new ClientConfiguration( ).withSignerOverride("S3SignerType"));
+        client.setEndpoint( endpoint );
+        client.setS3ClientOptions( new S3ClientOptions( ).withPathStyleAccess( endpoint.endsWith( "/services/objectstorage" ) ) );
+        return client;
     }
 
     public static String getConfigProperty(String configPath, String field) throws IOException {
