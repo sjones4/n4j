@@ -142,7 +142,7 @@ class TestCFTemplatesFull {
    */
   @Test
   void testEc2SignalResourceTemplate( ) {
-    stackCreateDelete( 'ec2_signal_resource', [ ], [ 'ImageId': N4j.IMAGE_ID ] )
+    stackCreateDelete( 'ec2_signal_resource', [ ], [ 'ImageId': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE ] )
   }
 
   /**
@@ -193,7 +193,7 @@ class TestCFTemplatesFull {
    */
   @Test
   void testInstanceVolumesTemplate( ) {
-    stackCreateDelete( 'instance_volumes', [ ], [ 'ImageId': N4j.IMAGE_ID ] )
+    stackCreateDelete( 'instance_volumes', [ ], [ 'ImageId': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE ] )
   }
 
   /**
@@ -233,7 +233,7 @@ class TestCFTemplatesFull {
       }
     };
     Assert.assertNotNull('Elastic load balancing account', elbAccountId )
-    stackCreateDelete( 'trinity', [ ], [ 'Image': N4j.IMAGE_ID, 'ElbAccountId': elbAccountId ] ) { Stack stack ->
+    stackCreateDelete( 'trinity', [ ], [ 'Image': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE, 'ElbAccountId': elbAccountId ] ) { Stack stack ->
       String urlText = stack?.outputs?.getAt( 0 )?.outputValue
       Assert.assertNotNull( 'stack url output', urlText )
 

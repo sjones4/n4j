@@ -24,7 +24,7 @@ import org.junit.Test
 
 import static N4j.ACCESS_KEY
 import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static N4j.getCloudInfo
 
 
 /**
@@ -43,7 +43,7 @@ class TestAutoScalingEC2InstanceTerminationProtection {
   }
 
   public TestAutoScalingEC2InstanceTerminationProtection( ){
-    minimalInit( )
+    getCloudInfo( )
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
@@ -114,7 +114,7 @@ class TestAutoScalingEC2InstanceTerminationProtection {
             instanceMonitoring: new InstanceMonitoring(
               enabled: false
             ),
-            instanceType: 'm1.small',
+            instanceType: N4j.INSTANCE_TYPE,
             keyName: keyName,
             launchConfigurationName: configName
         ) )

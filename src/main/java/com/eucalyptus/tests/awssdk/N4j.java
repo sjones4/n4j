@@ -45,6 +45,9 @@ import com.github.sjones4.youcan.youprop.YouPropClient;
 import com.github.sjones4.youcan.youprop.model.DescribePropertiesRequest;
 import com.github.sjones4.youcan.youprop.model.DescribePropertiesResult;
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest;
+import com.github.sjones4.youcan.youtwo.YouTwoClient;
+import com.github.sjones4.youcan.youtwo.model.DescribeInstanceTypesResult;
+import com.github.sjones4.youcan.youtwo.model.InstanceType;
 import com.google.common.base.MoreObjects;
 import com.jcraft.jsch.*;
 import org.apache.log4j.Logger;
@@ -103,7 +106,7 @@ public class N4j {
     public static String KERNEL_ID = null;
     public static String RAMDISK_ID = null;
     public static String AVAILABILITY_ZONE = null;
-    public static String INSTANCE_TYPE = "m1.small";
+    public static String INSTANCE_TYPE = "t2.micro";
     public static String EUCALYPTUS_VERSION = null;
 
     public static void initEndpoints( ) throws Exception {
@@ -135,6 +138,7 @@ public class N4j {
         s3 = getS3Client(ACCESS_KEY, SECRET_KEY, S3_ENDPOINT);
         youAre = getYouAreClient(ACCESS_KEY, SECRET_KEY, IAM_ENDPOINT);
         IMAGE_ID = findImage();
+        INSTANCE_TYPE = findInstanceType( "t2.micro", "m1.small" );
         EUCALYPTUS_VERSION = getEucalyptusVersion( );
 
         if (!isHVM()) {
@@ -930,6 +934,29 @@ public class N4j {
         assertThat(imageId != null, "No suitable image found");
         print("Using image: " + imageId);
         return imageId;
+    }
+
+    public static String findInstanceType(final String... preferredTypes) {
+      final YouTwoClient youTwo = new YouTwoClient( getAdminCredentialsProvider( ) );
+      youTwo.setEndpoint( EC2_ENDPOINT );
+      DescribeInstanceTypesResult result = youTwo.describeInstanceTypes( );
+      String type = null;
+      out:
+      for ( final String preferredType : preferredTypes ) {
+        for ( final InstanceType t : result.getInstanceTypes( ) ) {
+          if ( preferredType.equals( t.getName() ) ) {
+            type = preferredType;
+            break out;
+          }
+        }
+      }
+      if ( type == null && !result.getInstanceTypes().isEmpty() ) {
+        type = result.getInstanceTypes().get( 0 ).getName();
+      }
+      if ( type == null && preferredTypes.length > 0 ) {
+        type = preferredTypes[0];
+      }
+      return type;
     }
 
     public static boolean isHVM() {

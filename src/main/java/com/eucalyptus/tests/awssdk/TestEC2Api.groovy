@@ -61,75 +61,7 @@ import java.util.concurrent.TimeUnit
 
 import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.ec2
-import static com.eucalyptus.tests.awssdk.N4j.ec2
-import static com.eucalyptus.tests.awssdk.N4j.ec2
-import static com.eucalyptus.tests.awssdk.N4j.ec2
 import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.testInfo
-import static com.eucalyptus.tests.awssdk.N4j.testInfo
-import static com.eucalyptus.tests.awssdk.N4j.testInfo
-import static com.eucalyptus.tests.awssdk.N4j.testInfo
 import static com.eucalyptus.tests.awssdk.N4j.testInfo
 
 /**
@@ -709,7 +641,7 @@ class TestEC2Api {
             autoPlacement: 'off',
             availabilityZone: 'some-zone',
             clientToken: UUID.randomUUID( ).toString( ),
-            instanceType: 'm1.small',
+            instanceType: N4j.INSTANCE_TYPE,
             quantity: 1
         ) )
       } catch ( AmazonServiceException e ) {

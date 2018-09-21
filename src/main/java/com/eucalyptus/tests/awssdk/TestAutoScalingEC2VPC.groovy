@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import static N4j.ACCESS_KEY
 import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static N4j.getCloudInfo
 
 /**
  * This application tests Auto Scaling use of EC2 VPC functionality.
@@ -49,7 +49,7 @@ class TestAutoScalingEC2VPC {
   }
 
   public TestAutoScalingEC2VPC() {
-    minimalInit()
+    getCloudInfo()
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
@@ -66,7 +66,7 @@ class TestAutoScalingEC2VPC {
   }
 
   private String instanceType() {
-    return "m1.small"
+    return N4j.INSTANCE_TYPE
   }
 
   private void assertThat( boolean condition,
