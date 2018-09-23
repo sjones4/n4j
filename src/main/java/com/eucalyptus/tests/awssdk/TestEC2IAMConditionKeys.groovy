@@ -81,6 +81,7 @@ import static com.eucalyptus.tests.awssdk.N4j.print
 import static com.eucalyptus.tests.awssdk.N4j.waitForInstances
 import static com.eucalyptus.tests.awssdk.N4j.waitForSnapshots
 import static com.eucalyptus.tests.awssdk.N4j.waitForVolumeAttachments
+import static com.eucalyptus.tests.awssdk.N4j.waitForVolumes
 
 /**
  * Test for IAM policy condition keys used with EC2
@@ -260,7 +261,11 @@ class TestEC2IAMConditionKeys {
               "Statement": [
                   {
                       "Effect": "Allow",
-                      "Action": [ "ec2:DeleteSecurityGroup", "ec2:DeleteVolume" ],
+                      "Action": [ 
+                          "ec2:DeleteSecurityGroup", 
+                          "ec2:DeleteSnapshot", 
+                          "ec2:DeleteVolume" 
+                      ],
                       "Resource": "*",
                       "Condition": {
                           "StringEquals": {
@@ -276,6 +281,7 @@ class TestEC2IAMConditionKeys {
 
     String securityGroupId = null
     String volumeId = null
+    String snapshotId = null
     accountEc2.with {
       // Find an AZ to use
       String availabilityZone = describeAvailabilityZones( ).with{
@@ -298,6 +304,20 @@ class TestEC2IAMConditionKeys {
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
       }
 
+      print( 'Creating snapshot for delete test' )
+      snapshotId = createSnapshot( new CreateSnapshotRequest(
+          description: 'A snapshot for deletion testing',
+          volumeId: volumeId
+      ) ).with {
+        snapshot?.snapshotId
+      }
+      print( "Created snapshot: ${snapshotId}" )
+      Assert.assertNotNull( "Expected snapshotId", snapshotId )
+      cleanupTasks.add{
+        print( "Deleting snapshot ${snapshotId}" )
+        deleteSnapshot( new DeleteSnapshotRequest( snapshotId: snapshotId ) )
+      }
+
       print( 'Creating security group for delete test' )
       securityGroupId = createSecurityGroup( new CreateSecurityGroupRequest(
           groupName: 'tagged-resource-delete-test',
@@ -312,6 +332,12 @@ class TestEC2IAMConditionKeys {
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
       }
     }
+
+    print("Waiting for volume ${volumeId}")
+    waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
+
+    print("Waiting for snapshot ${snapshotId}")
+    waitForSnapshots( accountEc2, TimeUnit.MINUTES.toMillis(5) )
 
     AmazonEC2 userEc2 = AmazonEC2Client.builder( )
         .withCredentials( userCredentials )
@@ -333,13 +359,21 @@ class TestEC2IAMConditionKeys {
       } catch ( AmazonServiceException e ) {
         print( "Got expected exception: ${e}" )
       }
+
+      try {
+        print( "Attempting delete of untagged snapshot ${snapshotId} as user" )
+        deleteSnapshot( new DeleteSnapshotRequest( snapshotId: snapshotId ) )
+        Assert.fail( 'Expected volume snapshot to fail' )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+      }
       void
     }
 
     accountEc2.with {
-      print( "Tagging security group ${securityGroupId} and volume ${volumeId} with delete=true" )
+      print( "Tagging security group ${securityGroupId}, volume ${volumeId}, and snapshot ${snapshotId} with delete=true" )
       createTags( new CreateTagsRequest(
-          resources: [ securityGroupId, volumeId ],
+          resources: [ securityGroupId, volumeId, snapshotId ],
           tags: [
               new Tag( key: 'delete', value: 'true' )
           ]
@@ -355,6 +389,9 @@ class TestEC2IAMConditionKeys {
 
       print( "Attempting delete of tagged volume ${volumeId} as user" )
       deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
+
+      print( "Attempting delete of tagged snapshot ${snapshotId} as user" )
+      deleteSnapshot( new DeleteSnapshotRequest( snapshotId: snapshotId ) )
     }
   }
 
@@ -1087,7 +1124,10 @@ class TestEC2IAMConditionKeys {
                     {
                         "Effect": "Allow",
                         "Action": "ec2:CreateTags",
-                        "Resource": "arn:aws:ec2::${accountNumber}:volume/*",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:snapshot/*",
+                          "arn:aws:ec2::${accountNumber}:volume/*"
+                        ],
                         "Condition": {
                             "StringEquals": {
                                 "ec2:CreateAction": "CreateTags"
@@ -1100,7 +1140,10 @@ class TestEC2IAMConditionKeys {
                     {
                         "Effect": "Allow",
                         "Action": "ec2:DeleteTags",
-                        "Resource": "arn:aws:ec2::${accountNumber}:volume/*",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:snapshot/*",
+                          "arn:aws:ec2::${accountNumber}:volume/*"
+                        ],
                         "Condition": {
                             "ForAllValues:StringEquals": {
                                 "aws:TagKeys": ["environment","cost-center"]
@@ -1114,6 +1157,7 @@ class TestEC2IAMConditionKeys {
     }
 
     String volumeId = null
+    String snapshotId = null
     accountEc2.with {
       // Find an AZ to use
       String availabilityZone = describeAvailabilityZones( ).with{
@@ -1142,6 +1186,31 @@ class TestEC2IAMConditionKeys {
       cleanupTasks.add{
         print( "Deleting volume ${volumeId}" )
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
+      }
+
+      print( "Creating snapshot from volume: ${volumeId}" )
+      snapshotId = createSnapshot( new CreateSnapshotRequest(
+          volumeId: volumeId,
+          tagSpecifications: [
+              new TagSpecification(
+                  resourceType: 'snapshot',
+                  tags: [
+                      new Tag( key: 'restricted', value: 'value' ),
+                  ]
+              )
+          ]
+      ) ).with {
+        String createdSnapshotId = snapshot?.snapshotId
+        print( "Created snapshot ${createdSnapshotId} with tags ${snapshot?.tags}" )
+        Assert.assertNotNull( "Expected snapshotId", createdSnapshotId )
+        Assert.assertEquals( 'create snapshot response tag count', 1, snapshot?.tags?.size()?:0)
+        createdSnapshotId
+      }
+      print( "Created snapshot ${snapshotId}" )
+      Assert.assertNotNull( "Expected snapshotId", snapshotId )
+      cleanupTasks.add{
+        print( "Deleting snapshot ${snapshotId}" )
+        deleteSnapshot( new DeleteSnapshotRequest( snapshotId: snapshotId ) )
       }
     }
 
@@ -1172,6 +1241,28 @@ class TestEC2IAMConditionKeys {
         Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
+      try {
+        print( "Tagging snapshot ${snapshotId} with non-permitted tags" )
+        createTags( new CreateTagsRequest(
+            resources: [ snapshotId ],
+            tags: [
+                new Tag( key: 'meaning', value: '42' ),
+            ]
+        ) )
+        print( "Describing tags for snapshot ${snapshotId} to check if added" )
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new Filter( name: 'resource-id', values: [ snapshotId ] )
+            ]
+        ) ).with {
+          print( "Snapshot tags: ${tags}" )
+          Assert.assertEquals( 'Snapshot tag count', tags.size(), 1 )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
+      }
+
       print( "Creating volume tags ${volumeId}" )
       createTags( new CreateTagsRequest(
           resources: [ volumeId ],
@@ -1187,6 +1278,23 @@ class TestEC2IAMConditionKeys {
       ) ).with {
         print( "Volume tags: ${tags}" )
         Assert.assertEquals( 'Volume tag count', tags.size(), 2 )
+      }
+
+      print( "Creating snapshot tags ${snapshotId}" )
+      createTags( new CreateTagsRequest(
+          resources: [ snapshotId ],
+          tags: [
+              new Tag( key: 'cost-center', value: '5' ),
+          ]
+      ) )
+      print( "Describing tags for snapshot ${snapshotId} to verify added" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ snapshotId ] )
+          ]
+      ) ).with {
+        print( "Snapshot tags: ${tags}" )
+        Assert.assertEquals( 'Snapshot tag count', tags.size(), 2 )
       }
 
       try {
@@ -1211,6 +1319,28 @@ class TestEC2IAMConditionKeys {
         Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
       }
 
+      try {
+        print( "Deleting snapshot tags ${snapshotId} without permission (should fail)" )
+        deleteTags( new DeleteTagsRequest(
+            resources: [ snapshotId ],
+            tags: [
+                new Tag( key: 'restricted' ),
+            ]
+        ) )
+        print( "Describing tags for snapshot ${snapshotId} to verify not deleted" )
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new Filter( name: 'resource-id', values: [ snapshotId ] )
+            ]
+        ) ).with {
+          print( "Snapshot tags: ${tags}" )
+          Assert.assertEquals( 'Snapshot tag count', tags.size(), 2 )
+        }
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+        Assert.assertEquals( 'HTTP status code for error', e.statusCode, 403 )
+      }
+
       print( "Deleting volume tags ${volumeId}" )
       deleteTags( new DeleteTagsRequest(
           resources: [ volumeId ],
@@ -1227,6 +1357,29 @@ class TestEC2IAMConditionKeys {
         print( "Volume tags: ${tags}" )
         Assert.assertEquals( 'Volume tag count', tags.size(), 1 )
       }
+
+      print( "Deleting snapshot tags ${snapshotId}" )
+      deleteTags( new DeleteTagsRequest(
+          resources: [ snapshotId ],
+          tags: [
+              new Tag( key: 'cost-center', value: '5' ),
+          ]
+      ) )
+      print( "Describing tags for snapshot ${snapshotId} to verify deleted" )
+      describeTags( new DescribeTagsRequest(
+          filters: [
+              new Filter( name: 'resource-id', values: [ snapshotId ] )
+          ]
+      ) ).with {
+        print( "Snapshot tags: ${tags}" )
+        Assert.assertEquals( 'Snapshot tag count', tags.size(), 1 )
+      }
+
+      print("Waiting for volume ${volumeId}")
+      waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
+
+      print("Waiting for snapshot ${snapshotId}")
+      waitForSnapshots( accountEc2, TimeUnit.MINUTES.toMillis(5) )
 
       void
     }
@@ -1309,7 +1462,7 @@ class TestEC2IAMConditionKeys {
     String volumeId_1 = null
     String volumeId_2 = null
     String snapshotId = null
-    TestEC2IAMConditionKeys.accountEc2.with {
+    accountEc2.with {
       print( "Creating volume size 1 in availability zone: ${availabilityZone}" )
       volumeId_1 = createVolume( new CreateVolumeRequest(
           size: 1,
@@ -1339,13 +1492,13 @@ class TestEC2IAMConditionKeys {
       }
 
       for ( int n = 0; n < 60; n += 5 ) {
-        N4j.sleep( 5 );
+        N4j.sleep( 5 )
         if ( describeVolumes( new DescribeVolumesRequest( filters: [
             new Filter( name: 'volume-id', values: [ volumeId_1, volumeId_2 ] ),
             new Filter( name: 'status', values: [ 'available' ] ),
         ] ) ).with{ !volumes.empty } ) {
           print( "Volumes available: ${volumeId_1} ${volumeId_2}" )
-          break;
+          break
         } else {
           print( "Waiting for volumes to be available: ${volumeId_1} ${volumeId_2}" )
         }
@@ -2158,7 +2311,7 @@ class TestEC2IAMConditionKeys {
 
     // Wait until running
     print( 'Waiting for instances to be running...' )
-    waitForInstances( accountEc2, TimeUnit.MINUTES.toMillis( 2 ) )
+    waitForInstances( accountEc2, TimeUnit.MINUTES.toMillis( 5 ) )
 
     accountEc2.with {
       print( "Attaching volume ${volumeId_2} to instance ${instanceId} for detach testing" )
