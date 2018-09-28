@@ -19,7 +19,7 @@ import com.github.sjones4.youcan.youprop.YouProp
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 
-import org.junit.Test;
+import org.junit.Test
 
 import static N4j.ACCESS_KEY
 import static N4j.SECRET_KEY
@@ -37,11 +37,11 @@ class TestEC2VPCQuotasLimits {
 
   private final AWSCredentialsProvider credentials
 
-  public static void main( String[] args ) throws Exception {
+  static void main(String[] args ) throws Exception {
     new TestEC2VPCQuotasLimits( ).EC2VPCQuotasLimitsTest( )
   }
 
-  public TestEC2VPCQuotasLimits() {
+  TestEC2VPCQuotasLimits() {
     minimalInit()
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
@@ -75,7 +75,7 @@ class TestEC2VPCQuotasLimits {
   }
 
   @Test
-  public void EC2VPCQuotasLimitsTest( ) throws Exception {
+  void EC2VPCQuotasLimitsTest( ) throws Exception {
     final YouProp prop = getYouPropClient( credentials )
     final AmazonEC2 ec20 = getEC2Client( credentials )
 
@@ -190,7 +190,7 @@ class TestEC2VPCQuotasLimits {
         print( "Creating access key for admin account: ${accountName}" )
         YouAre adminIam = getYouAreClient( credentials )
         adminIam.addRequestHandler( new RequestHandler2(){
-          public void beforeRequest(final Request<?> request) {
+          void beforeRequest(final Request<?> request) {
             request.addParameter( "DelegateAccount", accountName )
           }
         } )
@@ -230,7 +230,7 @@ class TestEC2VPCQuotasLimits {
                         "ec2:quota-internetgatewaynumber":"3"
                       }
                     }
-                  },
+                  }
               ]
             }
           """.stripIndent( )
@@ -286,6 +286,12 @@ class TestEC2VPCQuotasLimits {
           print( "Deleting VPC 1 ${vpcId_1}" )
           deleteVpc( new DeleteVpcRequest( vpcId: vpcId_1 ) )
         }
+
+        print( "Attaching internet gateway 1 ${internetGatewayId} to vpc ${vpcId_1}" )
+        attachInternetGateway( new AttachInternetGatewayRequest(
+            vpcId: vpcId_1,
+            internetGatewayId: internetGatewayId
+        ) )
 
         print( 'Creating VPC 2' )
         String vpcId_2 = createVpc( new CreateVpcRequest( cidrBlock: '10.2.2.0/24' ) ).with {
@@ -484,6 +490,8 @@ class TestEC2VPCQuotasLimits {
               ipPermissions: [
                   new IpPermission(
                       ipProtocol: number,
+                      fromPort: 1,
+                      toPort: 1,
                       ipRanges: [ '0.0.0.0/0' ]
                   )
               ]

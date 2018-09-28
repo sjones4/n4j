@@ -43,7 +43,7 @@ class TestEC2VPCRoutes {
 
   private boolean assertThat( boolean condition,
                               String message ){
-    Assert.assertTrue( condition, message )
+    Assert.assertTrue( message, condition )
     true
   }
 

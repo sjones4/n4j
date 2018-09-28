@@ -15,7 +15,7 @@ import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
-
+import org.junit.Assert
 import org.junit.Test;
 
 import static N4j.ACCESS_KEY
@@ -57,7 +57,7 @@ class TestEC2VPCResourceConditionPolicy {
 
   private boolean assertThat( boolean condition,
                               String message ){
-    assert condition : message
+    Assert.assertTrue( message, condition )
     true
   }
 

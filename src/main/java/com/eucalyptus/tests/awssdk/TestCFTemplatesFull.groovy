@@ -16,6 +16,16 @@ import com.amazonaws.services.cloudwatch.AmazonCloudWatch
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
 import com.amazonaws.services.cloudwatch.model.DimensionFilter
 import com.amazonaws.services.cloudwatch.model.ListMetricsRequest
+import com.amazonaws.services.ec2.model.AccountAttribute
+import com.amazonaws.services.ec2.model.DescribeAddressesRequest
+import com.amazonaws.services.ec2.model.DescribeInternetGatewaysRequest
+import com.amazonaws.services.ec2.model.DescribeNatGatewaysRequest
+import com.amazonaws.services.ec2.model.DescribeNetworkAclsRequest
+import com.amazonaws.services.ec2.model.DescribeRouteTablesRequest
+import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest
+import com.amazonaws.services.ec2.model.DescribeSubnetsRequest
+import com.amazonaws.services.ec2.model.DescribeTagsRequest
+import com.amazonaws.services.ec2.model.DescribeVpcsRequest
 import com.amazonaws.services.simpleworkflow.model.DomainDeprecatedException
 import com.amazonaws.services.simpleworkflow.model.TypeDeprecatedException
 import com.github.sjones4.youcan.youserv.YouServ
@@ -346,6 +356,148 @@ class TestCFTemplatesFull {
   @Test
   void testVpcMetadataTemplate( ) {
     stackCreateDelete( 'vpc_meta' )
+  }
+
+  /**
+   * Test for vpc metadata requiring vpc platform
+   */
+  @Test
+  void testVpcMetadataRequiringVpcTemplate( ) {
+    N4j.print( 'Checking for VPC support' )
+    final boolean vpcAvailable = N4j.ec2.describeAccountAttributes( ).with {
+      accountAttributes.find{ AccountAttribute accountAttribute ->
+        accountAttribute.attributeName == 'supported-platforms'
+      }?.attributeValues*.attributeValue.contains( 'VPC' )
+    }
+    N4j.print( "VPC supported: ${vpcAvailable}" )
+    N4j.assumeThat( vpcAvailable, 'VPC is a supported platform' )
+    stackCreateDelete( 'vpc_meta_vpc_platform', [], [:] ) {  Stack stack ->
+      String vpcId = stack?.outputs?.getAt( 0 )?.getOutputValue();
+      String allocationId = stack?.outputs?.getAt( 6 )?.getOutputValue();
+      N4j.print( "Verifying tags for vpc stack : ${vpcId}" )
+
+      N4j.getEc2Client( testAcctAdminCredentials, N4j.EC2_ENDPOINT ).with {
+        // verify tags created
+        describeTags( new DescribeTagsRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'key', values: ['vpccftest'] )
+            ]
+        ) ).with {
+          N4j.print( "Got tags: ${tags}" )
+          Assert.assertEquals( 'Tag count', 8, tags?.size()?:0 )
+        }
+
+        // verify tags by resource
+        describeVpcs( new DescribeVpcsRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'vpc-id', values: [ vpcId ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("Vpc count", 1, vpcs?.size()?:0 )
+          vpcs?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Vpc has tag', tags )
+            Assert.assertEquals( 'Vpc tag count', 4, tags.size() )
+          }
+        }
+
+        describeInternetGateways( new DescribeInternetGatewaysRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'attachment.vpc-id', values: [ vpcId ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("Internet gateway count", 1, internetGateways?.size()?:0 )
+          internetGateways?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Internet gateway has tag', tags )
+            Assert.assertEquals( 'Internet gateway tag count', 4, tags.size() )
+          }
+        }
+
+        describeAddresses( new DescribeAddressesRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'allocation-id', values: [ allocationId ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("Elastic IP count", 1, addresses?.size()?:0 )
+          addresses?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Elastic IP has tag', tags )
+            Assert.assertEquals( 'Elastic IP tag count', 4, tags.size() )
+          }
+        }
+
+        describeNatGateways( new DescribeNatGatewaysRequest(
+            filter: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'vpc-id', values: [ vpcId ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("NAT gateway count", 1, natGateways?.size()?:0 )
+          natGateways?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('NAT gateway has tag', tags )
+            Assert.assertEquals( 'NAT gateway tag count', 4, tags.size() )
+          }
+        }
+
+        describeSubnets( new DescribeSubnetsRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'vpc-id', values: [ vpcId ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("Subnet count", 1, subnets?.size()?:0 )
+          subnets?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Subnet has tag', tags )
+            Assert.assertEquals( 'Subnet tag count', 4, tags.size() )
+          }
+        }
+
+        describeNetworkAcls( new DescribeNetworkAclsRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'vpc-id', values: [ vpcId ] ),
+                new com.amazonaws.services.ec2.model.Filter( name: 'default', values: [ 'false' ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("Network ACL count", 1, networkAcls?.size()?:0 )
+          networkAcls?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Network ACL has tag', tags )
+            Assert.assertEquals( 'Network ACL tag count', 4, tags.size() )
+          }
+        }
+
+        describeRouteTables( new DescribeRouteTablesRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'vpc-id', values: [ vpcId ] ),
+                new com.amazonaws.services.ec2.model.Filter( name: 'association.main', values: [ 'false' ] )
+            ]
+        ) ).with {
+          Assert.assertEquals("Route table count", 1, routeTables?.size()?:0 )
+          routeTables?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Route table has tag', tags )
+            Assert.assertEquals( 'Route table tag count', 4, tags.size() )
+          }
+        }
+
+        describeSecurityGroups( new DescribeSecurityGroupsRequest(
+            filters: [
+                new com.amazonaws.services.ec2.model.Filter( name: 'vpc-id', values: [ vpcId ] ),
+                new com.amazonaws.services.ec2.model.Filter( name: 'ip-permission.from-port', values: [ '22' ] )
+            ]
+        ) ).with {
+          Assert.assertEquals('Security group count', 1, securityGroups?.size()?:0 )
+          securityGroups?.getAt(0)?.with {
+            N4j.print( "Got tags: ${tags}" )
+            Assert.assertNotNull('Security group has tag', tags )
+            Assert.assertEquals( 'Security group tag count', 4, tags.size() )
+          }
+        }
+      }
+
+      null
+    }
   }
 
   private void stackCreateDelete(
