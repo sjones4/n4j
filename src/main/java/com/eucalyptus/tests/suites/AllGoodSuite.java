@@ -14,6 +14,7 @@ import org.junit.runners.Suite.SuiteClasses;
     CloudFormationFullSuite.class,
     CloudWatchSuite.class,
     Ec2FullSuite.class,
+    Ec2VpcFullSuite.class,
     ElbFullSuite.class,
     IamSuite.class,
     S3FullSuite.class,

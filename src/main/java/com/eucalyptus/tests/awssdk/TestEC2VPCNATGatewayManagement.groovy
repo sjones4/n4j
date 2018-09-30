@@ -23,11 +23,11 @@ class TestEC2VPCNATGatewayManagement {
 
   private final AWSCredentialsProvider credentials
 
-  public static void main( final String[] args ) throws Exception {
+  static void main(final String[] args ) throws Exception {
     new TestEC2VPCNATGatewayManagement( ).EC2VPCNATGatewayManagementTest( )
   }
 
-  public TestEC2VPCNATGatewayManagement( ) {
+  TestEC2VPCNATGatewayManagement( ) {
     minimalInit( )
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
@@ -40,16 +40,16 @@ class TestEC2VPCNATGatewayManagement {
 
   private boolean assertThat( boolean condition,
                               String message ){
-    Assert.assertTrue( condition, message )
+    Assert.assertTrue( message, condition )
     true
   }
 
   private void print( String text ) {
-    System.out.println( text )
+    N4j.print( text )
   }
 
   @Test
-  public void EC2VPCNATGatewayManagementTest( ) throws Exception {
+  void EC2VPCNATGatewayManagementTest( ) throws Exception {
     final AmazonEC2 ec2 = getEC2Client( credentials )
 
     // Check if running in a VPC cloud
@@ -60,10 +60,7 @@ class TestEC2VPCNATGatewayManagement {
       }?.attributeValues*.attributeValue.contains( 'VPC' )
     }
     print( "VPC supported: ${vpcAvailable}" )
-    if ( !vpcAvailable ) {
-      print( "Skipping VPC test for non-VPC cloud" )
-      return
-    }
+    assumeThat( vpcAvailable, 'VPC is a supported platform' )
 
     // Find an image to use
     final String imageId = ec2.describeImages( new DescribeImagesRequest(
@@ -82,7 +79,7 @@ class TestEC2VPCNATGatewayManagement {
     final String keyName = ec2.describeKeyPairs().with {
       keyPairs?.getAt(0)?.keyName
     }
-    print( "Using key pair: " + keyName );
+    print( "Using key pair: " + keyName )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
@@ -232,7 +229,13 @@ class TestEC2VPCNATGatewayManagement {
             print( e.toString( ) )
           }
         }
-        print( "Created NAT gateway ${allocationId}" )
+        print( "Created NAT gateway ${natGatewayId}" )
+
+        print( "Tagging NAT gateway ${natGatewayId}" )
+        createTags( new CreateTagsRequest(
+            resources: [natGatewayId],
+            tags: [new Tag(key: 'vpc', value: vpcId)]
+        ) )
 
         print( "Describing NAT gateways" )
         describeNatGateways( new DescribeNatGatewaysRequest(
@@ -256,6 +259,20 @@ class TestEC2VPCNATGatewayManagement {
                 natGatewayAddress.allocationId == allocationId,
                 "Expected NAT gateway address 0 allocation identifier ${allocationId}, but was: ${natGatewayAddress.allocationId}" )
           }
+          assertThat( natGateways[0].tags.size( ) == 1, "Expected 1 NAT gateway tags but was: ${natGateways[0].tags.size( )}")
+          assertThat( natGateways[0].tags[0].key == 'vpc', "Expected gateway tag 1 key 'vpc' but was: ${natGateways[0].tags[0].key}")
+          assertThat( natGateways[0].tags[0].value == vpcId, "Expected gateway tag 1 key '${vpcId}' but was: ${natGateways[0].tags[0].value}")
+        }
+
+        print( "Describing NAT gateways using filter vpc=${vpcId}, nat-gateway-id=${natGatewayId}" )
+        describeNatGateways( new DescribeNatGatewaysRequest(
+            filter: [
+              new Filter( name: 'tag:vpc', values: [vpcId]),
+              new Filter( name: 'nat-gateway-id', values: [natGatewayId]),
+            ]
+        ) ).with {
+          assertThat( natGateways != null, "Expected NAT gateways" )
+          assertThat( natGateways.size( ) == 1, "Expected 1 NAT gateway but was: ${natGateways.size( )}")
         }
 
         print( "Waiting for NAT gateway ${natGatewayId} to be available" )
@@ -319,7 +336,7 @@ class TestEC2VPCNATGatewayManagement {
         ].each { String name, String value ->
           final Collection<Filter> filters = [
               new Filter( name, [ value ] )
-          ];
+          ]
           if ( name != 'nat-gateway-id' ) {
             filters << new Filter( 'nat-gateway-id', [ natGatewayId ] )
           }
@@ -343,7 +360,7 @@ class TestEC2VPCNATGatewayManagement {
         ].each { String name, String value ->
           final Collection<Filter> filters = [
               new Filter( name, [ value ] )
-          ];
+          ]
           print( "Describing NAT gateways with filters ${filters}" )
           describeNatGateways( new DescribeNatGatewaysRequest(
               filter: filters
@@ -614,7 +631,7 @@ class TestEC2VPCNATGatewayManagement {
         void
       }
 
-      print( "Test complete" )
+      print( 'Test complete' )
     } finally {
       // Attempt to clean up anything we created
       cleanupTasks.reverseEach { Runnable cleanupTask ->

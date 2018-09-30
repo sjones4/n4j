@@ -64,7 +64,7 @@ class TestCFTemplatesShort {
         "Image" : {
           "Description" : "EC2 image",
           "Type" : "String",
-          "AllowedPattern" : "[ae]mi-[0-9a-fA-F]{8}",
+          "AllowedPattern" : "[ae]mi-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?",
           "ConstraintDescription" : "must be a valid EC2 image identifier."
         }
       },

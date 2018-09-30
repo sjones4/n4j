@@ -1,8 +1,8 @@
 package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
@@ -35,7 +35,7 @@ class TestEC2LongIdentifiers {
     this.host = CLC_IP
     this.testAcct= "${NAME_PREFIX}longid-test-acct"
     createAccount(testAcct)
-    this.testAcctCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
+    this.testAcctCredentials = new AWSStaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
 
   }
 
@@ -133,9 +133,8 @@ class TestEC2LongIdentifiers {
             assertThat( !statuses.isEmpty( ), 'Expected statuses, but was empty' )
             statuses.each { IdFormat idFormat ->
               assertThat( idFormat.resource != null, 'Expected resource' )
-              assertThat( allResources.contains(idFormat.resource), "Unexpected resource ${idFormat.resource}" )
               assertThat( idFormat.useLongIds != null, 'Expected useLongIds' )
-              assertThat( idFormat.useLongIds == value, "Expected useLongIds ${value}" )
+              assertThat( idFormat.useLongIds, "Expected useLongIds true" )
             }
           }
 
@@ -150,7 +149,7 @@ class TestEC2LongIdentifiers {
               ec2.deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
             }
             assertThat( volumeId != null, 'Expected volume identifier')
-            assertThat( volumeId.length( ) == 12, "Expected identifier length 12, but was: ${volumeId.length( )}" )
+            assertThat( volumeId.length( ) == 21, "Expected identifier length 21, but was: ${volumeId.length( )}" )
 
             for ( int n = 0; n < 60; n += 5 ) {
               N4j.sleep( 5 );
@@ -212,9 +211,8 @@ class TestEC2LongIdentifiers {
             assertThat( !statuses.isEmpty( ), 'Expected statuses, but was empty' )
             statuses.each { IdFormat idFormat ->
               assertThat( idFormat.resource != null, 'Expected resource' )
-              assertThat( allResources.contains(idFormat.resource), "Unexpected resource ${idFormat.resource}" )
               assertThat( idFormat.useLongIds != null, 'Expected useLongIds' )
-              assertThat( idFormat.useLongIds == value, "Expected useLongIds ${value}" )
+              assertThat( idFormat.useLongIds, "Expected useLongIds true" )
             }
           }
 
@@ -233,7 +231,7 @@ class TestEC2LongIdentifiers {
               ec2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
             }
             assertThat( instanceId != null, 'Expected volume identifier')
-            assertThat( instanceId.length( ) == 10, "Expected identifier length 10, but was: ${instanceId.length( )}" )
+            assertThat( instanceId.length( ) == 19, "Expected identifier length 19, but was: ${instanceId.length( )}" )
           }
         }
 
@@ -253,16 +251,16 @@ class TestEC2LongIdentifiers {
         }
 
         getYouPropClient( ).with {
-          print( "Disabing account long identifier settings" )
+          print( "Disabing long identifiers" )
           modifyPropertyValue( new ModifyPropertyValueRequest(
-              name: 'cloud.long_identifier_account_settings_used',
-              value: 'false'
+              name: 'cloud.short_identifier_prefixes',
+              value: '*'
           ) )
           cleanupTasks.add{
-            print( "Enabling account long identifier settings" )
+            print( "Enabling long identifiers" )
             modifyPropertyValue( new ModifyPropertyValueRequest(
-                name: 'cloud.long_identifier_account_settings_used',
-                value: 'true'
+                name: 'cloud.short_identifier_prefixes',
+                value: ''
             ) )
           }
         }

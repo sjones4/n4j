@@ -37,9 +37,9 @@ import org.junit.Assert
 import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
-import org.junit.Test;
+import org.junit.Test
 
-import static N4j.*;
+import static N4j.*
 
 
 /**
@@ -53,16 +53,16 @@ import static N4j.*;
 class TestEC2VPCManagement {
 
   // for each test
-  private static List<Runnable> cleanupTasks
+  private List<Runnable> cleanupTasks
 
   @BeforeClass
-  void init( ) {
+  static void init( ) {
     print("### SETUP - ${getClass().simpleName}")
     getCloudInfo()
   }
 
   @Before
-  static void initTest(  ) {
+  void initTest(  ) {
     print( "Initializing clean up tasks" )
     cleanupTasks = [ ]
   }
@@ -80,14 +80,18 @@ class TestEC2VPCManagement {
     }
   }
 
+  private void assertTrue( final boolean condition, final String message ) {
+    Assert.assertTrue( message, condition )
+  }
+
   @Test
-  public void testBasicManagement( ) throws Exception {
+  void testBasicManagement( ) throws Exception {
     testInfo("${this.getClass().simpleName}.testBasicManagement")
 
     // Find an AZ to use
     final DescribeAvailabilityZonesResult azResult = ec2.describeAvailabilityZones()
 
-    Assert.assertTrue( azResult.getAvailabilityZones().size() > 0, "Availability zone not found" )
+    assertTrue( azResult.getAvailabilityZones().size() > 0, "Availability zone not found" )
 
     final String availabilityZone = azResult.getAvailabilityZones().get( 0 ).getZoneName()
     print( "Using availability zone: " + availabilityZone )
@@ -106,9 +110,9 @@ class TestEC2VPCManagement {
       } ) ).with {
         dhcpOptions.with {
           print( dhcpConfigurations.toString( ) )
-          Assert.assertTrue( dhcpConfigurations.size()==5, "Expected five configuration settings, got: ${dhcpConfigurations.size()}")
+          assertTrue( dhcpConfigurations.size()==5, "Expected five configuration settings, got: ${dhcpConfigurations.size()}")
           dhcpConfigurations.each { DhcpConfiguration configuration ->
-            Assert.assertTrue( configuration.values==dhcpConfig.get(configuration.key), "Unexpected configuration value ${configuration.key}=${configuration.values}" )
+            assertTrue( configuration.values==dhcpConfig.get(configuration.key), "Unexpected configuration value ${configuration.key}=${configuration.values}" )
           }
           dhcpOptionsId
         }
@@ -120,12 +124,12 @@ class TestEC2VPCManagement {
       print( "Created DHCP options ${dhcpOptionsId}" )
       print( "Describing DHCP options ${dhcpOptionsId}" )
       describeDhcpOptions( new DescribeDhcpOptionsRequest( dhcpOptionsIds: [ dhcpOptionsId ] ) ).with {
-        Assert.assertTrue( dhcpOptions.size()==1, "Expected one dhcp options" )
+        assertTrue( dhcpOptions.size()==1, "Expected one dhcp options" )
         dhcpOptions.get( 0 ).with {
           print( dhcpConfigurations.toString( ) )
-          Assert.assertTrue( dhcpConfigurations.size()==5, "Expected five configuration settings, got: ${dhcpConfigurations.size()}")
+          assertTrue( dhcpConfigurations.size()==5, "Expected five configuration settings, got: ${dhcpConfigurations.size()}")
           dhcpConfigurations.each { DhcpConfiguration configuration ->
-            Assert.assertTrue( configuration.values==dhcpConfig.get(configuration.key), "Unexpected configuration value ${configuration.key}=${configuration.values}" )
+            assertTrue( configuration.values==dhcpConfig.get(configuration.key), "Unexpected configuration value ${configuration.key}=${configuration.values}" )
           }
         }
       }
@@ -133,7 +137,7 @@ class TestEC2VPCManagement {
       deleteDhcpOptions( new DeleteDhcpOptionsRequest( dhcpOptionsId: dhcpOptionsId ) )
       try {
         describeDhcpOptions( new DescribeDhcpOptionsRequest( dhcpOptionsIds: [ dhcpOptionsId ] ) ).with {
-          Assert.assertTrue( dhcpOptions.size() == 0 , "Expected no dhcp options")
+          assertTrue( dhcpOptions.size() == 0 , "Expected no dhcp options")
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -150,16 +154,16 @@ class TestEC2VPCManagement {
       }
       print( "Describing internet gateway ${internetGatewayId}" )
       describeInternetGateways( new DescribeInternetGatewaysRequest( internetGatewayIds: [ internetGatewayId ]) ).with {
-        Assert.assertTrue( internetGateways.size()==1, "Expected one internet gateway" )
+        assertTrue( internetGateways.size()==1, "Expected one internet gateway" )
       }
 
       print( 'Creating VPC' )
       String defaultDhcpOptionsId = null
       String vpcId = createVpc( new CreateVpcRequest( cidrBlock: '10.1.2.0/24' ) ).with {
         vpc.with {
-          Assert.assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
-          Assert.assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
-          Assert.assertTrue( !isDefault, "Expected non-default vpc" )
+          assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
+          assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
+          assertTrue( !isDefault, "Expected non-default vpc" )
           defaultDhcpOptionsId = dhcpOptionsId
           vpcId
         }
@@ -171,11 +175,11 @@ class TestEC2VPCManagement {
       }
       print( "Describing VPC ${vpcId}" )
       describeVpcs( new DescribeVpcsRequest( vpcIds: [ vpcId ] ) ).with {
-        Assert.assertTrue( vpcs.size()==1, "Expected one vpc" )
+        assertTrue( vpcs.size()==1, "Expected one vpc" )
         vpcs.get( 0 ).with {
-          Assert.assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
-          Assert.assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
-          Assert.assertTrue( !isDefault, "Expected non-default vpc" )
+          assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
+          assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
+          assertTrue( !isDefault, "Expected non-default vpc" )
         }
       }
       print( "Attaching internet gateway ${internetGatewayId} to VPC ${vpcId}" )
@@ -200,13 +204,13 @@ class TestEC2VPCManagement {
       String subnetAvailabilityZone = availabilityZone
       String subnetId = createSubnet( new CreateSubnetRequest( vpcId: vpcId, availabilityZone: availabilityZone, cidrBlock: '10.1.2.0/24' ) ).with {
         subnet.with {
-          Assert.assertTrue( vpcId == subnetVpcId, "Expected vpcId ${subnetVpcId}, but was ${vpcId}"  )
-          Assert.assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
-          Assert.assertTrue( availabilityZone == subnetAvailabilityZone, "Expected zone ${availabilityZone}, but was ${subnetAvailabilityZone}"  )
-          Assert.assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
-          Assert.assertTrue( availableIpAddressCount == 251, "Expected 251 IP addresses for subnet, but was: ${availableIpAddressCount}")
-          Assert.assertTrue( !defaultForAz, 'Expected non-default subnet' )
-          Assert.assertTrue( !mapPublicIpOnLaunch, 'Expected public ip not mapped on launch' )
+          assertTrue( vpcId == subnetVpcId, "Expected vpcId ${subnetVpcId}, but was ${vpcId}"  )
+          assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
+          assertTrue( availabilityZone == subnetAvailabilityZone, "Expected zone ${availabilityZone}, but was ${subnetAvailabilityZone}"  )
+          assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
+          assertTrue( availableIpAddressCount == 251, "Expected 251 IP addresses for subnet, but was: ${availableIpAddressCount}")
+          assertTrue( !defaultForAz, 'Expected non-default subnet' )
+          assertTrue( !mapPublicIpOnLaunch, 'Expected public ip not mapped on launch' )
           subnetId
         }
       }
@@ -217,15 +221,15 @@ class TestEC2VPCManagement {
       }
       print( "Describing subnet ${subnetId}" )
       describeSubnets( new DescribeSubnetsRequest( subnetIds: [ subnetId ] ) ).with {
-        Assert.assertTrue( subnets.size()==1, "Expected one subnet" )
+        assertTrue( subnets.size()==1, "Expected one subnet" )
         subnets.get( 0 ).with {
-          Assert.assertTrue( vpcId == subnetVpcId, "Expected vpcId ${subnetVpcId}, but was ${vpcId}"  )
-          Assert.assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
-          Assert.assertTrue( availabilityZone == subnetAvailabilityZone, "Expected zone ${availabilityZone}, but was ${subnetAvailabilityZone}"  )
-          Assert.assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
-          Assert.assertTrue( availableIpAddressCount == 251, "Expected 251 IP addresses for subnet, but was: ${availableIpAddressCount}")
-          Assert.assertTrue( !defaultForAz, 'Expected non-default subnet' )
-          Assert.assertTrue( !mapPublicIpOnLaunch, 'Expected public ip not mapped on launch' )
+          assertTrue( vpcId == subnetVpcId, "Expected vpcId ${subnetVpcId}, but was ${vpcId}"  )
+          assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
+          assertTrue( availabilityZone == subnetAvailabilityZone, "Expected zone ${availabilityZone}, but was ${subnetAvailabilityZone}"  )
+          assertTrue( 'available' == state || 'pending' == state, "Expected available or pending state, but was: ${state}" )
+          assertTrue( availableIpAddressCount == 251, "Expected 251 IP addresses for subnet, but was: ${availableIpAddressCount}")
+          assertTrue( !defaultForAz, 'Expected non-default subnet' )
+          assertTrue( !mapPublicIpOnLaunch, 'Expected public ip not mapped on launch' )
         }
       }
 
@@ -233,12 +237,12 @@ class TestEC2VPCManagement {
       String routeTableVpcId = vpcId
       String routeTableId = createRouteTable( new CreateRouteTableRequest( vpcId: vpcId ) ).with {
         routeTable.with {
-          Assert.assertTrue( vpcId == routeTableVpcId, "Expected vpcId ${routeTableVpcId}, but was: ${vpcId}" )
-          Assert.assertTrue( routes.size( ) == 1, "Expected one (local) route" )
+          assertTrue( vpcId == routeTableVpcId, "Expected vpcId ${routeTableVpcId}, but was: ${vpcId}" )
+          assertTrue( routes.size( ) == 1, "Expected one (local) route" )
           routes.get( 0 ).with {
-            Assert.assertTrue( gatewayId == 'local', "Expected local gatewayId, but was: ${gatewayId}")
-            Assert.assertTrue( destinationCidrBlock == '10.1.2.0/24', "Expected 10.1.2.0/24 destination cidr, but was: ${destinationCidrBlock}")
-            Assert.assertTrue( state == 'active', "Expected active state, but was: ${state}")
+            assertTrue( gatewayId == 'local', "Expected local gatewayId, but was: ${gatewayId}")
+            assertTrue( destinationCidrBlock == '10.1.2.0/24', "Expected 10.1.2.0/24 destination cidr, but was: ${destinationCidrBlock}")
+            assertTrue( state == 'active', "Expected active state, but was: ${state}")
           }
           routeTableId
         }
@@ -250,14 +254,14 @@ class TestEC2VPCManagement {
       }
       print( "Describing route table ${routeTableId}" )
       describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] )).with {
-        Assert.assertTrue( routeTables.size()==1, "Expected one route table" )
+        assertTrue( routeTables.size()==1, "Expected one route table" )
         routeTables.get( 0 ).with {
-          Assert.assertTrue( vpcId == routeTableVpcId, "Expected vpcId ${routeTableVpcId}, but was: ${vpcId}" )
-          Assert.assertTrue( routes.size( ) == 1, "Expected one (local) route" )
+          assertTrue( vpcId == routeTableVpcId, "Expected vpcId ${routeTableVpcId}, but was: ${vpcId}" )
+          assertTrue( routes.size( ) == 1, "Expected one (local) route" )
           routes.get( 0 ).with {
-            Assert.assertTrue( gatewayId == 'local', "Expected local gatewayId, but was: ${gatewayId}")
-            Assert.assertTrue( destinationCidrBlock == '10.1.2.0/24', "Expected 10.1.2.0/24 destination cidr, but was: ${destinationCidrBlock}")
-            Assert.assertTrue( state == 'active', "Expected active state, but was: ${state}")
+            assertTrue( gatewayId == 'local', "Expected local gatewayId, but was: ${gatewayId}")
+            assertTrue( destinationCidrBlock == '10.1.2.0/24', "Expected 10.1.2.0/24 destination cidr, but was: ${destinationCidrBlock}")
+            assertTrue( state == 'active', "Expected active state, but was: ${state}")
           }
         }
       }
@@ -266,10 +270,10 @@ class TestEC2VPCManagement {
       createRoute( new CreateRouteRequest( routeTableId: routeTableId, destinationCidrBlock: '0.0.0.0/0', gatewayId: internetGatewayId ) )
       print( "Describing route table ${routeTableId}" )
       describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] )).with {
-        Assert.assertTrue( routeTables.size()==1, "Expected one route table" )
+        assertTrue( routeTables.size()==1, "Expected one route table" )
         routeTables.get( 0 ).with {
           print( routes.toString( ) )
-          Assert.assertTrue( routes.size( ) == 2, "Expected two routes" )
+          assertTrue( routes.size( ) == 2, "Expected two routes" )
         }
       }
 
@@ -277,10 +281,10 @@ class TestEC2VPCManagement {
       deleteRoute( new DeleteRouteRequest( routeTableId: routeTableId, destinationCidrBlock: '0.0.0.0/0' ) )
       print( "Describing route table ${routeTableId}" )
       describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] )).with {
-        Assert.assertTrue( routeTables.size()==1, "Expected one route table" )
+        assertTrue( routeTables.size()==1, "Expected one route table" )
         routeTables.get( 0 ).with {
           print( routes.toString( ) )
-          Assert.assertTrue( routes.size( ) == 1, "Expected one route" )
+          assertTrue( routes.size( ) == 1, "Expected one route" )
         }
       }
 
@@ -288,8 +292,8 @@ class TestEC2VPCManagement {
       String networkAclVpcId = vpcId
       String networkAclId = createNetworkAcl( new CreateNetworkAclRequest( vpcId: vpcId ) ).with {
         networkAcl.with {
-          Assert.assertTrue( vpcId == networkAclVpcId, "Expected vpcId ${networkAclVpcId}, but was: ${vpcId}" )
-          Assert.assertTrue( !isDefault, "Expected non-default network acl" )
+          assertTrue( vpcId == networkAclVpcId, "Expected vpcId ${networkAclVpcId}, but was: ${vpcId}" )
+          assertTrue( !isDefault, "Expected non-default network acl" )
           networkAclId
         }
       }
@@ -300,10 +304,10 @@ class TestEC2VPCManagement {
       }
       print( "Describing network acl with id ${networkAclId}" )
       describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] ) ).with {
-        Assert.assertTrue( networkAcls.size()==1, "Expected one network acl" )
+        assertTrue( networkAcls.size()==1, "Expected one network acl" )
         networkAcls.get( 0 ).with {
-          Assert.assertTrue( vpcId == networkAclVpcId, "Expected vpcId ${networkAclVpcId}, but was: ${vpcId}" )
-          Assert.assertTrue( !isDefault, "Expected non-default network acl" )
+          assertTrue( vpcId == networkAclVpcId, "Expected vpcId ${networkAclVpcId}, but was: ${vpcId}" )
+          assertTrue( !isDefault, "Expected non-default network acl" )
         }
       }
 
@@ -313,16 +317,16 @@ class TestEC2VPCManagement {
       String networkInterfaceZone = availabilityZone
       String networkInterfaceId = createNetworkInterface( new CreateNetworkInterfaceRequest( subnetId: subnetId, description: 'a network interface', privateIpAddress: '10.1.2.10' ) ).with {
         networkInterface.with {
-          Assert.assertTrue( subnetId == networkInterfaceSubnetId, "Expected subnetId ${networkInterfaceSubnetId}, but was: ${subnetId}" )
-          Assert.assertTrue( vpcId == networkInterfaceVpcId, "Expected vpcId ${networkInterfaceVpcId}, but was: ${vpcId}" )
-          Assert.assertTrue( availabilityZone == networkInterfaceZone, "Expected availabilityZone ${networkInterfaceZone}, but was: ${availabilityZone}" )
-          Assert.assertTrue( description == 'a network interface', "Expected 'a network interface', but was: ${description}" )
-          Assert.assertTrue( ownerId.length()==12, "Expected owner id length 12, but was: ${ownerId}" )
-          Assert.assertTrue( !requesterManaged, "Expected not requester managed" )
-          Assert.assertTrue( status == 'available', "Expected status 'available', but was: ${status}" )
-          Assert.assertTrue( macAddress.length() == 17, "Expected mac address length 17, but was ${macAddress}" )
-          Assert.assertTrue( privateIpAddress == '10.1.2.10', "Expected private ip '10.1.2.10', but was: ${privateIpAddress}" )
-          Assert.assertTrue( sourceDestCheck, "Expected source dest check true" )
+          assertTrue( subnetId == networkInterfaceSubnetId, "Expected subnetId ${networkInterfaceSubnetId}, but was: ${subnetId}" )
+          assertTrue( vpcId == networkInterfaceVpcId, "Expected vpcId ${networkInterfaceVpcId}, but was: ${vpcId}" )
+          assertTrue( availabilityZone == networkInterfaceZone, "Expected availabilityZone ${networkInterfaceZone}, but was: ${availabilityZone}" )
+          assertTrue( description == 'a network interface', "Expected 'a network interface', but was: ${description}" )
+          assertTrue( ownerId.length()==12, "Expected owner id length 12, but was: ${ownerId}" )
+          assertTrue( !requesterManaged, "Expected not requester managed" )
+          assertTrue( status == 'available', "Expected status 'available', but was: ${status}" )
+          assertTrue( macAddress.length() == 17, "Expected mac address length 17, but was ${macAddress}" )
+          assertTrue( privateIpAddress == '10.1.2.10', "Expected private ip '10.1.2.10', but was: ${privateIpAddress}" )
+          assertTrue( sourceDestCheck, "Expected source dest check true" )
           networkInterfaceId
         }
       }
@@ -333,18 +337,18 @@ class TestEC2VPCManagement {
       }
       print( "Describing network interface with id ${networkInterfaceId}" )
       describeNetworkInterfaces( new DescribeNetworkInterfacesRequest( networkInterfaceIds: [ networkInterfaceId ] ) ).with {
-        Assert.assertTrue( networkInterfaces.size()==1, "Expected one network interface" )
+        assertTrue( networkInterfaces.size()==1, "Expected one network interface" )
         networkInterfaces.get( 0 ).with {
-          Assert.assertTrue( subnetId == networkInterfaceSubnetId, "Expected subnetId ${networkInterfaceSubnetId}, but was: ${subnetId}" )
-          Assert.assertTrue( vpcId == networkInterfaceVpcId, "Expected vpcId ${networkInterfaceVpcId}, but was: ${vpcId}" )
-          Assert.assertTrue( availabilityZone == networkInterfaceZone, "Expected availabilityZone ${networkInterfaceZone}, but was: ${availabilityZone}" )
-          Assert.assertTrue( description == 'a network interface', "Expected 'a network interface', but was: ${description}" )
-          Assert.assertTrue( ownerId.length()==12, "Expected owner id length 12, but was: ${ownerId}" )
-          Assert.assertTrue( !requesterManaged, "Expected not requester managed" )
-          Assert.assertTrue( status == 'available', "Expected status 'available', but was: ${status}" )
-          Assert.assertTrue( macAddress.length() == 17, "Expected mac address length 17, but was ${macAddress}" )
-          Assert.assertTrue( privateIpAddress == '10.1.2.10', "Expected private ip '10.1.2.10', but was: ${privateIpAddress}" )
-          Assert.assertTrue( sourceDestCheck, "Expected source dest check true" )
+          assertTrue( subnetId == networkInterfaceSubnetId, "Expected subnetId ${networkInterfaceSubnetId}, but was: ${subnetId}" )
+          assertTrue( vpcId == networkInterfaceVpcId, "Expected vpcId ${networkInterfaceVpcId}, but was: ${vpcId}" )
+          assertTrue( availabilityZone == networkInterfaceZone, "Expected availabilityZone ${networkInterfaceZone}, but was: ${availabilityZone}" )
+          assertTrue( description == 'a network interface', "Expected 'a network interface', but was: ${description}" )
+          assertTrue( ownerId.length()==12, "Expected owner id length 12, but was: ${ownerId}" )
+          assertTrue( !requesterManaged, "Expected not requester managed" )
+          assertTrue( status == 'available', "Expected status 'available', but was: ${status}" )
+          assertTrue( macAddress.length() == 17, "Expected mac address length 17, but was ${macAddress}" )
+          assertTrue( privateIpAddress == '10.1.2.10', "Expected private ip '10.1.2.10', but was: ${privateIpAddress}" )
+          assertTrue( sourceDestCheck, "Expected source dest check true" )
         }
       }
 
@@ -352,7 +356,7 @@ class TestEC2VPCManagement {
       deleteNetworkInterface( new DeleteNetworkInterfaceRequest( networkInterfaceId: networkInterfaceId ) )
       try {
         describeNetworkInterfaces( new DescribeNetworkInterfacesRequest( networkInterfaceIds: [ networkInterfaceId ] ) ).with {
-          Assert.assertTrue( networkInterfaces.size()==0, "Expected no network interfaces" )
+          assertTrue( networkInterfaces.size()==0, "Expected no network interfaces" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -362,7 +366,7 @@ class TestEC2VPCManagement {
       deleteNetworkAcl( new DeleteNetworkAclRequest( networkAclId: networkAclId ) )
       try {
         describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] ) ).with {
-          Assert.assertTrue( networkAcls.size()==0, "Expected no network acls" )
+          assertTrue( networkAcls.size()==0, "Expected no network acls" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -372,7 +376,7 @@ class TestEC2VPCManagement {
       deleteRouteTable( new DeleteRouteTableRequest( routeTableId: routeTableId ) )
       try {
         describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] ) ).with {
-          Assert.assertTrue( routeTables.size()==0, "Expected no route tables" )
+          assertTrue( routeTables.size()==0, "Expected no route tables" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -382,7 +386,7 @@ class TestEC2VPCManagement {
       deleteSubnet( new DeleteSubnetRequest( subnetId: subnetId ) )
       try {
         describeSubnets( new DescribeSubnetsRequest( subnetIds: [ subnetId ] ) ).with {
-          Assert.assertTrue( subnets.size()==0, "Expected no subnets" )
+          assertTrue( subnets.size()==0, "Expected no subnets" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -398,7 +402,7 @@ class TestEC2VPCManagement {
       deleteVpc( new DeleteVpcRequest( vpcId: vpcId ) )
       try {
         describeVpcs( new DescribeVpcsRequest( vpcIds: [ vpcId ] ) ).with {
-          Assert.assertTrue( vpcs.size()==0, "Expected no vpcs" )
+          assertTrue( vpcs.size()==0, "Expected no vpcs" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -408,7 +412,7 @@ class TestEC2VPCManagement {
       deleteInternetGateway( new DeleteInternetGatewayRequest( internetGatewayId: internetGatewayId ) )
       try {
         describeInternetGateways( new DescribeInternetGatewaysRequest( internetGatewayIds: [ internetGatewayId ]) ).with {
-          Assert.assertTrue( internetGateways.size()==0, "Expected no internet gateway" )
+          assertTrue( internetGateways.size()==0, "Expected no internet gateway" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -424,13 +428,13 @@ class TestEC2VPCManagement {
    * Test that we allow pattern/prefix mismatched cidrs such as 1.1.1.1/24, but correct them, e.g. 1.1.1.0/24
    */
   @Test
-  public void testManagementWithIncorrectCidrs( ) throws Exception {
+  void testManagementWithIncorrectCidrs( ) throws Exception {
     testInfo("${this.getClass().simpleName}.testManagementWithIncorrectCidrs")
 
     // Find an AZ to use
     final DescribeAvailabilityZonesResult azResult = ec2.describeAvailabilityZones()
 
-    Assert.assertTrue(azResult.getAvailabilityZones().size() > 0, "Availability zone not found")
+    assertTrue(azResult.getAvailabilityZones().size() > 0, "Availability zone not found")
 
     final String availabilityZone = azResult.getAvailabilityZones().get( 0 ).getZoneName()
     print( "Using availability zone: " + availabilityZone )
@@ -447,14 +451,14 @@ class TestEC2VPCManagement {
       }
       print( "Describing internet gateway ${internetGatewayId}" )
       describeInternetGateways( new DescribeInternetGatewaysRequest( internetGatewayIds: [ internetGatewayId ]) ).with {
-        Assert.assertTrue( internetGateways.size()==1, "Expected one internet gateway" )
+        assertTrue( internetGateways.size()==1, "Expected one internet gateway" )
       }
 
       print( 'Creating VPC' )
       String defaultDhcpOptionsId = null
       String vpcId = createVpc( new CreateVpcRequest( cidrBlock: '10.1.2.123/24' ) ).with {
         vpc.with {
-          Assert.assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
+          assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
           defaultDhcpOptionsId = dhcpOptionsId
           vpcId
         }
@@ -466,9 +470,9 @@ class TestEC2VPCManagement {
       }
       print( "Describing VPC ${vpcId}" )
       describeVpcs( new DescribeVpcsRequest( vpcIds: [ vpcId ] ) ).with {
-        Assert.assertTrue( vpcs.size()==1, "Expected one vpc" )
+        assertTrue( vpcs.size()==1, "Expected one vpc" )
         vpcs.get( 0 ).with {
-          Assert.assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
+          assertTrue( '10.1.2.0/24' == cidrBlock, "Expected cidr 10.1.2.0/24, but was: ${cidrBlock}" )
         }
       }
       print( "Attaching internet gateway ${internetGatewayId} to VPC ${vpcId}" )
@@ -491,7 +495,7 @@ class TestEC2VPCManagement {
       print( 'Creating subnet' )
       String subnetId = createSubnet( new CreateSubnetRequest( vpcId: vpcId, availabilityZone: availabilityZone, cidrBlock: '10.1.2.123/24' ) ).with {
         subnet.with {
-          Assert.assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
+          assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
           subnetId
         }
       }
@@ -502,19 +506,19 @@ class TestEC2VPCManagement {
       }
       print( "Describing subnet ${subnetId}" )
       describeSubnets( new DescribeSubnetsRequest( subnetIds: [ subnetId ] ) ).with {
-        Assert.assertTrue( subnets.size()==1, "Expected one subnet" )
+        assertTrue( subnets.size()==1, "Expected one subnet" )
         subnets.get( 0 ).with {
-          Assert.assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
+          assertTrue( cidrBlock == '10.1.2.0/24', "Expected cidr 10.1.2.0/24, but was ${cidrBlock}" )
         }
       }
 
       print( 'Creating route table' )
       String routeTableId = createRouteTable( new CreateRouteTableRequest( vpcId: vpcId ) ).with {
         routeTable.with {
-          Assert.assertTrue( routes.size( ) == 1, "Expected one (local) route" )
+          assertTrue( routes.size( ) == 1, "Expected one (local) route" )
           routes.get( 0 ).with {
-            Assert.assertTrue( gatewayId == 'local', "Expected local gatewayId, but was: ${gatewayId}")
-            Assert.assertTrue( destinationCidrBlock == '10.1.2.0/24', "Expected 10.1.2.0/24 destination cidr, but was: ${destinationCidrBlock}")
+            assertTrue( gatewayId == 'local', "Expected local gatewayId, but was: ${gatewayId}")
+            assertTrue( destinationCidrBlock == '10.1.2.0/24', "Expected 10.1.2.0/24 destination cidr, but was: ${destinationCidrBlock}")
           }
           routeTableId
         }
@@ -530,10 +534,10 @@ class TestEC2VPCManagement {
 
       print( "Describing route table ${routeTableId}" )
       describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] )).with {
-        Assert.assertTrue( routeTables.size()==1, "Expected one route table" )
+        assertTrue( routeTables.size()==1, "Expected one route table" )
         routeTables.get( 0 ).with {
           print( routes.toString( ) )
-          Assert.assertTrue( routes.size( ) == 2, "Expected two routes" )
+          assertTrue( routes.size( ) == 2, "Expected two routes" )
           routes.each { Route route ->
             if ( route.gatewayId == internetGatewayId ) {
               Assert.assertEquals( 'Invalid destination cidr', '0.0.0.0/0', route.destinationCidrBlock )
@@ -548,10 +552,10 @@ class TestEC2VPCManagement {
       deleteRoute( new DeleteRouteRequest( routeTableId: routeTableId, destinationCidrBlock: '10.10.10.10/0' ) )
       print( "Describing route table ${routeTableId}" )
       describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] )).with {
-        Assert.assertTrue( routeTables.size()==1, "Expected one route table" )
+        assertTrue( routeTables.size()==1, "Expected one route table" )
         routeTables.get( 0 ).with {
           print( routes.toString( ) )
-          Assert.assertTrue( routes.size( ) == 1, "Expected one route" )
+          assertTrue( routes.size( ) == 1, "Expected one route" )
         }
       }
 
@@ -577,10 +581,10 @@ class TestEC2VPCManagement {
 
       print( "Describing network acl ${networkAclId}" )
       describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] )).with {
-        Assert.assertTrue( networkAcls.size()==1, "Expected one network acl" )
+        assertTrue( networkAcls.size()==1, "Expected one network acl" )
         networkAcls.get( 0 ).with {
           print( entries.toString( ) )
-          Assert.assertTrue( entries.size( ) == 3, "Expected two network acl entries" )
+          assertTrue( entries.size( ) == 3, "Expected two network acl entries" )
           entries.each { NetworkAclEntry entry ->
             if ( entry.ruleNumber == 42 ) {
               Assert.assertEquals( 'Invalid cidr','10.0.0.0/8', entry.cidrBlock)
@@ -595,7 +599,7 @@ class TestEC2VPCManagement {
       deleteNetworkAcl( new DeleteNetworkAclRequest( networkAclId: networkAclId ) )
       try {
         describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] ) ).with {
-          Assert.assertTrue( networkAcls.size()==0, "Expected no network acls" )
+          assertTrue( networkAcls.size()==0, "Expected no network acls" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -605,7 +609,7 @@ class TestEC2VPCManagement {
       deleteRouteTable( new DeleteRouteTableRequest( routeTableId: routeTableId ) )
       try {
         describeRouteTables( new DescribeRouteTablesRequest( routeTableIds: [ routeTableId ] ) ).with {
-          Assert.assertTrue( routeTables.size()==0, "Expected no route tables" )
+          assertTrue( routeTables.size()==0, "Expected no route tables" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -615,7 +619,7 @@ class TestEC2VPCManagement {
       deleteSubnet( new DeleteSubnetRequest( subnetId: subnetId ) )
       try {
         describeSubnets( new DescribeSubnetsRequest( subnetIds: [ subnetId ] ) ).with {
-          Assert.assertTrue( subnets.size()==0, "Expected no subnets" )
+          assertTrue( subnets.size()==0, "Expected no subnets" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -631,7 +635,7 @@ class TestEC2VPCManagement {
       deleteVpc( new DeleteVpcRequest( vpcId: vpcId ) )
       try {
         describeVpcs( new DescribeVpcsRequest( vpcIds: [ vpcId ] ) ).with {
-          Assert.assertTrue( vpcs.size()==0, "Expected no vpcs" )
+          assertTrue( vpcs.size()==0, "Expected no vpcs" )
         }
       } catch ( AmazonClientException e ) {
         // OK
@@ -641,7 +645,7 @@ class TestEC2VPCManagement {
       deleteInternetGateway( new DeleteInternetGatewayRequest( internetGatewayId: internetGatewayId ) )
       try {
         describeInternetGateways( new DescribeInternetGatewaysRequest( internetGatewayIds: [ internetGatewayId ]) ).with {
-          Assert.assertTrue( internetGateways.size()==0, "Expected no internet gateway" )
+          assertTrue( internetGateways.size()==0, "Expected no internet gateway" )
         }
       } catch ( AmazonClientException e ) {
         // OK
