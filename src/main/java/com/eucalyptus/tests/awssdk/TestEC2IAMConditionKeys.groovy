@@ -2520,7 +2520,7 @@ class TestEC2IAMConditionKeys {
 
     // Wait until running
     print( 'Waiting for instances to be running...' )
-    waitForInstances( accountEc2, TimeUnit.MINUTES.toMillis( 2 ) )
+    waitForInstances( accountEc2, TimeUnit.MINUTES.toMillis( 5 ) )
 
     accountEc2.with {
       print( "Stopping instance ${instanceId_1} for start testing" )

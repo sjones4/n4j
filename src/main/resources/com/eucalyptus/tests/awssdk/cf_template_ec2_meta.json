@@ -18,12 +18,30 @@
             "IpProtocol" : "tcp",
             "FromPort" : "80",
             "ToPort" : "80",
-            "CidrIp" : "0.0.0.0/0"
+            "CidrIp" : "0.0.0.0/0",
+            "Description" : "HTTP service access"
           },{
             "IpProtocol" : "tcp",
             "FromPort" : "22",
             "ToPort" : "22",
-            "CidrIp" : "192.168.1.1/32"
+            "CidrIp" : "192.168.1.1/32",
+            "Description" : "SSH access from specified ip range"
+          }
+        ]
+      }
+    },
+
+    "SecurityGroupAllowingAccessFromGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Security group description here",
+        "SecurityGroupIngress" : [
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "80",
+            "ToPort" : "80",
+            "SourceSecurityGroupName" : { "Ref": "SecurityGroup" },
+            "Description" : "SSH access from other group"
           }
         ]
       }
@@ -43,6 +61,7 @@
         "FromPort" : "80",
         "ToPort" : "80",
         "CidrIp" : "0.0.0.0/0",
+        "Description" : "HTTP service access",
         "GroupId" : { "Fn::GetAtt": [ "SecurityGroupDetachedRules", "GroupId" ] }
       }
     }
