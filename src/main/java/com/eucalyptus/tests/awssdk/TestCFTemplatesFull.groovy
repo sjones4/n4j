@@ -194,7 +194,6 @@ class TestCFTemplatesFull {
   @Test
   void testIamManagedPoliciesTemplate( ) {
     // CAPABILITY_NAMED_IAM not needed but used in place of CAPABILITY_IAM
-    //TODO:STEVE: add name support for managed policy resource : "ManagedPolicyName": "managedpolicy1",
     stackCreateDelete( 'iam_managed_policies', ['CAPABILITY_NAMED_IAM'] )
   }
 

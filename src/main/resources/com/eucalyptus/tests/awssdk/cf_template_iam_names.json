@@ -62,6 +62,26 @@
       }
     },
 
+    "ManagedPolicy" : {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "Description": "A customer managed policy",
+        "Path": "/path/",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Action": [ "*" ],
+            "Effect": "Allow",
+            "Resource": [ "*" ]
+          }]
+        },
+        "ManagedPolicyName" : "managed-policy1",
+        "Users":  [{"Ref": "User"}],
+        "Groups": [{"Ref": "Group"}],
+        "Roles":  [{"Ref": "Role"}]
+      }
+    },
+
     "AccessKey" : {
       "Type": "AWS::IAM::AccessKey",
       "Properties": {
