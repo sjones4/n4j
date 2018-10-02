@@ -74,7 +74,7 @@ class TestCFTemplatesShort {
           "Properties" : {
             "GroupDescription" : "Security group",
             "SecurityGroupIngress" : [
-              { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22" }
+              { "IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "Description" : "SSH access" }
             ],
             "Tags": [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"}} ]
           }
@@ -161,6 +161,7 @@ class TestCFTemplatesShort {
             "CidrIp": "0.0.0.0/0",
             "FromPort": "22",
             "ToPort": "22",
+            "Description": "Access using SSH from anywhere",
             "GroupId": {
               "Fn::GetAtt": [ "SecurityGroup", "GroupId" ]
             },
