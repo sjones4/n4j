@@ -35,6 +35,8 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -42,6 +44,9 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.BinaryUtils;
 import com.amazonaws.util.Md5Utils;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 /**
  * Tests for listing objects in a bucket.
@@ -298,11 +303,132 @@ public class S3ListObjectsTests {
   }
 
   /**
+   * Test for pagination with listing v2
+   */
+  @Test
+  public void paginationV2() {
+    testInfo(this.getClass().getSimpleName() + " - paginationV2");
+
+    try {
+      TreeSet<String> keySet = new TreeSet<>( );
+      ListObjectsV2Result objects;
+
+      // Upload objects for listing
+      for (int j = 0; j < 100; j++) {
+        putObject(bucketName, "a" + j + "." + eucaUUID(), fileToPut, keySet);
+      }
+
+      // List objects and get continuation tokens
+      int listedCount = 0;
+      objects = listObjectsV2(bucketName, null, null, null, true, 10, null);
+      verifyObjectSummaries(Sets.newTreeSet(Iterables.limit( keySet, 10 )), objects.getObjectSummaries());
+      listedCount += objects.getObjectSummaries().size();
+
+      assertNotNull("Continuation token", objects.getNextContinuationToken());
+
+      String next = objects.getNextContinuationToken();
+      for(int k = 0; k < 100 && next != null; k++) {
+        objects = listObjectsV2(bucketName, null, null, null, true, 10, next);
+        verifyObjectSummaries(Sets.newTreeSet(Iterables.limit(Iterables.skip(keySet, listedCount),10)), objects.getObjectSummaries());
+        listedCount += objects.getObjectSummaries().size();
+        next = objects.getNextContinuationToken();
+      }
+
+      assertEquals( "Listed objects", 100, listedCount );
+    } catch (AmazonServiceException ase) {
+      printException(ase);
+      assertThat(false, "Failed to run paginationV2");
+    }
+  }
+
+  /**
+   * Test for verifying the common prefixes using a prefix and delimiter with listing v2
+   */
+  @Test
+  public void delimiterAndPrefixV2() {
+    testInfo(this.getClass().getSimpleName() + " - delimiterAndPrefixV2");
+
+    try {
+      int innerP = 2 + random.nextInt(4); // 2-5 inner prefixes
+      int keys = 3 + random.nextInt(3); // 3-5 keys
+      String delimiter = "/";
+      String outerPrefix = VALID_CHARS.charAt(random.nextInt(VALID_CHARS.length())) + eucaUUID() + delimiter;
+      TreeSet<String> allKeys = new TreeSet<>( );
+      TreeSet<String> commonPrefixSet = new TreeSet<>( );
+      ListObjectsV2Result objects;
+
+      print("Number of inner prefixes: " + innerP);
+      print("Number of keys per prefix: " + keys);
+      print("Outer prefix: " + outerPrefix);
+
+      for (int i = 0; i < innerP; i++) {
+        String innerPrefix = outerPrefix + VALID_CHARS.charAt(random.nextInt(VALID_CHARS.length())) + eucaUUID() + delimiter;
+        print("Inner prefix: " + innerPrefix);
+        TreeSet<String> keySet = new TreeSet<>( );
+
+        // Upload objects with different keys that start with the same prefix
+        for (int j = 0; j < keys; j++) {
+          putObject(bucketName, innerPrefix + eucaUUID(), fileToPut, keySet);
+        }
+
+        // List objects and verify that they are ordered lexicographically
+        objects = listObjectsV2(bucketName, innerPrefix, null, null, true);
+        verifyObjectSummaries(keySet, objects.getObjectSummaries());
+
+        // Store the common prefix and keys
+        commonPrefixSet.add(innerPrefix);
+        allKeys.addAll(keySet);
+      }
+
+      // Upload something of the form outerprefix/key, this should not be counted as the common prefix
+      TreeSet<String> keySet = new TreeSet<>( );
+      for (int i = 0; i < keys; i++) {
+        putObject(bucketName, outerPrefix + eucaUUID(), fileToPut, keySet);
+      }
+      allKeys.addAll(keySet);
+
+      // List objects and verify the results
+      objects = listObjectsV2(bucketName, null, null, allKeys.first( ), false);
+      assertEquals( "Expected object summary list to be of size " + (allKeys.size( )-1) + ", but got a list of size " + objects.getObjectSummaries( ).size( ), (allKeys.size( ) -1),objects.getObjectSummaries( ).size( ) );
+      Iterator<S3ObjectSummary> summaryIterator = objects.getObjectSummaries().iterator();
+
+      for (String key : Iterables.skip( allKeys, 1 )) {
+        S3ObjectSummary objectSummary = summaryIterator.next();
+        assertEquals( "Object keys are ordered lexicographically. Expected " + key + ", but got " + objectSummary.getKey( ), objectSummary.getKey( ), key );
+        verifyObjectCommonElements(objectSummary, false);
+      }
+
+      // List objects with prefix and delimiter and verify again
+      objects = listObjectsV2(bucketName, outerPrefix, delimiter, null, null);
+      assertEquals( "Expected object summaries list to be of size " + keySet.size( ) + "but got a list of size " + objects.getObjectSummaries( ).size( ), objects.getObjectSummaries( ).size( ), keySet.size( ) );
+      assertEquals( "Expected common prefixes list to be of size " + commonPrefixSet.size( ) + ", but got a list of size "
+          + objects.getCommonPrefixes( ).size( ), objects.getCommonPrefixes( ).size( ), commonPrefixSet.size( ) );
+
+      Iterator<String> prefixIterator = objects.getCommonPrefixes().iterator();
+      for (String prefix : commonPrefixSet) {
+        String nextCommonPrefix = prefixIterator.next();
+        assertEquals( "Common prefixes are not ordered lexicographically. Expected " + prefix + ", but got " + nextCommonPrefix, prefix, nextCommonPrefix );
+      }
+
+      // keys with only the outerprefix should be in the summary list
+      summaryIterator = objects.getObjectSummaries().iterator();
+      for (String key : keySet) {
+        S3ObjectSummary objectSummary = summaryIterator.next();
+        assertEquals( "Object keys are ordered lexicographically. Expected " + key + ", but got " + objectSummary.getKey( ), objectSummary.getKey( ), key );
+        verifyObjectCommonElements(objectSummary, false);
+      }
+    } catch (AmazonServiceException ase) {
+      printException(ase);
+      assertThat(false, "Failed to run delimiterAndPrefixV2");
+    }
+  }
+
+  /**
    * Test for verifying the common prefixes using a prefix and delimiter
    */
   @Test
-  public void delmiterAndPrefix() {
-    testInfo(this.getClass().getSimpleName() + " - delmiterAndPrefix");
+  public void delimiterAndPrefix() {
+    testInfo(this.getClass().getSimpleName() + " - delimiterAndPrefix");
 
     try {
       int innerP = 2 + random.nextInt(4); // 2-5 inner prefixes
@@ -375,7 +501,7 @@ public class S3ListObjectsTests {
       }
     } catch (AmazonServiceException ase) {
       printException(ase);
-      assertThat(false, "Failed to run delmiterAndPrefixdelmiterAndPrefixdelmiterAndPrefixdelimiter");
+      assertThat(false, "Failed to run delimiterAndPrefix");
     }
   }
 
@@ -618,7 +744,7 @@ public class S3ListObjectsTests {
         Objects.equals(objectList.getDelimiter(), delimiter));
     assertNotNull( "Expected common prefixes to be empty or populated, but got " + objectList.getCommonPrefixes( ), objectList.getCommonPrefixes( ) );
     assertTrue("Expected marker to be " + marker + ", but got " + objectList.getMarker(), Objects.equals(objectList.getMarker(), marker));
-    assertEquals( "Expected max-keys to be " + ( maxKeys != null ? maxKeys : DEFAULT_MAX_KEYS ) + ", but got " + objectList.getMaxKeys( ), objectList.getMaxKeys( ), ( maxKeys != null ? maxKeys : DEFAULT_MAX_KEYS ) );
+    assertEquals( "Expected max-keys to be " + MoreObjects.firstNonNull(maxKeys, DEFAULT_MAX_KEYS) + ", but got " + objectList.getMaxKeys( ), MoreObjects.<Object>firstNonNull(maxKeys, DEFAULT_MAX_KEYS), objectList.getMaxKeys( ));
     assertTrue("Expected prefix to be " + prefix + ", but got " + objectList.getPrefix(), Objects.equals(objectList.getPrefix(), prefix));
     assertNotNull( "Invalid object summary list", objectList.getObjectSummaries( ) );
     assertEquals( "Expected is truncated to be " + isTruncated + ", but got " + objectList.isTruncated( ), objectList.isTruncated( ), isTruncated );
@@ -631,7 +757,77 @@ public class S3ListObjectsTests {
     return objectList;
   }
 
+  private ListObjectsV2Result listObjectsV2(String bucketName, String prefix, String delimiter, String startAfter, Boolean fetchOwner) {
+    return listObjectsV2( bucketName, prefix, delimiter, startAfter, fetchOwner, null, null );
+  }
+
+  private ListObjectsV2Result listObjectsV2(String bucketName, String prefix, String delimiter, String startAfter, Boolean fetchOwner, Integer maxKeys, String next) {
+
+    StringBuilder sb = new StringBuilder(account + ": List objects v2 using bucket=" + bucketName);
+
+    ListObjectsV2Request request = new ListObjectsV2Request();
+    request.setBucketName(bucketName);
+
+    if (maxKeys != null) {
+      request.setMaxKeys(maxKeys.intValue());
+      sb.append(", max keys=").append(maxKeys);
+    }
+    if (prefix != null) {
+      request.setPrefix(prefix);
+      sb.append(", prefix=").append(prefix);
+    }
+    if (delimiter != null) {
+      request.setDelimiter(delimiter);
+      sb.append(", delimiter=").append(delimiter);
+    }
+    if (startAfter != null) {
+      request.setStartAfter(startAfter);
+      sb.append(", start after=").append(startAfter);
+    }
+    if (next != null) {
+      request.setContinuationToken(next);
+      sb.append(", continuation token=").append(next);
+    }
+    if (fetchOwner != null) {
+      request.setFetchOwner(fetchOwner);
+      sb.append(", fetch owner=").append(fetchOwner);
+    }
+
+    print(sb.toString());
+    ListObjectsV2Result objectList = s3.listObjectsV2(request);
+
+    assertNotNull( "Invalid object list", objectList );
+    assertEquals( "Expected object listing bucket name to be " + bucketName + ", but got " + objectList.getBucketName( ), objectList.getBucketName( ), bucketName );
+    assertTrue("Expected delimiter to be " + delimiter + ", but got " + objectList.getDelimiter(),
+        Objects.equals(objectList.getDelimiter(), delimiter));
+    assertNotNull( "Expected common prefixes to be empty or populated, but got " + objectList.getCommonPrefixes( ), objectList.getCommonPrefixes( ) );
+    assertEquals( "Expected max-keys to be " + MoreObjects.firstNonNull(maxKeys, DEFAULT_MAX_KEYS) + ", but got " + objectList.getMaxKeys( ), MoreObjects.<Object>firstNonNull(maxKeys, DEFAULT_MAX_KEYS), objectList.getMaxKeys( )  );
+    assertTrue("Expected prefix to be " + prefix + ", but got " + objectList.getPrefix(), Objects.equals(objectList.getPrefix(), prefix));
+    assertNotNull( "Invalid object summary list", objectList.getObjectSummaries( ) );
+    if (objectList.isTruncated()) {
+      assertNotNull( "Invalid next-marker, expected it to contain next key but got null", objectList.getNextContinuationToken( ) );
+    } else {
+      assertNull( "Invalid next-marker, expected it to be null but got " + objectList.getNextContinuationToken( ), objectList.getNextContinuationToken( ) );
+    }
+    if ( startAfter != null ) {
+      assertEquals( "Start after", startAfter, objectList.getStartAfter( ) );
+    }
+    for ( final S3ObjectSummary objectSummary : objectList.getObjectSummaries() ) {
+      if ( fetchOwner == null || !fetchOwner ) {
+        assertNull( "Owner", objectSummary.getOwner( ) );
+      } else {
+        assertNotNull( "Owner", objectSummary.getOwner( ) );
+      }
+    }
+    return objectList;
+  }
+
+
   private void verifyObjectSummaries(Set<String> keySet, List<S3ObjectSummary> objectSummaries) {
+    verifyObjectSummaries( keySet, objectSummaries, true );
+  }
+
+  private void verifyObjectSummaries(Set<String> keySet, List<S3ObjectSummary> objectSummaries, boolean ownerPresent) {
     assertEquals( "Expected object summary list to be of size " + keySet.size( ) + ", but got a list of size " + objectSummaries.size( ), keySet.size( ), objectSummaries.size( ) );
 
     Iterator<String> keyIterator = keySet.iterator();
@@ -642,15 +838,23 @@ public class S3ListObjectsTests {
     while (summaryIterator.hasNext()) {
       objectSummary = summaryIterator.next();
       assertEquals( "Expected keys to be ordered lexicographically", objectSummary.getKey( ), keyIterator.next( ) );
-      verifyObjectCommonElements(objectSummary);
+      verifyObjectCommonElements(objectSummary, ownerPresent);
     }
   }
 
   private void verifyObjectCommonElements(S3ObjectSummary objectSummary) {
+    verifyObjectCommonElements( objectSummary, true );
+  }
+
+  private void verifyObjectCommonElements(S3ObjectSummary objectSummary, boolean ownerPresent) {
     assertEquals( "Expected bucket name to be " + bucketName + ", but got " + objectSummary.getBucketName( ), objectSummary.getBucketName( ), bucketName );
     assertEquals( "Expected etag to be " + md5 + ", but got " + objectSummary.getETag( ), objectSummary.getETag( ), md5 );
     assertNotNull( "Invalid last modified field", objectSummary.getLastModified( ) );
-    assertEquals( "Expected owner ID to be " + ownerID + ", but got " + objectSummary.getOwner( ).getId( ), objectSummary.getOwner( ).getId( ), ownerID );
+    if ( ownerPresent ) {
+      assertEquals( "Expected owner ID to be " + ownerID + ", but got " + objectSummary.getOwner( ).getId( ), objectSummary.getOwner( ).getId( ), ownerID );
+    } else {
+      assertNull( "Owner", objectSummary.getOwner() );
+    }
     assertEquals( "Expected size to be " + size + ", but got " + objectSummary.getSize( ), objectSummary.getSize( ), size );
   }
 
