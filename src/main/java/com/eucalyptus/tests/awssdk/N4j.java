@@ -518,6 +518,10 @@ public class N4j {
     }
 
     public static YouAre getYouAreClient(AWSCredentials credentials, String endpoint) {
+        return getYouAreClient( new AWSStaticCredentialsProvider( credentials ), endpoint );
+    }
+
+    public static YouAre getYouAreClient(AWSCredentialsProvider credentials, String endpoint) {
         final YouAre youAre = new YouAreClient(credentials);
         youAre.setEndpoint(endpoint);
         return youAre;
