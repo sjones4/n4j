@@ -2,10 +2,7 @@ package com.eucalyptus.tests.awssdk
 
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.auth.AWSStaticCredentialsProvider
-import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -25,18 +22,12 @@ class TestEC2InstanceTerminationProtection {
   @BeforeClass
   static void init( ){
     N4j.initEndpoints()
-    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( N4j.ACCESS_KEY, N4j.SECRET_KEY ) )
-  }
-
-  private AmazonEC2Client getEC2Client( final AWSCredentialsProvider credentials ) {
-    final AmazonEC2Client ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( N4j.EC2_ENDPOINT )
-    ec2
+    credentials = N4j.getAdminCredentialsProvider( )
   }
 
   @Test
   void EC2InstanceTerminationProtectionTest( ) throws Exception {
-    final AmazonEC2 ec2 = getEC2Client( credentials )
+    final AmazonEC2 ec2 = N4j.getEc2Client( credentials, N4j.EC2_ENDPOINT )
 
     // Find an AZ to use
     final String availabilityZone = ec2.describeAvailabilityZones( ).with{

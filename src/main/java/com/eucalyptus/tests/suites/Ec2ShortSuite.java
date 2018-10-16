@@ -10,6 +10,7 @@ import com.eucalyptus.tests.awssdk.*;
     TestEC2Api.class,
     TestEC2DescribeInstanceStatus.class,
     TestEC2Ebs.class,
+    TestEC2IamInstanceProfileAssociation.class,
 })
 public class Ec2ShortSuite {
   // junit test suite as defined by SuiteClasses annotation

@@ -5,12 +5,10 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.client.builder.AwsClientBuilder
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.AllocateHostsRequest
 import com.amazonaws.services.ec2.model.AssignIpv6AddressesRequest
-import com.amazonaws.services.ec2.model.AssociateIamInstanceProfileRequest
 import com.amazonaws.services.ec2.model.AssociateSubnetCidrBlockRequest
 import com.amazonaws.services.ec2.model.AssociateVpcCidrBlockRequest
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest
@@ -20,20 +18,33 @@ import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
 import com.amazonaws.services.ec2.model.DeleteEgressOnlyInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DeleteKeyPairRequest
 import com.amazonaws.services.ec2.model.DeleteSecurityGroupRequest
+import com.amazonaws.services.ec2.model.DescribeAggregateIdFormatRequest
 import com.amazonaws.services.ec2.model.DescribeEgressOnlyInternetGatewaysRequest
+import com.amazonaws.services.ec2.model.DescribeElasticGpusRequest
+import com.amazonaws.services.ec2.model.DescribeFleetHistoryRequest
+import com.amazonaws.services.ec2.model.DescribeFleetInstancesRequest
+import com.amazonaws.services.ec2.model.DescribeFleetsRequest
+import com.amazonaws.services.ec2.model.DescribeFpgaImagesRequest
 import com.amazonaws.services.ec2.model.DescribeHostReservationOfferingsRequest
 import com.amazonaws.services.ec2.model.DescribeHostReservationsRequest
 import com.amazonaws.services.ec2.model.DescribeHostsRequest
-import com.amazonaws.services.ec2.model.DescribeIamInstanceProfileAssociationsRequest
+import com.amazonaws.services.ec2.model.DescribeInstanceCreditSpecificationsRequest
+import com.amazonaws.services.ec2.model.DescribeLaunchTemplateVersionsRequest
+import com.amazonaws.services.ec2.model.DescribeLaunchTemplatesRequest
+import com.amazonaws.services.ec2.model.DescribeNetworkInterfacePermissionsRequest
+import com.amazonaws.services.ec2.model.DescribePrincipalIdFormatRequest
 import com.amazonaws.services.ec2.model.DescribeScheduledInstanceAvailabilityRequest
 import com.amazonaws.services.ec2.model.DescribeScheduledInstancesRequest
 import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest
-import com.amazonaws.services.ec2.model.DisassociateIamInstanceProfileRequest
+import com.amazonaws.services.ec2.model.DescribeVolumesModificationsRequest
+import com.amazonaws.services.ec2.model.DescribeVpcEndpointConnectionNotificationsRequest
+import com.amazonaws.services.ec2.model.DescribeVpcEndpointConnectionsRequest
+import com.amazonaws.services.ec2.model.DescribeVpcEndpointServiceConfigurationsRequest
+import com.amazonaws.services.ec2.model.DescribeVpcEndpointServicePermissionsRequest
 import com.amazonaws.services.ec2.model.DisassociateSubnetCidrBlockRequest
 import com.amazonaws.services.ec2.model.DisassociateVpcCidrBlockRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.GetHostReservationPurchasePreviewRequest
-import com.amazonaws.services.ec2.model.IamInstanceProfileSpecification
 import com.amazonaws.services.ec2.model.ImportKeyPairRequest
 import com.amazonaws.services.ec2.model.IpPermission
 import com.amazonaws.services.ec2.model.IpRange
@@ -43,7 +54,6 @@ import com.amazonaws.services.ec2.model.PurchaseRequest
 import com.amazonaws.services.ec2.model.PurchaseScheduledInstancesRequest
 import com.amazonaws.services.ec2.model.ReleaseAddressRequest
 import com.amazonaws.services.ec2.model.ReleaseHostsRequest
-import com.amazonaws.services.ec2.model.ReplaceIamInstanceProfileAssociationRequest
 import com.amazonaws.services.ec2.model.RevokeSecurityGroupIngressRequest
 import com.amazonaws.services.ec2.model.RunScheduledInstancesRequest
 import com.amazonaws.services.ec2.model.ScheduledInstanceRecurrenceRequest
@@ -59,11 +69,6 @@ import org.junit.Test
 
 import java.util.concurrent.TimeUnit
 
-import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
-import static com.eucalyptus.tests.awssdk.N4j.assertThat
-import static com.eucalyptus.tests.awssdk.N4j.print
-import static com.eucalyptus.tests.awssdk.N4j.testInfo
-
 /**
  * Test EC2 api basics
  */
@@ -71,22 +76,16 @@ class TestEC2Api {
 
   private static String testAcct
   private static AWSCredentialsProvider testAcctAdminCredentials
-  private static AmazonEC2Client ec2Client
-
-  private static AmazonEC2Client getEC2Client( final AWSCredentialsProvider credentials ) {
-    final AmazonEC2Client ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( N4j.EC2_ENDPOINT )
-    ec2
-  }
+  private static AmazonEC2 ec2Client
 
   @BeforeClass
   static void init( ){
     N4j.testInfo( TestEC2Api.simpleName )
     N4j.getCloudInfo( )
-    this.testAcct = "${N4j.NAME_PREFIX}ec2-api-test"
+    testAcct = "${N4j.NAME_PREFIX}ec2-api-test"
     N4j.createAccount( testAcct )
-    this.testAcctAdminCredentials = new StaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
-    this.ec2Client = getEC2Client( testAcctAdminCredentials )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( N4j.getUserCreds( testAcct, 'admin' ) )
+    ec2Client = N4j.getEc2Client( testAcctAdminCredentials, N4j.EC2_ENDPOINT )
   }
 
   @AfterClass
@@ -360,9 +359,9 @@ class TestEC2Api {
   }
 
   @Ignore
-  @Test( ) // Enable when functionality is fixed
+  @Test // Enable when functionality is fixed
   void testUnknownAccessKeyError( ) throws Exception {
-    testInfo("${this.getClass().simpleName}.testUnknownAccessKeyError");
+    N4j.testInfo("${this.getClass().simpleName}.testUnknownAccessKeyError")
 
     try {
       final AmazonEC2 client = AmazonEC2Client.builder( )
@@ -372,66 +371,13 @@ class TestEC2Api {
       client.describeAvailabilityZones( )
     } catch ( AmazonServiceException e ) {
       print( "Expected error: ${e}" )
-      assertThat( 'AuthFailure' == e.errorCode, "Expected error code AuthFailure, but was: ${e.errorCode}" )
-    }
-  }
-
-  @Test
-  void testIamInstanceProfileAssociationStubs( ) throws Exception {
-    testInfo( "${this.getClass().simpleName}.testIamInstanceProfileAssociationStubs" );
-
-    ec2Client.with{
-      try {
-        associateIamInstanceProfile( new AssociateIamInstanceProfileRequest(
-            instanceId: 'i-00000000',
-            iamInstanceProfile: new IamInstanceProfileSpecification(
-                name: 'my-instance-profile'
-            )
-        ) )
-      } catch ( AmazonServiceException e ) {
-        print( "Expected error: ${e}" )
-        assertThat( 'InvalidInstanceID.NotFound' == e.errorCode, "Expected error code InvalidInstanceID.NotFound, but was: ${e.errorCode}" )
-      }
-
-      describeIamInstanceProfileAssociations( new DescribeIamInstanceProfileAssociationsRequest(
-          associationIds: [
-              'iip-assoc-08049da59357d598c'
-          ],
-          nextToken: 'invalid-token',
-          maxResults: 100,
-          filters: [
-              new Filter( name: 'instance-id', values: ['i-00000000' ] )
-          ]
-      ) )
-
-      try {
-        disassociateIamInstanceProfile( new DisassociateIamInstanceProfileRequest(
-            associationId: 'iip-assoc-08049da59357d598c'
-        ) )
-      } catch ( AmazonServiceException e ) {
-        print( "Expected error: ${e}" )
-        assertThat( 'InvalidParameterValue' == e.errorCode, "Expected error code InvalidParameterValue, but was: ${e.errorCode}" )
-      }
-
-      try {
-        replaceIamInstanceProfileAssociation( new ReplaceIamInstanceProfileAssociationRequest(
-            associationId: 'iip-assoc-08049da59357d598c',
-            iamInstanceProfile: new IamInstanceProfileSpecification(
-                name: 'my-instance-profile'
-            )
-        ) )
-      } catch ( AmazonServiceException e ) {
-        print( "Expected error: ${e}" )
-        assertThat( 'InvalidParameterValue' == e.errorCode, "Expected error code InvalidParameterValue, but was: ${e.errorCode}" )
-      }
-
-      void
+      N4j.assertThat( 'AuthFailure' == e.errorCode, "Expected error code AuthFailure, but was: ${e.errorCode}" )
     }
   }
 
   @Test
   void testIpv6Stubs( ) throws Exception {
-    testInfo( "${this.getClass().simpleName}.testIpv6Stubs" );
+    N4j.testInfo( "${this.getClass().simpleName}.testIpv6Stubs" )
 
     ec2Client.with{
       try {
@@ -444,7 +390,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidNetworkInterfaceID.NotFound' == e.errorCode, "Expected error code InvalidNetworkInterfaceID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidNetworkInterfaceID.NotFound' == e.errorCode, "Expected error code InvalidNetworkInterfaceID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -454,7 +400,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidNetworkInterfaceID.NotFound' == e.errorCode, "Expected error code InvalidNetworkInterfaceID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidNetworkInterfaceID.NotFound' == e.errorCode, "Expected error code InvalidNetworkInterfaceID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -464,7 +410,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidSubnetID.NotFound' == e.errorCode, "Expected error code InvalidSubnetID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidSubnetID.NotFound' == e.errorCode, "Expected error code InvalidSubnetID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -474,7 +420,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidVpcID.NotFound' == e.errorCode, "Expected error code InvalidVpcID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidVpcID.NotFound' == e.errorCode, "Expected error code InvalidVpcID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -484,7 +430,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidVpcID.NotFound' == e.errorCode, "Expected error code InvalidVpcID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidVpcID.NotFound' == e.errorCode, "Expected error code InvalidVpcID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -493,7 +439,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidGatewayID.NotFound' == e.errorCode, "Expected error code InvalidGatewayID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidGatewayID.NotFound' == e.errorCode, "Expected error code InvalidGatewayID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -506,7 +452,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidNextToken' == e.errorCode, "Expected error code InvalidNextToken, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidNextToken' == e.errorCode, "Expected error code InvalidNextToken, but was: ${e.errorCode}" )
       }
 
       try {
@@ -515,7 +461,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidSubnetCidrBlockAssociationID.NotFound' == e.errorCode, "Expected error code InvalidSubnetCidrBlockAssociationID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidSubnetCidrBlockAssociationID.NotFound' == e.errorCode, "Expected error code InvalidSubnetCidrBlockAssociationID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -524,7 +470,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidVpcCidrBlockAssociationID.NotFound' == e.errorCode, "Expected error code InvalidVpcCidrBlockAssociationID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidVpcCidrBlockAssociationID.NotFound' == e.errorCode, "Expected error code InvalidVpcCidrBlockAssociationID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -537,7 +483,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidNetworkInterfaceID.NotFound' == e.errorCode, "Expected error code InvalidNetworkInterfaceID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidNetworkInterfaceID.NotFound' == e.errorCode, "Expected error code InvalidNetworkInterfaceID.NotFound, but was: ${e.errorCode}" )
       }
 
       void
@@ -546,7 +492,7 @@ class TestEC2Api {
 
   @Test
   void testScheduledInstanceStubs( ) throws Exception {
-    testInfo( "${this.getClass().simpleName}.testScheduledInstanceStubs" );
+    N4j.testInfo( "${this.getClass().simpleName}.testScheduledInstanceStubs" )
 
     ec2Client.with{
       try {
@@ -573,7 +519,7 @@ class TestEC2Api {
         ) ).toString( ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidPaginationToken' == e.errorCode, "Expected error code InvalidPaginationToken, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidPaginationToken' == e.errorCode, "Expected error code InvalidPaginationToken, but was: ${e.errorCode}" )
       }
 
       try {
@@ -592,7 +538,7 @@ class TestEC2Api {
         ) ).toString( ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidParameterValue' == e.errorCode, "Expected error code InvalidParameterValue, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidParameterValue' == e.errorCode, "Expected error code InvalidParameterValue, but was: ${e.errorCode}" )
       }
 
       try {
@@ -607,7 +553,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidPurchaseToken.Malformed' == e.errorCode, "Expected error code InvalidPurchaseToken.Malformed, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidPurchaseToken.Malformed' == e.errorCode, "Expected error code InvalidPurchaseToken.Malformed, but was: ${e.errorCode}" )
       }
 
       try {
@@ -624,7 +570,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidScheduledInstance' == e.errorCode, "Expected error code InvalidScheduledInstance, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidScheduledInstance' == e.errorCode, "Expected error code InvalidScheduledInstance, but was: ${e.errorCode}" )
       }
 
       void
@@ -633,7 +579,7 @@ class TestEC2Api {
 
   @Test
   void testHostsStubs( ) throws Exception {
-    testInfo( "${this.getClass().simpleName}.testHostsStubs" );
+    N4j.testInfo( "${this.getClass().simpleName}.testHostsStubs" )
 
     ec2Client.with{
       try {
@@ -646,7 +592,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidRequest' == e.errorCode, "Expected error code InvalidRequest, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidRequest' == e.errorCode, "Expected error code InvalidRequest, but was: ${e.errorCode}" )
       }
 
       try {
@@ -661,7 +607,7 @@ class TestEC2Api {
         ) ).toString( ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidHostReservationOfferingId.NotFound' == e.errorCode, "Expected error code InvalidHostReservationOfferingId.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidHostReservationOfferingId.NotFound' == e.errorCode, "Expected error code InvalidHostReservationOfferingId.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -674,7 +620,7 @@ class TestEC2Api {
         ) ).toString( ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidHostReservationId.NotFound' == e.errorCode, "Expected error code InvalidHostReservationId.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidHostReservationId.NotFound' == e.errorCode, "Expected error code InvalidHostReservationId.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -687,7 +633,7 @@ class TestEC2Api {
         ) ).toString( ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidHostID.NotFound' == e.errorCode, "Expected error code InvalidHostID.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidHostID.NotFound' == e.errorCode, "Expected error code InvalidHostID.NotFound, but was: ${e.errorCode}" )
       }
 
       try {
@@ -697,7 +643,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidHostReservationOfferingId.NotFound' == e.errorCode, "Expected error code InvalidHostReservationOfferingId.NotFound, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidHostReservationOfferingId.NotFound' == e.errorCode, "Expected error code InvalidHostReservationOfferingId.NotFound, but was: ${e.errorCode}" )
       }
 
       print( 'Modifying hosts')
@@ -716,7 +662,7 @@ class TestEC2Api {
         ) )
       } catch ( AmazonServiceException e ) {
         print( "Expected error: ${e}" )
-        assertThat( 'InvalidParameter' == e.errorCode, "Expected error code InvalidParameter, but was: ${e.errorCode}" )
+        N4j.assertThat( 'InvalidParameter' == e.errorCode, "Expected error code InvalidParameter, but was: ${e.errorCode}" )
 
       }
 
@@ -726,6 +672,131 @@ class TestEC2Api {
       ) ).toString( ) )
 
       void
+    }
+  }
+
+  @Test
+  void testFleetStubs( ) throws Exception {
+    N4j.testInfo("${this.getClass().simpleName}.testFleetStubs")
+
+    ec2Client.with {
+      describeFleets( new DescribeFleetsRequest(
+          filters: [ new Filter(
+              name: 'fleet-state',
+              values: ['active']
+          ) ],
+          fleetIds: [ 'fleet-00000000000000000' ]
+      ) )
+      describeFleetHistory( new DescribeFleetHistoryRequest(
+          eventType: 'fleet-change',
+          fleetId: 'fleet-00000000000000000',
+          startTime: new Date()
+      ) )
+      describeFleetInstances( new DescribeFleetInstancesRequest(
+          filters: [ new Filter(
+              name: 'instance-type',
+              values: ['t2-*']
+          ) ],
+          fleetId: 'fleet-00000000000000000'
+      ) )
+    }
+  }
+
+  @Test
+  void testGeneralStubs( ) {
+    N4j.testInfo("${this.getClass().simpleName}.testGeneralStubs")
+
+    ec2Client.with {
+      describeAggregateIdFormat(new DescribeAggregateIdFormatRequest())
+      describePrincipalIdFormat(new DescribePrincipalIdFormatRequest())
+
+      describeElasticGpus(new DescribeElasticGpusRequest(
+          filters: [
+              new Filter( name: 'instance-id', values: [ 'i-00000000000000000' ] )
+          ],
+          elasticGpuIds: [ 'egpu-00000000000000000' ]
+      ))
+
+      describeFpgaImages(new DescribeFpgaImagesRequest(
+          filters: [
+              new Filter( name: 'fpga-image-id', values: [ 'afi-00000000000000000' ] )
+          ],
+          fpgaImageIds: [ 'afi-00000000000000000' ],
+          owners: [ 'self' ]
+      ))
+
+      describeInstanceCreditSpecifications(new DescribeInstanceCreditSpecificationsRequest(
+          filters: [
+              new Filter( name: 'instance-id', values: [ 'i-00000000000000000' ] )
+          ],
+          instanceIds: [ 'i-00000000000000000' ]
+      ))
+
+      describeLaunchTemplates(new DescribeLaunchTemplatesRequest(
+          filters: [
+              new Filter( name: 'launch-template-name', values: [ '*' ] )
+          ],
+          launchTemplateIds: [ 'lt-00000000000000000' ],
+          launchTemplateNames: [ 'LaunchTemplate1' ]
+      ))
+
+      describeLaunchTemplateVersions(new DescribeLaunchTemplateVersionsRequest(
+          filters: [
+              new Filter( name: 'image-id', values: [ 'ami-00000000000000000' ] )
+          ],
+          launchTemplateId: 'lt-00000000000000000',
+          versions: [ '1' ]
+      ))
+
+      describeNetworkInterfacePermissions(new DescribeNetworkInterfacePermissionsRequest(
+          filters: [
+              new Filter(
+                  name: 'network-interface-permission.network-interface-id',
+                  values: [ 'eni-00000000000000000' ]
+              )
+          ],
+          networkInterfacePermissionIds: [ 'eni-perm-00000000000000000' ]
+      ))
+
+      describeVolumesModifications(new DescribeVolumesModificationsRequest(
+          filters: [
+              new Filter( name: 'volume-id', values: [ 'vol-00000000000000000' ] )
+          ],
+          volumeIds: [ 'vol-00000000000000000' ]
+      ))
+    }
+  }
+
+  @Test
+  void testVpcStubs( ) throws Exception {
+    N4j.testInfo("${this.getClass().simpleName}.testVpcStubs")
+
+    ec2Client.with {
+      describeVpcEndpointConnectionNotifications( new DescribeVpcEndpointConnectionNotificationsRequest(
+          filters: [
+              new Filter( name: 'connection-notification-id', values: [ '*' ] )
+          ]
+      ) )
+
+      describeVpcEndpointConnections( new DescribeVpcEndpointConnectionsRequest(
+          filters: [
+              new Filter( name: 'vpc-endpoint-id', values: [ '*' ] )
+          ]
+      ) )
+
+      describeVpcEndpointServiceConfigurations(new DescribeVpcEndpointServiceConfigurationsRequest(
+          filters: [
+              new Filter( name: 'service-name', values: [ '*' ] )
+          ],
+          serviceIds: [ 'vpce-svc-00000000000000000' ]
+      ))
+
+      describeVpcEndpointServicePermissions(new DescribeVpcEndpointServicePermissionsRequest(
+          filters: [
+              new Filter( name: 'principal', values: [ '*' ] )
+          ],
+          serviceId: 'vpce-svc-03d5ebb7d9579a123'
+      ))
     }
   }
 }
