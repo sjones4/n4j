@@ -5,8 +5,10 @@ import com.amazonaws.services.identitymanagement.model.DeleteServerCertificateRe
 import com.amazonaws.services.identitymanagement.model.GetServerCertificateRequest
 import com.amazonaws.services.identitymanagement.model.ListServerCertificatesRequest
 import com.amazonaws.services.identitymanagement.model.UploadServerCertificateRequest
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.Test
+
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 
 /**
  * Tests management of IAM server certificates.
@@ -59,7 +61,7 @@ class TestIAMServerCertificateManagement {
   '''.stripIndent( )
 
   @BeforeClass
-  void init( ) {
+  static void init( ) {
     N4j.getCloudInfo( )
   }
 
@@ -68,7 +70,7 @@ class TestIAMServerCertificateManagement {
     final AmazonIdentityManagement iam = N4j.youAre
 
     final String namePrefix = UUID.randomUUID().toString().substring(0, 13) + "-";
-    print( "Using resource prefix for test: " + namePrefix );
+    N4j.print( "Using resource prefix for test: " + namePrefix );
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
@@ -81,8 +83,9 @@ class TestIAMServerCertificateManagement {
             certificateBody: ALICE_PEM,
             privateKey: ALICE_PK
         ) ).with {
-          N4j.assertThat( serverCertificateMetadata.expiration != null,
-              "Expected expiration for certificate ${serverCertificateMetadata.serverCertificateName}" )
+          Assert.assertTrue(
+              "Expected expiration for certificate ${serverCertificateMetadata.serverCertificateName}",
+              serverCertificateMetadata.expiration != null)
           serverCertificateMetadata.serverCertificateId
         }
         N4j.print( "Created server certificate ${certName}/${certId}" )
@@ -98,10 +101,12 @@ class TestIAMServerCertificateManagement {
             pathPrefix: "/${namePrefix}"
         ) ).with {
           N4j.print( serverCertificateMetadataList.toString() )
-          N4j.assertThat( serverCertificateMetadataList?.size() == 1,
-              "Expected 1 server certificate with path prefix but was: ${serverCertificateMetadataList?.size()}" )
-          N4j.assertThat( serverCertificateMetadataList.getAt(0).expiration != null,
-              "Expected expiration for certificate ${serverCertificateMetadataList.getAt(0).serverCertificateName}" )
+          Assert.assertTrue(
+              "Expected 1 server certificate with path prefix but was: ${serverCertificateMetadataList?.size()}",
+              serverCertificateMetadataList?.size() == 1)
+          Assert.assertTrue(
+              "Expected expiration for certificate ${serverCertificateMetadataList.getAt(0).serverCertificateName}",
+              serverCertificateMetadataList.getAt(0).expiration != null)
         }
 
         N4j.print( "Getting server certificate" )
@@ -109,15 +114,18 @@ class TestIAMServerCertificateManagement {
             serverCertificateName: certName
         ) ).with {
           N4j.print( serverCertificate.toString( ) )
-          N4j.assertThat( serverCertificate != null, 'Expected serverCertificate' )
-          N4j.assertThat( serverCertificate.serverCertificateMetadata != null,
-              'Expected serverCertificate.serverCertificateMetadata' )
-          N4j.assertThat( serverCertificate.serverCertificateMetadata.expiration != null,
-              "Expected expiration for certificate ${serverCertificate.serverCertificateMetadata.serverCertificateName}" )
+          Assert.assertTrue('Expected serverCertificate', serverCertificate != null)
+          Assert.assertTrue(
+              'Expected serverCertificate.serverCertificateMetadata',
+              serverCertificate.serverCertificateMetadata != null )
+          Assert.assertTrue(
+              "Expected expiration for certificate ${serverCertificate.serverCertificateMetadata.serverCertificateName}",
+              serverCertificate.serverCertificateMetadata.expiration != null
+          )
         }
       }
 
-      print( "Test complete" )
+      N4j.print( "Test complete" )
     } finally {
       // Attempt to clean up anything we created
       cleanupTasks.reverseEach { Runnable cleanupTask ->
@@ -129,5 +137,4 @@ class TestIAMServerCertificateManagement {
       }
     }
   }
-
 }

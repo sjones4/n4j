@@ -7,12 +7,9 @@ import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-import org.testng.annotations.Test
-
-import static N4j.minimalInit
-import static N4j.ACCESS_KEY
-import static N4j.SECRET_KEY
-import static N4j.CLC_IP
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 
 /**
  * This application tests EC2 instance termination protection.
@@ -23,51 +20,30 @@ import static N4j.CLC_IP
  */
 class TestEC2InstanceTerminationProtection {
 
-  private final String host
-  private final AWSCredentialsProvider credentials
+  private static AWSCredentialsProvider credentials
 
-  public static void main( String[] args ) throws Exception {
-      new TestEC2InstanceTerminationProtection().EC2InstanceTerminationProtectionTest()
-  }
-
-  public TestEC2InstanceTerminationProtection( ){
-    minimalInit()
-    this.host=CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-            .resolve( servicePath )
-            .toString()
+  @BeforeClass
+  static void init( ){
+    N4j.initEndpoints()
+    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( N4j.ACCESS_KEY, N4j.SECRET_KEY ) )
   }
 
   private AmazonEC2Client getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2Client ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( cloudUri( '/services/compute' ) )
+    ec2.setEndpoint( N4j.EC2_ENDPOINT )
     ec2
   }
 
-  private boolean assertThat( boolean condition,
-                              String message ){
-    assert condition : message
-    true
-  }
-
-  private void print( String text ) {
-    System.out.println( text )
-  }
-
   @Test
-  public void EC2InstanceTerminationProtectionTest( ) throws Exception {
+  void EC2InstanceTerminationProtectionTest( ) throws Exception {
     final AmazonEC2 ec2 = getEC2Client( credentials )
 
     // Find an AZ to use
     final String availabilityZone = ec2.describeAvailabilityZones( ).with{
       availabilityZones?.getAt( 0 )?.zoneName
-    };
-    assertThat( availabilityZone != null, "Availability zone not found" );
-    print( "Using availability zone: ${availabilityZone}" );
+    }
+    Assert.assertTrue("Availability zone not found", availabilityZone != null)
+    N4j.print( "Using availability zone: ${availabilityZone}" )
 
     // Find an image to use
     final String imageId = ec2.describeImages( new DescribeImagesRequest(
@@ -78,19 +54,19 @@ class TestEC2InstanceTerminationProtection {
     ) ).with {
       images?.getAt( 0 )?.imageId
     }
-    assertThat( imageId != null , "Image not found (instance-store)" )
-    print( "Using image: ${imageId}" )
+    Assert.assertTrue("Image not found (instance-store)", imageId != null)
+    N4j.print( "Using image: ${imageId}" )
 
     // Discover SSH key
     final String keyName = ec2.describeKeyPairs().with {
       keyPairs?.getAt(0)?.keyName
     }
-    print( "Using key pair: " + keyName );
+    N4j.print( "Using key pair: " + keyName )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
       ec2.with {
-        print( "Running instance without termination protection" )
+        N4j.print( "Running instance without termination protection" )
         String instanceId = runInstances( new RunInstancesRequest(
             imageId: imageId,
             keyName: keyName,
@@ -103,29 +79,29 @@ class TestEC2InstanceTerminationProtection {
           reservation?.instances?.getAt(0)?.instanceId
         }
         cleanupTasks.add{
-          print( "Terminating instance: ${instanceId}" )
+          N4j.print( "Terminating instance: ${instanceId}" )
           terminateInstances( new TerminateInstancesRequest(
               instanceIds: [ instanceId ]
           ) )
         }
 
-        print( "Describing attributes for instance ${instanceId} to check termination protection disabled" )
+        N4j.print( "Describing attributes for instance ${instanceId} to check termination protection disabled" )
         final Boolean disableApiTermination = describeInstanceAttribute( new DescribeInstanceAttributeRequest(
             instanceId: instanceId,
             attribute: 'disableApiTermination'
         ) ).with {
           instanceAttribute?.disableApiTermination
         }
-        assertThat( Boolean.FALSE.equals( disableApiTermination ), "Expected false == disableApiTermination, but was: ${disableApiTermination}" )
+        Assert.assertTrue("Expected false == disableApiTermination, but was: ${disableApiTermination}", Boolean.FALSE.equals(disableApiTermination))
 
-        print( "Terminating instance ${instanceId}" )
+        N4j.print( "Terminating instance ${instanceId}" )
         terminateInstances( new TerminateInstancesRequest(
             instanceIds: [ instanceId ]
         ) )
       }
 
       ec2.with {
-        print( "Running instance with termination protection" )
+        N4j.print( "Running instance with termination protection" )
         String instanceId = runInstances( new RunInstancesRequest(
             imageId: imageId,
             keyName: keyName,
@@ -139,60 +115,60 @@ class TestEC2InstanceTerminationProtection {
           reservation?.instances?.getAt(0)?.instanceId
         }
         cleanupTasks.add{
-          print( "Disabling termination protection for instance ${instanceId}" )
+          N4j.print( "Disabling termination protection for instance ${instanceId}" )
           modifyInstanceAttribute( new ModifyInstanceAttributeRequest(
               instanceId: instanceId,
               disableApiTermination: false
           ) )
-          print( "Terminating instance ${instanceId}" )
+          N4j.print( "Terminating instance ${instanceId}" )
           terminateInstances( new TerminateInstancesRequest(
               instanceIds: [ instanceId ]
           ) )
         }
 
-        print( "Describing attributes for instance ${instanceId} to check termination protection enabled" )
+        N4j.print( "Describing attributes for instance ${instanceId} to check termination protection enabled" )
         final Boolean disableApiTermination = describeInstanceAttribute( new DescribeInstanceAttributeRequest(
             instanceId: instanceId,
             attribute: 'disableApiTermination'
         ) ).with {
           instanceAttribute?.disableApiTermination
         }
-        assertThat( Boolean.TRUE.equals( disableApiTermination ), "Expected true == disableApiTermination, but was: ${disableApiTermination}" )
+        Assert.assertTrue("Expected true == disableApiTermination, but was: ${disableApiTermination}", Boolean.TRUE.equals(disableApiTermination))
 
-        print( "Terminating instance ${instanceId} (should fail)" )
+        N4j.print( "Terminating instance ${instanceId} (should fail)" )
         try {
           terminateInstances( new TerminateInstancesRequest(
               instanceIds: [ instanceId ]
           ) )
-          assertThat( false, "Expected termination to fail for instance ${instanceId} with termination protection enabled")
+          Assert.assertTrue("Expected termination to fail for instance ${instanceId} with termination protection enabled", false)
         } catch ( AmazonServiceException e ) {
-          print( "Expected termination failure: ${e}" )
-          assertThat( 'OperationNotPermitted' == e.errorCode, "Expected error code OperationNotPermitted, but was: ${e.errorCode}" )
+          N4j.print( "Expected termination failure: ${e}" )
+          Assert.assertTrue("Expected error code OperationNotPermitted, but was: ${e.errorCode}", 'OperationNotPermitted' == e.errorCode)
         }
 
-        print( "Disabling termination protection for instance ${instanceId}" )
+        N4j.print( "Disabling termination protection for instance ${instanceId}" )
         modifyInstanceAttribute( new ModifyInstanceAttributeRequest(
             instanceId: instanceId,
             disableApiTermination: false
         ) )
 
-        print( "Describing attributes for instance ${instanceId} to check termination protection disabled" )
+        N4j.print( "Describing attributes for instance ${instanceId} to check termination protection disabled" )
         final Boolean disableApiTermination2 = describeInstanceAttribute( new DescribeInstanceAttributeRequest(
             instanceId: instanceId,
             attribute: 'disableApiTermination'
         ) ).with {
           instanceAttribute?.disableApiTermination
         }
-        assertThat( Boolean.FALSE.equals( disableApiTermination2 ), "Expected false == disableApiTermination, but was: ${disableApiTermination2}" )
+        Assert.assertTrue("Expected false == disableApiTermination, but was: ${disableApiTermination2}", Boolean.FALSE.equals(disableApiTermination2))
 
-        print( "Terminating instance ${instanceId}" )
+        N4j.print( "Terminating instance ${instanceId}" )
         terminateInstances( new TerminateInstancesRequest(
             instanceIds: [ instanceId ]
         ) )
       }
 
       ec2.with {
-        print( "Running instance without termination protection" )
+        N4j.print( "Running instance without termination protection" )
         String instanceId = runInstances( new RunInstancesRequest(
             imageId: imageId,
             keyName: keyName,
@@ -205,51 +181,51 @@ class TestEC2InstanceTerminationProtection {
           reservation?.instances?.getAt(0)?.instanceId
         }
         cleanupTasks.add{
-          print( "Terminating instance: ${instanceId}" )
+          N4j.print( "Terminating instance: ${instanceId}" )
           terminateInstances( new TerminateInstancesRequest(
               instanceIds: [ instanceId ]
           ) )
         }
 
-        print( "Enabling termination protection for instance ${instanceId}" )
+        N4j.print( "Enabling termination protection for instance ${instanceId}" )
         modifyInstanceAttribute( new ModifyInstanceAttributeRequest(
             instanceId: instanceId,
             disableApiTermination: true
         ) )
 
-        print( "Describing attributes for instance ${instanceId} to check termination protection enabled" )
+        N4j.print( "Describing attributes for instance ${instanceId} to check termination protection enabled" )
         final Boolean disableApiTermination = describeInstanceAttribute( new DescribeInstanceAttributeRequest(
             instanceId: instanceId,
             attribute: 'disableApiTermination'
         ) ).with {
           instanceAttribute?.disableApiTermination
         }
-        assertThat( Boolean.TRUE.equals( disableApiTermination ), "Expected true == disableApiTermination, but was: ${disableApiTermination}" )
+        Assert.assertTrue("Expected true == disableApiTermination, but was: ${disableApiTermination}", Boolean.TRUE.equals(disableApiTermination))
 
-        print( "Terminating instance ${instanceId} (should fail)" )
+        N4j.print( "Terminating instance ${instanceId} (should fail)" )
         try {
           terminateInstances( new TerminateInstancesRequest(
               instanceIds: [ instanceId ]
           ) )
-          assertThat( false, "Expected termination to fail for instance ${instanceId} with termination protection enabled")
+          Assert.assertTrue("Expected termination to fail for instance ${instanceId} with termination protection enabled", false)
         } catch ( AmazonServiceException e ) {
-          print( "Expected termination failure: ${e}" )
-          assertThat( 'OperationNotPermitted' == e.errorCode, "Expected error code OperationNotPermitted, but was: ${e.errorCode}" )
+          N4j.print( "Expected termination failure: ${e}" )
+          Assert.assertTrue("Expected error code OperationNotPermitted, but was: ${e.errorCode}", 'OperationNotPermitted' == e.errorCode)
         }
 
-        print( "Disabling termination protection for instance ${instanceId}" )
+        N4j.print( "Disabling termination protection for instance ${instanceId}" )
         modifyInstanceAttribute( new ModifyInstanceAttributeRequest(
             instanceId: instanceId,
             disableApiTermination: false
         ) )
 
-        print( "Terminating instance ${instanceId}" )
+        N4j.print( "Terminating instance ${instanceId}" )
         terminateInstances( new TerminateInstancesRequest(
             instanceIds: [ instanceId ]
         ) )
       }
 
-      print( "Test complete" )
+      N4j.print( "Test complete" )
     } finally {
       // Attempt to clean up anything we created
       cleanupTasks.reverseEach { Runnable cleanupTask ->

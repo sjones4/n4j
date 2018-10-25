@@ -4,7 +4,7 @@ import com.amazonaws.services.cloudwatch.model.AlarmHistoryItem;
 import com.amazonaws.services.cloudwatch.model.DescribeAlarmHistoryRequest;
 import com.amazonaws.services.cloudwatch.model.DescribeAlarmHistoryResult;
 import com.amazonaws.services.cloudwatch.model.HistoryItemType;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.text.SimpleDateFormat;
 import java.util.Collection;

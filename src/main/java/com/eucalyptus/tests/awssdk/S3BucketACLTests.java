@@ -1,21 +1,21 @@
 package com.eucalyptus.tests.awssdk;
 
+import static org.junit.Assert.assertTrue;
 import static com.eucalyptus.tests.awssdk.N4j.assertThat;
 import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
-import static org.testng.AssertJUnit.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -60,10 +60,10 @@ public class S3BucketACLTests {
   private static String ownerId = null;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3BucketACLTests.class.getSimpleName());
     try {
-      account = this.getClass().getSimpleName().toLowerCase();
+      account = S3BucketACLTests.class.getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
     } catch (Exception e) {
       try {
@@ -79,20 +79,20 @@ public class S3BucketACLTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3BucketACLTests.class.getSimpleName());
     N4j.deleteAccount(account);
     s3 = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     print("Initializing bucket name and clean up tasks");
     bucketName = eucaUUID();
     cleanupTasks = new ArrayList<Runnable>();
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {

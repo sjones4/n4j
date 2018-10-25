@@ -70,7 +70,7 @@ import static com.eucalyptus.tests.awssdk.N4j.getYouAreClient;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,16 +79,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.apache.commons.lang.StringUtils;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.identitymanagement.model.GetUserResult;
@@ -119,10 +119,10 @@ public class S3ListMpuTests {
   private static final int DEFAULT_MAX_KEYS = 1000;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3ListMpuTests.class.getSimpleName());
     try {
-      accountA = this.getClass().getSimpleName().toLowerCase() + 'a';
+      accountA = S3ListMpuTests.class.getSimpleName().toLowerCase() + 'a';
       s3ClientA = initS3ClientWithNewAccount(accountA, "admin");
       ownerA = s3ClientA.getS3AccountOwner();
       accountIdA = ownerA.getId();
@@ -144,7 +144,7 @@ public class S3ListMpuTests {
     // s3 = getS3Client("awsrc_euca");
   }
 
-  public AmazonS3 getS3Client(String credPath) throws Exception {
+  public static AmazonS3 getS3Client(String credPath) throws Exception {
     print("Getting cloud information from " + credPath);
 
     String s3Endpoint = N4j.getAttribute(credPath, "S3_URL");
@@ -157,13 +157,13 @@ public class S3ListMpuTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3ListMpuTests.class.getSimpleName());
     N4j.deleteAccount(accountA);
     s3ClientA = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     bucketName = eucaUUID();
     cleanupTasks = new ArrayList<Runnable>();
@@ -181,7 +181,7 @@ public class S3ListMpuTests {
         bucketName.equals(bucket.getName()));
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {
@@ -413,7 +413,7 @@ public class S3ListMpuTests {
 
       for (String prefix : prefixKeyUploadIdMap.keySet()) {
         String commonPrefix = commonPrefixIterator.next();
-        assertTrue("Expected common prefix to be " + prefix + ", but got " + commonPrefix, StringUtils.equals(prefix, commonPrefix));
+        assertTrue("Expected common prefix to be " + prefix + ", but got " + commonPrefix, Objects.equals(prefix, commonPrefix));
       }
 
       assertTrue("Expected common prefixes iterator to be empty", !commonPrefixIterator.hasNext());
@@ -424,7 +424,7 @@ public class S3ListMpuTests {
         listing = listMpu(s3ClientA, accountA, bucketName, null, null, new String(prefix).replaceAll(delimiter, ""), delimiter, null, false);
         assertTrue("Expected 1 common prefix but got " + listing.getCommonPrefixes().size(), listing.getCommonPrefixes().size() == 1);
         assertTrue("Expected common prefix to be " + prefix + ", but got " + listing.getCommonPrefixes().get(0),
-            StringUtils.equals(listing.getCommonPrefixes().get(0), prefix));
+            Objects.equals(listing.getCommonPrefixes().get(0), prefix));
         assertTrue("Expected no multipart uploads but got some", listing.getMultipartUploads() == null || listing.getMultipartUploads().isEmpty());
       }
     } catch (AmazonServiceException ase) {
@@ -621,14 +621,15 @@ public class S3ListMpuTests {
 
   private void verifyCommonElements(MultipartUpload mpu) {
     assertTrue("Expected initiator ID to be " + userArnA + ", but got " + mpu.getInitiator().getId(),
-        StringUtils.equals(mpu.getInitiator().getId(), userArnA));
+        Objects.equals(mpu.getInitiator().getId(), userArnA));
     assertTrue("Expected initiator name to be " + userNameA + ", but got " + mpu.getInitiator().getDisplayName(),
-        StringUtils.equals(mpu.getInitiator().getDisplayName(), userNameA));
+        Objects.equals(mpu.getInitiator().getDisplayName(), userNameA));
     assertTrue("Expected account ID to be " + accountIdA + ", but got " + mpu.getOwner().getId(),
-        StringUtils.equals(mpu.getOwner().getId(), accountIdA));
+        Objects.equals(mpu.getOwner().getId(), accountIdA));
     assertTrue("Expected account ID to be " + accountA + ", but got " + mpu.getOwner().getDisplayName(),
-        StringUtils.equals(mpu.getOwner().getDisplayName(), accountA));
-    assertTrue("Expected storage class to be STANDARD, but got " + mpu.getStorageClass(), StringUtils.equals(mpu.getStorageClass(), "STANDARD"));
+        Objects.equals(mpu.getOwner().getDisplayName(), accountA));
+    assertTrue("Expected storage class to be STANDARD, but got " + mpu.getStorageClass(),
+        Objects.equals(mpu.getStorageClass(), "STANDARD"));
   }
 
   private MultipartUploadListing listMpu(AmazonS3 s3, String accountName, String bucketName, String keyMarker, String uploadIdMarker, String prefix,
@@ -664,12 +665,12 @@ public class S3ListMpuTests {
     assertTrue("Invalid multipart upload list", mpuListing != null);
     assertTrue("Expected bucket name to be " + bucketName + ", but got " + mpuListing.getBucketName(), mpuListing.getBucketName().equals(bucketName));
     assertTrue("Expected key-marker to be " + keyMarker + ", but got " + mpuListing.getKeyMarker(),
-        StringUtils.equals(mpuListing.getKeyMarker(), keyMarker));
+        Objects.equals(mpuListing.getKeyMarker(), keyMarker));
     assertTrue("Expected upload-id-marker to be " + uploadIdMarker + ", but got " + mpuListing.getUploadIdMarker(),
-        StringUtils.equals(mpuListing.getUploadIdMarker(), uploadIdMarker));
-    assertTrue("Expected prefix to be " + prefix + ", but got " + mpuListing.getPrefix(), StringUtils.equals(mpuListing.getPrefix(), prefix));
+        Objects.equals(mpuListing.getUploadIdMarker(), uploadIdMarker));
+    assertTrue("Expected prefix to be " + prefix + ", but got " + mpuListing.getPrefix(), Objects.equals(mpuListing.getPrefix(), prefix));
     assertTrue("Expected delimiter to be " + delimiter + ", but got " + mpuListing.getDelimiter(),
-        StringUtils.equals(mpuListing.getDelimiter(), delimiter));
+        Objects.equals(mpuListing.getDelimiter(), delimiter));
     assertTrue("Expected max-keys to be " + (maxUploads != null ? maxUploads : DEFAULT_MAX_KEYS) + ", but got " + mpuListing.getMaxUploads(),
         mpuListing.getMaxUploads() == (maxUploads != null ? maxUploads : DEFAULT_MAX_KEYS));
     assertTrue("Expected is truncated to be " + isTruncated + ", but got " + mpuListing.isTruncated(), mpuListing.isTruncated() == isTruncated);
@@ -677,9 +678,9 @@ public class S3ListMpuTests {
     if (mpuListing.getMultipartUploads() != null && !mpuListing.getMultipartUploads().isEmpty()) {
       MultipartUpload lastMpu = mpuListing.getMultipartUploads().get(mpuListing.getMultipartUploads().size() - 1);
       assertTrue("Expected next-key-marker to be " + lastMpu.getKey() + ", but got " + mpuListing.getNextKeyMarker(),
-          StringUtils.equals(lastMpu.getKey(), mpuListing.getNextKeyMarker()));
+          Objects.equals(lastMpu.getKey(), mpuListing.getNextKeyMarker()));
       assertTrue("Expected next-upload-id-marker to be " + lastMpu.getUploadId() + ", but got " + mpuListing.getNextUploadIdMarker(),
-          StringUtils.equals(lastMpu.getUploadId(), mpuListing.getNextUploadIdMarker()));
+          Objects.equals(lastMpu.getUploadId(), mpuListing.getNextUploadIdMarker()));
     } else {
       assertTrue("Expected next-key-marker to be null, but got " + mpuListing.getNextKeyMarker(), mpuListing.getNextKeyMarker() == null);
       assertTrue("Expected next-upload-id-marker to be null, but got " + mpuListing.getNextUploadIdMarker(),

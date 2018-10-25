@@ -5,7 +5,7 @@ import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,11 +14,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.After;
+import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -62,12 +62,12 @@ public class S3ObjectACLAcrossAccountsTests {
   private static String md5_orig = null;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + S3ObjectACLAcrossAccountsTests.class.getSimpleName());
 
     try {
-      accountA = this.getClass().getSimpleName().toLowerCase() + "a";
-      accountB = this.getClass().getSimpleName().toLowerCase() + "b";
+      accountA = S3ObjectACLAcrossAccountsTests.class.getSimpleName().toLowerCase() + "a";
+      accountB = S3ObjectACLAcrossAccountsTests.class.getSimpleName().toLowerCase() + "b";
       s3ClientA = initS3ClientWithNewAccount(accountA, "admin");
       s3ClientB = initS3ClientWithNewAccount(accountB, "admin");
     } catch (Exception e) {
@@ -89,15 +89,15 @@ public class S3ObjectACLAcrossAccountsTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() throws Exception {
+    print("### POST SUITE CLEANUP - " + S3ObjectACLAcrossAccountsTests.class.getSimpleName());
     N4j.deleteAccount(accountA);
     N4j.deleteAccount(accountB);
     s3ClientA = null;
     s3ClientB = null;
   }
 
-  @BeforeMethod
+  @Before
   public void setup() throws Exception {
     print("Initializing bucket name, key name and clean up tasks");
     bucketName = eucaUUID();
@@ -105,7 +105,7 @@ public class S3ObjectACLAcrossAccountsTests {
     cleanupTasks = new ArrayList<Runnable>();
   }
 
-  @AfterMethod
+  @After
   public void cleanup() throws Exception {
     Collections.reverse(cleanupTasks);
     for (final Runnable cleanupTask : cleanupTasks) {

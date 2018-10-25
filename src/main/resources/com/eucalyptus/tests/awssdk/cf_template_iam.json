@@ -1,0 +1,68 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Resources" : {
+
+    "Group" : {
+      "Type" : "AWS::IAM::Group"
+    },
+
+    "InstanceProfile" : {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/profile/",
+        "Roles": [ { "Ref": "Role" } ]
+      }
+    },
+
+    "Role" : {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "ec2.amazonaws.com" ]
+            },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Path": "/path/"
+      }
+    },
+
+    "User" : {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "Groups": [ { "Ref": "Group" } ],
+        "Path": "/path/"
+      }
+    },
+
+    "Policy" : {
+      "Type" : "AWS::IAM::Policy",
+      "Properties" : {
+        "Groups" : [ { "Ref": "Group" } ],
+        "PolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Action": [ "*" ],
+            "Effect": "Allow",
+            "Resource": [ "*" ]
+          }]
+        },
+        "PolicyName" : "policy",
+        "Roles" : [ { "Ref": "Role" } ],
+        "Users" : [ { "Ref": "User" } ]
+      }
+    },
+
+    "AccessKey" : {
+      "Type": "AWS::IAM::AccessKey",
+      "Properties": {
+        "Status": "Active",
+        "UserName": { "Ref": "User" }
+      }
+    }
+  }
+}

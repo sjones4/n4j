@@ -19,17 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.tests.awssdk;
 
+import static com.eucalyptus.tests.awssdk.N4j.ec2;
+import static com.eucalyptus.tests.awssdk.N4j.print;
+
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.*;
-import org.testng.annotations.Test;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import static com.eucalyptus.tests.awssdk.N4j.*;
 
 /**
  * This application tests RunInstances with a client token.
@@ -42,8 +45,8 @@ public class TestEC2RunInstancesClientToken {
 
     @Test
     public void EC2RunInstancesClientTokenTest() throws Exception {
-        testInfo(this.getClass().getSimpleName());
-        getCloudInfo();
+        N4j.testInfo(this.getClass().getSimpleName());
+        N4j.getCloudInfo();
         // End discovery, start test
         final List<Runnable> cleanupTasks = new ArrayList<Runnable>();
         try {
@@ -52,7 +55,7 @@ public class TestEC2RunInstancesClientToken {
             print("Running instance with client token: " + clientToken);
             final RunInstancesResult runResult =
                     ec2.runInstances(new RunInstancesRequest()
-                            .withImageId(IMAGE_ID)
+                            .withImageId(N4j.IMAGE_ID)
                             .withClientToken(clientToken)
                             .withMinCount(1)
                             .withMaxCount(1));
@@ -69,7 +72,7 @@ public class TestEC2RunInstancesClientToken {
             // Rerunning instance with client token
             final RunInstancesResult runResult2 =
                     ec2.runInstances(new RunInstancesRequest()
-                            .withImageId(IMAGE_ID)
+                            .withImageId(N4j.IMAGE_ID)
                             .withClientToken(clientToken)
                             .withMinCount(1)
                             .withMaxCount(1));
@@ -83,7 +86,7 @@ public class TestEC2RunInstancesClientToken {
                 }
             });
 
-            assertThat(instanceId2.equals(instanceId), "Instance identifiers did not match");
+            Assert.assertTrue( "Instance identifiers did not match", instanceId2.equals(instanceId) );
 
             // Test client token filter
             print("Describing instances using client token filter");
@@ -92,20 +95,20 @@ public class TestEC2RunInstancesClientToken {
                         ec2.describeInstances(new DescribeInstancesRequest().withFilters(
                                 new Filter().withName("client-token").withValues(clientToken)));
                 final List<String> describedInstances = getInstancesIds(describeInstancesResult.getReservations());
-                assertThat(describedInstances.size() == 1, "Expected one instance");
-                assertThat(instanceId.equals(describedInstances.get(0)), "Unexpected instance id: " + describedInstances.get(0));
+                Assert.assertTrue( "Expected one instance", describedInstances.size() == 1 );
+                Assert.assertTrue( "Unexpected instance id: " + describedInstances.get(0), instanceId.equals(describedInstances.get(0)) );
             }
 
             // Terminate instance
             print("Terminating instance: " + instanceId);
-            sleep(10); // small buffer
+            N4j.sleep(10); // small buffer
             ec2.terminateInstances(new TerminateInstancesRequest().withInstanceIds(instanceId));
             waitForInstanceToTerminate(ec2, TimeUnit.MINUTES.toMillis(15), instanceId);
 
             // Rerun instance with client token
             final RunInstancesResult runResult3 =
                     ec2.runInstances(new RunInstancesRequest()
-                            .withImageId(IMAGE_ID)
+                            .withImageId(N4j.IMAGE_ID)
                             .withClientToken(clientToken)
                             .withMinCount(1)
                             .withMaxCount(1));
@@ -119,7 +122,7 @@ public class TestEC2RunInstancesClientToken {
                 }
             });
 
-            assertThat(instanceId3.equals(instanceId), "Instance identifiers did not match (after termination)");
+            Assert.assertTrue( "Instance identifiers did not match (after termination)", instanceId3.equals(instanceId) );
 
             // Test client token filter after termination
             print("Describing instances using client token filter (after termination)");
@@ -128,8 +131,8 @@ public class TestEC2RunInstancesClientToken {
                         ec2.describeInstances(new DescribeInstancesRequest().withFilters(
                                 new Filter().withName("client-token").withValues(clientToken)));
                 final List<String> describedInstances = getInstancesIds(describeInstancesResult.getReservations());
-                assertThat(describedInstances.size() == 1, "Expected one instance");
-                assertThat(instanceId.equals(describedInstances.get(0)), "Unexpected instance id: " + describedInstances.get(0));
+                Assert.assertTrue( "Expected one instance", describedInstances.size() == 1 );
+                Assert.assertTrue( "Unexpected instance id: " + describedInstances.get(0), instanceId.equals(describedInstances.get(0)) );
             }
 
             print("Test complete");
@@ -181,7 +184,7 @@ public class TestEC2RunInstancesClientToken {
                 }
             }
         }
-        assertThat(completed, "Instance did not terminate within the expected timeout");
+        Assert.assertTrue( "Instance did not terminate within the expected timeout", completed );
         print("Instance terminated in " + (System.currentTimeMillis() - startTime) + "ms");
     }
 }

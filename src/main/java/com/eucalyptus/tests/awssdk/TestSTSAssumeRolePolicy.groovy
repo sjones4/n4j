@@ -15,10 +15,9 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
 import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
 
 /**
@@ -32,7 +31,6 @@ import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
 class TestSTSAssumeRolePolicy {
 
   private final int sleepSecs = 1
-  private final String host
   private final String testAcct
   private final AWSCredentialsProvider adminCredentials
   private final String otherTestAcct
@@ -40,7 +38,6 @@ class TestSTSAssumeRolePolicy {
 
   public TestSTSAssumeRolePolicy( ) {
     N4j.getCloudInfo( )
-    this.host = CLC_IP
     this.testAcct= "${NAME_PREFIX}test-acct"
     N4j.createAccount(testAcct)
     this.adminCredentials = new StaticCredentialsProvider( N4j.getUserCreds(testAcct, 'admin') )
@@ -61,27 +58,21 @@ class TestSTSAssumeRolePolicy {
     N4j.deleteAccount(otherTestAcct)
   }
 
-  private String cloudUri(String servicePath) {
-    URI.create("http://${host}:8773/")
-            .resolve(servicePath)
-            .toString()
-  }
-
   private AWSSecurityTokenService getStsClient(final AWSCredentialsProvider credentials) {
     final AWSSecurityTokenService sts = new AWSSecurityTokenServiceClient(credentials)
-    sts.setEndpoint(cloudUri('/services/Tokens'))
+    sts.setEndpoint(N4j.TOKENS_ENDPOINT)
     sts
   }
 
   private AmazonIdentityManagement getIamClient(final AWSCredentialsProvider credentials) {
     final AmazonIdentityManagement iam = new AmazonIdentityManagementClient(credentials)
-    iam.setEndpoint(cloudUri('/services/Euare'))
+    iam.setEndpoint(N4j.IAM_ENDPOINT)
     iam
   }
 
   private AmazonEC2 getEC2Client(final AWSCredentialsProvider credentials) {
     final AmazonEC2 ec2 = new AmazonEC2Client(credentials)
-    ec2.setEndpoint(cloudUri("/services/compute"))
+    ec2.setEndpoint(N4j.EC2_ENDPOINT)
     ec2
   }
 

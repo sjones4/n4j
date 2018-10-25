@@ -21,12 +21,13 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
-import org.testng.annotations.Test
+
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
 import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
-import static com.eucalyptus.tests.awssdk.N4j.minimalInit
 import static com.eucalyptus.tests.awssdk.N4j.testInfo
 
 /**
@@ -44,44 +45,39 @@ import static com.eucalyptus.tests.awssdk.N4j.testInfo
  */
 class TestIAMPolicyVariablesS3 {
 
-  private final String host;
-  private final AWSCredentialsProvider credentials;
+  private static AWSCredentialsProvider credentials
 
-  TestIAMPolicyVariablesS3( ) {
-    minimalInit()
-    this.host=CLC_IP
+  @BeforeClass
+  static void init( ) {
+    N4j.initEndpoints()
     this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri(String host, String servicePath ) {
-    URI.create( "http://${host}:8773/" )
-        .resolve( servicePath )
-        .toString( )
   }
 
   private YouAreClient getYouAreClient( AWSCredentialsProvider clientCredentials = credentials  ) {
     final YouAreClient euare = new YouAreClient( clientCredentials )
-    euare.setEndpoint( cloudUri( host, '/services/Euare' ) )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare
   }
 
   private AWSSecurityTokenService getStsClient( AWSCredentialsProvider clientCredentials = credentials  ) {
     final AWSSecurityTokenService sts = new AWSSecurityTokenServiceClient( clientCredentials )
-    sts.setEndpoint(cloudUri( host, '/services/Tokens' ))
+    sts.setEndpoint( N4j.TOKENS_ENDPOINT )
     sts
   }
 
   private AmazonS3 getS3Client( AWSCredentialsProvider clientCredentials = credentials ) {
     final AmazonS3Client s3 =
         new AmazonS3Client( clientCredentials, new ClientConfiguration( ).withSignerOverride("S3SignerType") )
-    s3.setEndpoint( cloudUri( host, '/services/objectstorage' ) )
-    s3.setS3ClientOptions( new S3ClientOptions( ).builder( ).setPathStyleAccess( true ).build( ) )
+    s3.setEndpoint( N4j.S3_ENDPOINT )
+    if ( !N4j.S3_ENDPOINT.contains('s3.') && !N4j.S3_ENDPOINT.contains('objectstorage.') ) {
+      s3.setS3ClientOptions( new S3ClientOptions( ).builder( ).setPathStyleAccess( true ).build( ) )
+    }
     s3
   }
 
   @Test
-  public void testIAMPolicyVariablesS3( ) throws Exception {
-    testInfo(this.getClass().getSimpleName());
+  void testIAMPolicyVariablesS3( ) throws Exception {
+    testInfo(this.getClass().getSimpleName())
     final String namePrefix = UUID.randomUUID().toString().substring(0,8) + "-"
     N4j.print( "Using resource prefix for test: ${namePrefix}" )
 
@@ -101,7 +97,7 @@ class TestIAMPolicyVariablesS3 {
         String adminAccountNumber = createAccount(new CreateAccountRequest(accountName: accountName)).with {
           account?.accountId
         }
-        N4j.assertThat( adminAccountNumber != null, "Expected account number" )
+        Assert.assertTrue("Expected account number", adminAccountNumber != null)
         N4j.print( "Created test account with number: ${adminAccountNumber}" )
         cleanupTasks.add {
           N4j.print("Deleting test account: ${accountName}")
@@ -111,7 +107,7 @@ class TestIAMPolicyVariablesS3 {
         N4j.print("Creating access key for test account admin user: ${accountName}")
         getYouAreClient( ).with {
           addRequestHandler(new RequestHandler2() {
-            public void beforeRequest(final Request<?> request) {
+            void beforeRequest(final Request<?> request) {
               request.addParameter("DelegateAccount", accountName)
             }
           })
@@ -138,8 +134,8 @@ class TestIAMPolicyVariablesS3 {
           accountId = user?.arn?.substring( 13,25 )
           user?.userId
         }
-        N4j.assertThat( userId != null, "Expected user id")
-        N4j.assertThat( accountId != null, "Expected account id")
+        Assert.assertTrue("Expected user id", userId != null)
+        Assert.assertTrue("Expected account id", accountId != null)
         N4j.print( "Created user ${userName} with id ${userId} in account ${accountId}" )
 
         String policyName = "${namePrefix}policy1"
@@ -315,17 +311,17 @@ class TestIAMPolicyVariablesS3 {
         }
 
         N4j.print( "Putting blah object to ${bucketName} home/someotheruser directory" )
-        putObject( bucketName, "home/someotheruser/blah", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) );
+        putObject( bucketName, "home/someotheruser/blah", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) )
         cleanupTasks.add{
           N4j.print( "Deleting blah object from ${bucketName} home/someotheruser directory" )
-          deleteObject( bucketName, "home/someotheruser/blah"  );
+          deleteObject( bucketName, "home/someotheruser/blah"  )
         }
       }
 
       final AWSCredentialsProvider roleCredentialsProvider = new AWSCredentialsProvider( ) {
         AWSCredentials awsCredentials = null
         @Override
-        public AWSCredentials getCredentials( ) {
+        AWSCredentials getCredentials( ) {
           if ( awsCredentials == null ) {
             N4j.print "Getting credentials using assume role with web identity"
             awsCredentials = getStsClient( adminCredentials ).with {
@@ -346,30 +342,30 @@ class TestIAMPolicyVariablesS3 {
         }
 
         @Override
-        public void refresh( ) {
+        void refresh( ) {
           awsCredentials = null
         }
       }
       getS3Client( roleCredentialsProvider ).with {
         N4j.print("Putting foo1 object to ${bucketName} home/${roleId}:${roleSessionName} directory")
-        putObject(bucketName, "home/${roleId}:${roleSessionName}/foo1", new ByteArrayInputStream("DATA".getBytes("utf-8")), new ObjectMetadata());
+        putObject(bucketName, "home/${roleId}:${roleSessionName}/foo1", new ByteArrayInputStream("DATA".getBytes("utf-8")), new ObjectMetadata())
 
         N4j.print("Deleting object foo1 from ${bucketName} home/${roleId}:${roleSessionName} directory")
-        deleteObject(bucketName, "home/${roleId}:${roleSessionName}/foo1");
+        deleteObject(bucketName, "home/${roleId}:${roleSessionName}/foo1")
       }
 
       getS3Client( userCredentials ).with {
         N4j.print( "Putting foo1 object to ${bucketName} home/${userId} directory" )
-        putObject( bucketName, "home/${userId}/foo1", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) );
+        putObject( bucketName, "home/${userId}/foo1", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) )
 
         N4j.print( "Deleting object foo1 from ${bucketName} home/${userId} directory" )
-        deleteObject( bucketName, "home/${userId}/foo1"  );
+        deleteObject( bucketName, "home/${userId}/foo1"  )
 
         N4j.print( "Putting foo1 object to ${bucketName}/${userName} home directory" )
-        putObject( bucketName, "home/${userName}/foo1", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) );
+        putObject( bucketName, "home/${userName}/foo1", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) )
 
         N4j.print( "Copying object foo1 to copy1 in ${bucketName} home directory" )
-        copyObject( bucketName, "home/${userName}/foo1", bucketName, "home/${userName}/copy1" );
+        copyObject( bucketName, "home/${userName}/foo1", bucketName, "home/${userName}/copy1" )
 
         N4j.print( "Listing bucket root" )
         N4j.print( listObjects( new ListObjectsRequest(
@@ -377,7 +373,7 @@ class TestIAMPolicyVariablesS3 {
             prefix: '',
             delimiter: '/'
         ) ).with{
-          N4j.assertThat( [ 'home/' ] == commonPrefixes, "bucket root listing" )
+          Assert.assertTrue("bucket root listing", ['home/'] == commonPrefixes)
           objectSummaries*.key + commonPrefixes
         }.toString( ) )
 
@@ -387,7 +383,7 @@ class TestIAMPolicyVariablesS3 {
             prefix: 'home/',
             delimiter: '/'
         ) ).with{
-          N4j.assertThat( [ "home/${userName}/", 'home/someotheruser/' ] == commonPrefixes, "bucket home listing" )
+          Assert.assertTrue("bucket home listing", ["home/${userName}/", 'home/someotheruser/'] == commonPrefixes)
           objectSummaries*.key + commonPrefixes
         }.toString( ) )
 
@@ -397,9 +393,9 @@ class TestIAMPolicyVariablesS3 {
             prefix: "home/${userName}/",
             delimiter: '/'
         )  ).with{
-          N4j.assertThat(
-              [ "home/${userName}/copy1" as String, "home/${userName}/foo1" as String ] == objectSummaries*.key,
-              "bucket user listing" )
+          Assert.assertTrue("bucket user listing",
+              ["home/${userName}/copy1" as String, "home/${userName}/foo1" as String] == objectSummaries*.key
+          )
           objectSummaries*.key + commonPrefixes
         }.toString( ) )
 
@@ -410,21 +406,21 @@ class TestIAMPolicyVariablesS3 {
               prefix: 'home/someotheruser/',
               delimiter: '/'
           )  ).with{ objectSummaries*.key + commonPrefixes }.toString( ) )
-          N4j.assertThat( false, 'Expected failure listing bucket prefix without permission' )
+          Assert.assertTrue('Expected failure listing bucket prefix without permission', false)
         } catch ( AmazonServiceException e ) {
           N4j.print( "Expected error list bucket prefix without permission: ${e}" )
         }
 
         N4j.print( "Deleting object foo1 from ${bucketName} home/${userName} directory" )
-        deleteObject( bucketName, "home/${userName}/foo1"  );
+        deleteObject( bucketName, "home/${userName}/foo1"  )
 
         N4j.print( "Deleting object copy1 from ${bucketName} home/${userName} directory" )
-        deleteObject( bucketName, "home/${userName}/copy1"  );
+        deleteObject( bucketName, "home/${userName}/copy1"  )
 
         try {
           N4j.print( "Putting object to ${bucketName} outside of home directory, should fail" )
-          putObject( bucketName, "foo1", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) );
-          N4j.assertThat( false, "Expected put object to fail for admin user due to permissions" )
+          putObject( bucketName, "foo1", new ByteArrayInputStream( "DATA".getBytes( "utf-8" ) ), new ObjectMetadata( ) )
+          Assert.assertTrue("Expected put object to fail for admin user due to permissions", false)
         } catch ( AmazonServiceException e ) {
           N4j.print( "Expected error putting object without permission: ${e}" )
         }

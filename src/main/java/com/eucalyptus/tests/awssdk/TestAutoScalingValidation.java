@@ -2,7 +2,7 @@ package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.autoscaling.model.*;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;

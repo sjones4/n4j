@@ -23,13 +23,9 @@ import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
 import com.github.sjones4.youcan.youare.YouAreClient
 
-
-import org.testng.annotations.Test;
-
-import static N4j.minimalInit;
-import static N4j.CLC_IP;
-import static N4j.ACCESS_KEY;
-import static N4j.SECRET_KEY;
+import org.junit.Assert
+import org.junit.BeforeClass
+import org.junit.Test
 
 /**
  * This application tests administration for CF resources.
@@ -40,52 +36,30 @@ import static N4j.SECRET_KEY;
  */
 class TestCFAdministration {
 
-  private final String host;
-  private final AWSCredentialsProvider credentials;
+  private static AWSCredentialsProvider credentials
 
-  public static void main( String[] args ) throws Exception {
-    new TestCFAdministration( ).CFAdministrationTest( )
-  }
-
-  public TestCFAdministration( ) {
-    minimalInit()
-    this.host = CLC_IP
-    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-            .resolve( servicePath )
-            .toString()
+  @BeforeClass
+  static void init( ) {
+    N4j.initEndpoints( )
+    this.credentials = new StaticCredentialsProvider( new BasicAWSCredentials( N4j.ACCESS_KEY, N4j.SECRET_KEY ) )
   }
 
   private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials  ) {
     final YouAreClient euare = new YouAreClient( credentials )
-    euare.setEndpoint( cloudUri( "/services/Euare" ) )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare
   }
 
   private AmazonCloudFormationClient getCloudFormationClient( final AWSCredentialsProvider credentials  ) {
     final AmazonCloudFormationClient cf = new AmazonCloudFormationClient( credentials )
-    cf.setEndpoint( cloudUri( "/services/CloudFormation" ) )
+    cf.setEndpoint( N4j.CF_ENDPOINT )
     cf
   }
 
-  private boolean assertThat( boolean condition,
-                              String message ){
-    assert condition : message
-    true
-  }
-
-  private void print( String text ) {
-    System.out.println( text )
-  }
-
   @Test
-  public void CFAdministrationTest( ) throws Exception {
-
+  void CFAdministrationTest( ) throws Exception {
     final String namePrefix = UUID.randomUUID().toString() + "-"
-    print( "Using resource prefix for test: ${namePrefix}" )
+    N4j.print( "Using resource prefix for test: ${namePrefix}" )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
@@ -95,50 +69,50 @@ class TestCFAdministration {
       final YouAre youAre = getYouAreClient( credentials )
       youAre.with {
         final String accountName = "${namePrefix}cf-test-account"
-        print( "Creating account for administration / IAM testing: ${accountName}" )
+        N4j.print( "Creating account for administration / IAM testing: ${accountName}" )
         String adminAccountNumber = createAccount( new CreateAccountRequest( accountName: accountName ) ).with {
           account?.accountId
         }
-        assertThat( adminAccountNumber != null, "Expected account number" )
-        print( "Created admin account with number: ${adminAccountNumber}" )
+        Assert.assertTrue("Expected account number", adminAccountNumber != null)
+        N4j.print( "Created admin account with number: ${adminAccountNumber}" )
         cleanupTasks.add {
-          print( "Deleting admin account: ${accountName}" )
+          N4j.print( "Deleting admin account: ${accountName}" )
           deleteAccount( new DeleteAccountRequest( accountName: accountName, recursive: true ) )
         }
 
         YouAre adminIam = getYouAreClient( credentials )
         adminIam.addRequestHandler( new AbstractRequestHandler(){
-          public void beforeRequest(final Request<?> request) {
+          void beforeRequest(final Request<?> request) {
             request.addParameter( "DelegateAccount", accountName )
           }
         } )
         adminIam.with {
-          print( "Creating access key for admin account: ${accountName}" )
+          N4j.print( "Creating access key for admin account: ${accountName}" )
           cfAccountCredentials = createAccessKey( new CreateAccessKeyRequest( userName: 'admin' ) ).with {
             accessKey?.with {
               new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
 
-          assertThat( cfAccountCredentials != null, "Expected admin credentials" )
-          print( "Created cf account access key: ${cfAccountCredentials.credentials.AWSAccessKeyId}" )
+          Assert.assertTrue("Expected admin credentials", cfAccountCredentials != null)
+          N4j.print( "Created cf account access key: ${cfAccountCredentials.credentials.AWSAccessKeyId}" )
 
-          print( "Creating USER in admin account for policy testing: ${userName}" )
+          N4j.print( "Creating USER in admin account for policy testing: ${userName}" )
           final String userId = createUser( new CreateUserRequest( userName: userName, path: '/' ) ).with {
             user.userId
           }
-          assertThat( userId != null, "Expected USER ID" )
-          print( "Created admin USER with number: ${userId}" )
+          Assert.assertTrue("Expected USER ID", userId != null)
+          N4j.print( "Created admin USER with number: ${userId}" )
 
-          print( "Creating access key for admin USER: ${userName}" )
+          N4j.print( "Creating access key for admin USER: ${userName}" )
           cfUserCredentials = createAccessKey( new CreateAccessKeyRequest( userName: userName ) ).with {
             accessKey?.with {
               new StaticCredentialsProvider( new BasicAWSCredentials( accessKeyId, secretAccessKey ) )
             }
           }
 
-          assertThat( cfUserCredentials != null, "Expected USER credentials" )
-          print( "Created cf USER access key: ${cfAccountCredentials.credentials.AWSAccessKeyId}" )
+          Assert.assertTrue("Expected USER credentials", cfUserCredentials != null)
+          N4j.print( "Created cf USER access key: ${cfAccountCredentials.credentials.AWSAccessKeyId}" )
 
           void
         }
@@ -166,34 +140,34 @@ class TestCFAdministration {
       String stackId1 = null
       String stackId2 = null
       getCloudFormationClient( cfAccountCredentials ).with {
-        print( "Creating test stack: ${stackName1}" )
+        N4j.print( "Creating test stack: ${stackName1}" )
         stackId1 = createStack( new CreateStackRequest(
                 stackName: stackName1,
                 templateBody:template
         ) ).stackId
-        assertThat( stackId1 != null, "Expected stack ID" )
-        print( "Created stack with ID: ${stackId1}" )
+        Assert.assertTrue("Expected stack ID", stackId1 != null)
+        N4j.print( "Created stack with ID: ${stackId1}" )
         cleanupTasks.add{
-          print( "Deleting stack: ${stackName1}" )
+          N4j.print( "Deleting stack: ${stackName1}" )
           deleteStack( new DeleteStackRequest( stackName: stackName1 ) )
         }
 
-        print( "Creating test stack: ${stackName2}" )
+        N4j.print( "Creating test stack: ${stackName2}" )
         stackId2 = createStack( new CreateStackRequest(
                 stackName: stackName2,
                 templateBody:template
         ) ).stackId
-        assertThat( stackId2 != null, "Expected stack ID" )
-        print( "Created stack with ID: ${stackId2}" )
+        Assert.assertTrue("Expected stack ID", stackId2 != null)
+        N4j.print( "Created stack with ID: ${stackId2}" )
         cleanupTasks.add{
-          print( "Deleting stack: ${stackName2}" )
+          N4j.print( "Deleting stack: ${stackName2}" )
           deleteStack( new DeleteStackRequest( stackName: stackName2 ) )
         }
 
-        print( "Waiting for stack ${stackId1} creation" )
+        N4j.print( "Waiting for stack ${stackId1} creation" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for stack ${stackId1} creation, waited ${it*5}s" )
+          N4j.print( "Waiting for stack ${stackId1} creation, waited ${it*5}s" )
           describeStacks( new DescribeStacksRequest(
                   stackName: stackId1
           ) ).with {
@@ -201,10 +175,10 @@ class TestCFAdministration {
           }
         }
 
-        print( "Waiting for stack ${stackId2} creation" )
+        N4j.print( "Waiting for stack ${stackId2} creation" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for stack ${stackId2} creation, waited ${it*5}s" )
+          N4j.print( "Waiting for stack ${stackId2} creation, waited ${it*5}s" )
           describeStacks( new DescribeStacksRequest(
                   stackName: stackId2
           ) ).with {
@@ -214,7 +188,7 @@ class TestCFAdministration {
       }
 
       getYouAreClient( cfAccountCredentials ).with {
-        print( "Creating policy with stack permissions" )
+        N4j.print( "Creating policy with stack permissions" )
         putUserPolicy( new PutUserPolicyRequest(
                 userName: userName,
                 policyName: 'cf-policy',
@@ -242,90 +216,90 @@ class TestCFAdministration {
       }
 
       getCloudFormationClient( credentials ).with {
-        println( "Verifying cloud admin does not see other account stacks when describing by default" )
+        N4j.print( "Verifying cloud admin does not see other account stacks when describing by default" )
         int adminStackCount = describeStacks( ).with {
-          assertThat(
-                  stacks.findAll{ [ stackId1, stackId2 ].contains( it.stackId )  }.empty,
-                  "Expected no stacks from other accounts" )
+          Assert.assertTrue("Expected no stacks from other accounts",
+              stacks.findAll { [stackId1, stackId2].contains(it.stackId) }.empty
+          )
           stacks.size( )
         }
 
-        println( "Verifying cloud admin does not see other account stacks when listing" )
+        N4j.print( "Verifying cloud admin does not see other account stacks when listing" )
         listStacks( new ListStacksRequest() ).with {
-          assertThat(
-                  stackSummaries.findAll{ [ stackId1, stackId2 ].contains( it.stackId )  }.empty,
-                  "Expected no stacks from other accounts" )
+          Assert.assertTrue("Expected no stacks from other accounts",
+              stackSummaries.findAll { [stackId1, stackId2].contains(it.stackId) }.empty
+          )
         }
 
-        println( "Verifying cloud admin sees other account stacks with verbose describe" )
+        N4j.print( "Verifying cloud admin sees other account stacks with verbose describe" )
         describeStacks( new DescribeStacksRequest( stackName: 'verbose' ) ).with {
-          assertThat( stacks?.size() > adminStackCount, "Expected to see other account stacks" )
+          Assert.assertTrue("Expected to see other account stacks", stacks?.size() > adminStackCount)
         }
 
-        println( "Verifying cloud admin sees other account stack with explicit describe" )
+        N4j.print( "Verifying cloud admin sees other account stack with explicit describe" )
         describeStacks( new DescribeStacksRequest( stackName: stackId1 ) ).with {
-          assertThat( 1 == stacks?.size(), "Expected 1 stack" )
+          Assert.assertTrue("Expected 1 stack", 1 == stacks?.size())
         }
 
-        println( "Verifying cloud admin can describe stack events" )
+        N4j.print( "Verifying cloud admin can describe stack events" )
         describeStackEvents( new DescribeStackEventsRequest(
                 stackName: stackId1
         ) ).with {
-          assertThat( !stackEvents?.empty, "Expected stack events" )
+          Assert.assertTrue("Expected stack events", !stackEvents?.empty)
         }
 
-        println( "Verifying cloud admin can describe stack resources" )
+        N4j.print( "Verifying cloud admin can describe stack resources" )
         describeStackResources( new DescribeStackResourcesRequest(
                 stackName: stackId1
         ) ).with {
-          assertThat( !stackResources?.empty, "Expected stack resources" )
+          Assert.assertTrue("Expected stack resources", !stackResources?.empty)
         }
       }
 
       getCloudFormationClient( cfUserCredentials ).with {
-        println( "Verifying USER sees permitted stack when describing" )
+        N4j.print( "Verifying USER sees permitted stack when describing" )
         describeStacks( ).with {
-          assertThat( 1 == stacks?.size(), "Expected 1 stack" )
+          Assert.assertTrue("Expected 1 stack", 1 == stacks?.size())
         }
 
-        println( "Verifying USER sees permitted stack when describing by name" )
+        N4j.print( "Verifying USER sees permitted stack when describing by name" )
         describeStacks( new DescribeStacksRequest( stackName: stackName1 ) ).with {
-          assertThat( 1 == stacks?.size(), "Expected 1 stack" )
+          Assert.assertTrue("Expected 1 stack", 1 == stacks?.size())
         }
 
-        println( "Verifying USER sees permitted stack when listing" )
+        N4j.print( "Verifying USER sees permitted stack when listing" )
         listStacks( ).with {
-          assertThat( 1 == stackSummaries?.size(), "Expected 1 stack" )
+          Assert.assertTrue("Expected 1 stack", 1 == stackSummaries?.size())
         }
 
-        println( "Verifying USER can describe stack events" )
+        N4j.print( "Verifying USER can describe stack events" )
         describeStackEvents( new DescribeStackEventsRequest(
                 stackName: stackName1
         ) ).with {
-          assertThat( !stackEvents?.empty, "Expected stack events" )
+          Assert.assertTrue("Expected stack events", !stackEvents?.empty)
         }
 
-        println( "Verifying USER can describe stack resources" )
+        N4j.print( "Verifying USER can describe stack resources" )
         describeStackResources( new DescribeStackResourcesRequest(
                 stackName: stackName1
         ) ).with {
-          assertThat( !stackResources?.empty, "Expected stack resources" )
+          Assert.assertTrue("Expected stack resources", !stackResources?.empty)
         }
 
-        println( "Verifying USER can list stack resources" )
+        N4j.print( "Verifying USER can list stack resources" )
         listStackResources( new ListStackResourcesRequest(
                 stackName: stackName1
         ) ).with {
-          assertThat( !stackResourceSummaries?.empty, "Expected stack resources" )
+          Assert.assertTrue("Expected stack resources", !stackResourceSummaries?.empty)
         }
 
-        println( "Verifying USER can delete stack ${stackName1}" )
+        N4j.print( "Verifying USER can delete stack ${stackName1}" )
         deleteStack( new DeleteStackRequest( stackName: stackName1 ) )
 
-        print( "Waiting for stack ${stackName1} deletion" )
+        N4j.print( "Waiting for stack ${stackName1} deletion" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for stack ${stackName1} deletion, waited ${it*5}s" )
+          N4j.print( "Waiting for stack ${stackName1} deletion, waited ${it*5}s" )
           describeStacks( new DescribeStacksRequest(
                   stackName: stackName1
           ) ).with {
@@ -333,20 +307,20 @@ class TestCFAdministration {
           }
         }
 
-        print( "Verifying stack deleted ${stackName1}" )
+        N4j.print( "Verifying stack deleted ${stackName1}" )
         describeStacks( new DescribeStacksRequest( stackName: stackName1 ) ).with {
-          assertThat( stacks?.empty || stacks?.getAt( 0 )?.stackStatus == 'DELETE_COMPLETE', "Expected stack ${stackName1} deleted" )
+          Assert.assertTrue("Expected stack ${stackName1} deleted", stacks?.empty || stacks?.getAt(0)?.stackStatus == 'DELETE_COMPLETE')
         }
       }
 
       getCloudFormationClient( credentials ).with {
-        println( "Verifying cloud admin can delete other accounts stack" )
+        N4j.print( "Verifying cloud admin can delete other accounts stack" )
         deleteStack( new DeleteStackRequest( stackName: stackId2 ) )
 
-        print( "Waiting for stack ${stackId2} deletion" )
+        N4j.print( "Waiting for stack ${stackId2} deletion" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for stack ${stackId2} deletion, waited ${it*5}s" )
+          N4j.print( "Waiting for stack ${stackId2} deletion, waited ${it*5}s" )
           describeStacks( new DescribeStacksRequest(
                   stackName: stackId2
           ) ).with {
@@ -354,22 +328,22 @@ class TestCFAdministration {
           }
         }
 
-        print( "Verifying stack deleted ${stackId2}" )
+        N4j.print( "Verifying stack deleted ${stackId2}" )
         describeStacks( new DescribeStacksRequest( stackName: stackId2 ) ).with {
-          assertThat( stacks?.empty || stacks?.getAt( 0 )?.stackStatus == 'DELETE_COMPLETE', "Expected stack ${stackId2} deleted" )
+          Assert.assertTrue("Expected stack ${stackId2} deleted", stacks?.empty || stacks?.getAt(0)?.stackStatus == 'DELETE_COMPLETE')
         }
       }
 
-      print( "Test complete" )
+      N4j.print( "Test complete" )
     } finally {
       // Attempt to clean up anything we created
       cleanupTasks.reverseEach { Runnable cleanupTask ->
         try {
           cleanupTask.run()
         } catch ( DomainDeprecatedException e ) {
-          print( e.message )
+          N4j.print( e.message )
         } catch ( TypeDeprecatedException e ) {
-          print( e.message )
+          N4j.print( e.message )
         } catch ( Exception e ) {
           e.printStackTrace()
         }
