@@ -3,7 +3,7 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.services.autoscaling.AmazonAutoScaling
 import com.amazonaws.services.autoscaling.model.*
 import com.amazonaws.services.ec2.model.*
-import org.testng.annotations.Test
+import org.junit.Test
 
 import static N4j.*
 
@@ -39,7 +39,7 @@ class TestMultipleSecurityGroups {
             println("Running instance with client token: ${instanceClientToken}")
             final String instanceId = ec2.runInstances(new RunInstancesRequest(
                     imageId: IMAGE_ID,
-                    instanceType: "m1.small",
+                    instanceType: INSTANCE_TYPE,
                     minCount: 1,
                     maxCount: 1,
                     clientToken: instanceClientToken,
@@ -134,7 +134,7 @@ class TestMultipleSecurityGroups {
             print("Creating launch configuration: ${launchConfigurationName}");
             asg.createLaunchConfiguration(new CreateLaunchConfigurationRequest(
                     imageId: IMAGE_ID,
-                    instanceType: "m1.small",
+                    instanceType: INSTANCE_TYPE,
                     securityGroups: groupNames,
                     launchConfigurationName: launchConfigurationName,
             ))

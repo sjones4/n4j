@@ -20,7 +20,7 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.AmazonServiceException;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -60,7 +60,6 @@ public class TestAutoScalingVMTypeReferenceValidation {
                 String instanceType =  NAME_PREFIX+"-invalid";
                 createLaunchConfig(launchConfig,IMAGE_ID,instanceType,null,null,null,null,null,null,null,null);
                 assertThat(false, "Creation should fail");
-                INSTANCE_TYPE = "m1.small";
             } catch (AmazonServiceException ase) {
                 print("Expected error returned: " + ase);
             }

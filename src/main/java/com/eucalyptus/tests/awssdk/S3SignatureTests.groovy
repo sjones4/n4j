@@ -8,11 +8,12 @@ import com.amazonaws.services.s3.model.Bucket
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectRequest
 import com.github.sjones4.youcan.youare.YouAre
-import org.testng.annotations.AfterClass
-import org.testng.annotations.AfterMethod
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.BeforeMethod
-import org.testng.annotations.Test
+import static org.junit.Assert.*
+import org.junit.AfterClass
+import org.junit.After
+import org.junit.BeforeClass
+import org.junit.Before
+import org.junit.Test
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -29,9 +30,6 @@ import static com.eucalyptus.tests.awssdk.N4j.getUserCreds
 import static com.eucalyptus.tests.awssdk.N4j.getYouAreClient
 import static com.eucalyptus.tests.awssdk.N4j.print
 import static com.eucalyptus.tests.awssdk.N4j.sleep
-import static org.testng.Assert.assertEquals
-import static org.testng.Assert.assertTrue
-import static org.testng.Assert.fail
 
 /**
  * Test covering HMAC signatures with S3.
@@ -44,15 +42,16 @@ import static org.testng.Assert.fail
 class S3SignatureTests {
   private String bucketName
   private List<Runnable> cleanupTasks
-  private YouAre iam
-  private AmazonS3 s3
-  private AmazonS3 userS3
-  private AmazonS3 userS3v4
-  private String account
-  private String user = "user"
+
+  private static YouAre iam
+  private static AmazonS3 s3
+  private static AmazonS3 userS3
+  private static AmazonS3 userS3v4
+  private static String account
+  private static String user = "user"
 
   @BeforeClass
-  public void init() throws Exception {
+  static void init() throws Exception {
     print( "### PRE SUITE SETUP - ${getClass().simpleName}")
     try {
       getCloudInfo( )
@@ -77,13 +76,13 @@ class S3SignatureTests {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
+  static void teardown() throws Exception {
     print("### POST SUITE CLEANUP - ${getClass().simpleName}")
     N4j.deleteAccount(account)
   }
 
-  @BeforeMethod
-  public void setup() throws Exception {
+  @Before
+  void setup() throws Exception {
     bucketName = eucaUUID()
     cleanupTasks = []
     Bucket bucket = S3Utils.createBucket(s3, account, bucketName, S3Utils.BUCKET_CREATION_RETRIES)
@@ -92,12 +91,12 @@ class S3SignatureTests {
         s3.deleteBucket(bucketName)
     }
 
-    assertTrue(bucket != null, "Invalid reference to bucket")
-    assertTrue(bucketName.equals(bucket.name), "Mismatch in bucket names. Expected bucket name to be ${bucketName}, but got ${bucket.name}")
+    assertTrue("Invalid reference to bucket", bucket != null)
+    assertTrue("Mismatch in bucket names. Expected bucket name to be ${bucketName}, but got ${bucket.name}", bucketName.equals(bucket.name))
   }
 
-  @AfterMethod
-  public void cleanup() throws Exception {
+  @After
+  void cleanup() throws Exception {
     Collections.reverse(cleanupTasks)
     for (final Runnable cleanupTask : cleanupTasks) {
       try {
@@ -110,7 +109,7 @@ class S3SignatureTests {
   }
 
   @Test
-  public void testSignatureV2( ) throws Exception {
+  void testSignatureV2( ) throws Exception {
     print( "${account}: Putting policy for user ${user}" )
     iam.putUserPolicy( new PutUserPolicyRequest(
         userName: user,
@@ -150,12 +149,12 @@ class S3SignatureTests {
       fail( 'Expected signature v4 auth failure' )
     } catch ( AmazonServiceException e ) {
       print( "${account}: Got expected signature v4 error: ${e}" )
-      assertEquals( e.errorCode, 'AccessDenied', "Error code" )
+      assertEquals( "Error code", 'AccessDenied', e.errorCode )
     }
   }
 
   @Test
-  public void testSignatureV4( ) throws Exception {
+  void testSignatureV4( ) throws Exception {
     print( "${account}: Putting policy for user ${user}" )
     iam.putUserPolicy( new PutUserPolicyRequest(
         userName: user,
@@ -198,12 +197,12 @@ class S3SignatureTests {
       fail( 'Expected signature v2 auth failure' )
     } catch ( AmazonServiceException e ) {
       print( "${account}: Got expected signature v2 error: ${e}" )
-      assertEquals( e.errorCode, 'AccessDenied', "Error code" )
+      assertEquals( "Error code", 'AccessDenied', e.errorCode )
     }
   }
 
   @Test
-  public void testSignatureV2QueryString( ) throws Exception {
+  void testSignatureV2QueryString( ) throws Exception {
     final String keyName = "key-1"
     print( "${account}: Putting object to use for testing access ${bucketName}/${keyName}" )
     s3.putObject( new PutObjectRequest(
@@ -261,7 +260,7 @@ class S3SignatureTests {
   }
 
   @Test
-  public void testSignatureV4QueryString( ) throws Exception {
+  void testSignatureV4QueryString( ) throws Exception {
     final String keyName = "key-1"
     print( "${account}: Putting object to use for testing access ${bucketName}/${keyName}" )
     s3.putObject( new PutObjectRequest(

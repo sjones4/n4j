@@ -46,12 +46,12 @@ import com.github.sjones4.youcan.youare.model.DeleteAccountRequest;
 import com.github.sjones4.youcan.youtoken.YouTokenClient;
 import com.github.sjones4.youcan.youtoken.model.GetImpersonationTokenRequest;
 import com.github.sjones4.youcan.youtoken.model.GetImpersonationTokenResult;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static com.eucalyptus.tests.awssdk.N4j.minimalInit;
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP;
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY;
 import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY;
+
 /**
  * This application tests getting an impersonation token using STS and consuming EC2 with the creds.
  *
@@ -59,7 +59,6 @@ import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY;
  */
 public class TestSTSGetImpersonationToken {
 
-  private final String host;
   private final String accessKey;
   private final String secretKey;
 
@@ -70,7 +69,6 @@ public class TestSTSGetImpersonationToken {
 
   public TestSTSGetImpersonationToken() throws Exception{
     minimalInit();
-    this.host = CLC_IP;
     this.accessKey = ACCESS_KEY;
     this.secretKey = SECRET_KEY;
   }
@@ -79,20 +77,13 @@ public class TestSTSGetImpersonationToken {
     return new BasicAWSCredentials( accessKey, secretKey );
   }
 
-  private String cloudUri( String servicePath ) {
-    return
-        URI.create( "http://" + host + ":8773/" )
-            .resolve( servicePath )
-            .toString();
-  }
-
   private AmazonEC2 getEc2ClientUsingToken( final String accountAlias,
                                             final String userName ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( new AWSCredentialsProvider(){
       @Override
       public AWSCredentials getCredentials() {
         final YouTokenClient tokens = new YouTokenClient( credentials() );
-        tokens.setEndpoint( cloudUri( "/services/Tokens" ) );
+        tokens.setEndpoint( N4j.TOKENS_ENDPOINT );
         final GetImpersonationTokenResult impersonationTokenResult = tokens.getImpersonationToken(
             new GetImpersonationTokenRequest()
                 .withAccountAlias( accountAlias)
@@ -110,13 +101,13 @@ public class TestSTSGetImpersonationToken {
       public void refresh() {
       }
     } );
-    ec2.setEndpoint( cloudUri( "/services/Eucalyptus" ) );
+    ec2.setEndpoint( N4j.EC2_ENDPOINT );
     return ec2;
   }
 
   private YouAreClient getYouAreClient( ) {
     final YouAreClient euare = new YouAreClient( credentials( ) );
-    euare.setEndpoint( cloudUri( "/services/Euare" ) );
+    euare.setEndpoint( N4j.IAM_ENDPOINT );
     return euare;
   }
 
@@ -127,7 +118,7 @@ public class TestSTSGetImpersonationToken {
         request.addParameter( "DelegateAccount", asAccount );
       }
     } );
-    euare.setEndpoint( cloudUri( "/services/Euare" ) );
+    euare.setEndpoint( N4j.IAM_ENDPOINT );
     return euare;
   }
 
@@ -135,7 +126,7 @@ public class TestSTSGetImpersonationToken {
     final AmazonEC2 ec2 = new AmazonEC2Client( new BasicAWSCredentials(
         accessKey.getAccessKeyId(),
         accessKey.getSecretAccessKey() ) );
-    ec2.setEndpoint( cloudUri( "/services/Eucalyptus" ) );
+    ec2.setEndpoint( N4j.EC2_ENDPOINT );
     return ec2;
   }
 

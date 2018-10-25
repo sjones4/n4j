@@ -32,12 +32,12 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.github.sjones4.youcan.youare.model.Account;
-import org.testng.annotations.Test;
 import static com.eucalyptus.tests.awssdk.N4j.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.junit.Test;
 
 /**
  * NOTE: This test may stop working if we limit access to the Eucalyptus account

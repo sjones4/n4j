@@ -9,11 +9,9 @@ import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.google.common.collect.Maps;
 import com.google.common.collect.ImmutableMap;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -27,16 +25,16 @@ import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
  */
 public class TestSQSDelaySeconds {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
-  private int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
+  private static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSDelaySeconds.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -50,15 +48,15 @@ public class TestSQSDelaySeconds {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSDelaySeconds.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -80,15 +78,14 @@ public class TestSQSDelaySeconds {
   }
 
   @Test
-  @Parameters("concise")
-  public void testMessageDelay(@Optional("false") boolean concise) throws Exception {
+  public void testMessageDelay() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testMessageDelay");
     String queueName = "queue_name_message_delay";
     // send messages out with a bit of spacing between delays
     // give yourself a little error time (5 seconds may be too little?)
     int errorSecs = 5;
-    int skewErrorSecs = 10; // number of seconds between client and server?
-    int spacingSecs = 15;
+    int skewErrorSecs = 5; // number of seconds between client and server?
+    int spacingSecs = 10;
     int totalTime = spacingSecs * 6;
 
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -111,20 +108,18 @@ public class TestSQSDelaySeconds {
     sendTimestampsLocal.put(messageId2, System.currentTimeMillis() / 1000);
     delaySecondsMap.put(messageId2, 2 * spacingSecs);
 
-    if (!concise) {
-      accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds", String.valueOf(3 * spacingSecs)));
-      String messageId3 = accountSQSClient.sendMessage(queueUrl, "mess3").getMessageId();
-      sendTimestampsLocal.put(messageId3, System.currentTimeMillis() / 1000);
-      delaySecondsMap.put(messageId3, 3 * spacingSecs);
+    accountSQSClient.setQueueAttributes(queueUrl, ImmutableMap.of("DelaySeconds", String.valueOf(3 * spacingSecs)));
+    String messageId3 = accountSQSClient.sendMessage(queueUrl, "mess3").getMessageId();
+    sendTimestampsLocal.put(messageId3, System.currentTimeMillis() / 1000);
+    delaySecondsMap.put(messageId3, 3 * spacingSecs);
 
-      SendMessageRequest sendMessageRequest2 = new SendMessageRequest();
-      sendMessageRequest2.setQueueUrl(queueUrl);
-      sendMessageRequest2.setDelaySeconds(4 * spacingSecs);
-      sendMessageRequest2.setMessageBody("mess4");
-      String messageId4 = accountSQSClient.sendMessage(sendMessageRequest2).getMessageId();
-      sendTimestampsLocal.put(messageId4, System.currentTimeMillis() / 1000);
-      delaySecondsMap.put(messageId4, 4 * spacingSecs);
-    }
+    SendMessageRequest sendMessageRequest2 = new SendMessageRequest();
+    sendMessageRequest2.setQueueUrl(queueUrl);
+    sendMessageRequest2.setDelaySeconds(4 * spacingSecs);
+    sendMessageRequest2.setMessageBody("mess4");
+    String messageId4 = accountSQSClient.sendMessage(sendMessageRequest2).getMessageId();
+    sendTimestampsLocal.put(messageId4, System.currentTimeMillis() / 1000);
+    delaySecondsMap.put(messageId4, 4 * spacingSecs);
 
     Map<String, Long> firstReceiveTimestampsLocal = Maps.newHashMap();
     Map<String, Message> messages = Maps.newHashMap();
@@ -133,32 +128,15 @@ public class TestSQSDelaySeconds {
     receiveMessageRequest.setMaxNumberOfMessages(MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES);
     receiveMessageRequest.setQueueUrl(queueUrl);
 
-    if (!concise) {
-      for (int i=0; i < totalTime; i++) {
-        ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
-        if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
-          for (Message message: receiveMessageResult.getMessages()) {
-            firstReceiveTimestampsLocal.putIfAbsent(message.getMessageId(), System.currentTimeMillis() / 1000);
-            messages.put(message.getMessageId(), message);
-          }
+    for (int i=0; i < totalTime; i++) {
+      ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
+      if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
+        for (Message message: receiveMessageResult.getMessages()) {
+          firstReceiveTimestampsLocal.putIfAbsent(message.getMessageId(), System.currentTimeMillis() / 1000);
+          messages.put(message.getMessageId(), message);
         }
-        Thread.sleep(1000L);
       }
-    } else {
-      long loopStart = System.currentTimeMillis();
-      while (firstReceiveTimestampsLocal.size() < 2 && System.currentTimeMillis() - loopStart < 120000L) {
-        ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(receiveMessageRequest);
-        if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
-          for (Message message: receiveMessageResult.getMessages()) {
-            firstReceiveTimestampsLocal.putIfAbsent(message.getMessageId(), System.currentTimeMillis() / 1000);
-            messages.put(message.getMessageId(), message);
-          }
-        }
-        Thread.sleep(1000L);
-      }
-      if (firstReceiveTimestampsLocal.size() < 2) {
-        throw new InterruptedException("Timeout");
-      }
+      Thread.sleep(1000L);
     }
 
     for (String messageId: sendTimestampsLocal.keySet()) {
@@ -192,7 +170,7 @@ public class TestSQSDelaySeconds {
         "Message " + messageId + " should have clock skew ranges near each other");
     }
   }
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

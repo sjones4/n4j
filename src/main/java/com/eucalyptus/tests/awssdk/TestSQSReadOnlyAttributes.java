@@ -1,29 +1,21 @@
 package com.eucalyptus.tests.awssdk;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.GetQueueAttributesResult;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
-import com.amazonaws.services.sqs.model.SetQueueAttributesRequest;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Parameters;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
@@ -32,15 +24,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  * Created by ethomas on 10/4/16.
  */
 public class TestSQSReadOnlyAttributes {
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSReadOnlyAttributes.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -53,15 +45,15 @@ public class TestSQSReadOnlyAttributes {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSReadOnlyAttributes.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -83,16 +75,10 @@ public class TestSQSReadOnlyAttributes {
   }
 
   @Test
-  @Parameters("concise")
-  public void testReadOnlyAttributes(@Optional("false") boolean concise) throws Exception {
+  public void testReadOnlyAttributes() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testReadOnlyAttributes");
 
     int delaySeconds = 20;
-    if (concise) {
-      // make it faster for concise
-      delaySeconds = 10;
-    }
-
     int visibilityTimeout = 2 * delaySeconds;
 
     int messageRetentionPeriod = 60;
@@ -140,11 +126,9 @@ public class TestSQSReadOnlyAttributes {
     Thread.sleep(1000L * delaySeconds);
     getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
     assertThat(numbersMatch(getQueueAttributesResult, 0, 8, 0), "Should have 8 visible messages");
-    if (!concise) {
-      Thread.sleep(1000L * (messageRetentionPeriod - 2 * delaySeconds));
-      getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
-      assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages (all expired)");
-    }
+    Thread.sleep(1000L * (messageRetentionPeriod - 2 * delaySeconds));
+    getQueueAttributesResult = accountSQSClient.getQueueAttributes(queueUrl, Collections.singletonList("All"));
+    assertThat(numbersMatch(getQueueAttributesResult, 0, 0, 0), "Should have 0 messages (all expired)");
   }
 
   private boolean numbersMatch(GetQueueAttributesResult getQueueAttributesResult, int delayed, int visible, int notVisible) {

@@ -3,13 +3,14 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.model.PutAccountPolicyRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.*
 
@@ -26,25 +27,26 @@ import static com.eucalyptus.tests.awssdk.N4j.*
  */
 class TestIAMManagedPolicyLimits {
 
-  private final AWSCredentialsProvider testAcctAdminCredentials
-  private final String testAcct
+  private static AWSCredentialsProvider testAcctAdminCredentials
+  private static String testAcct
 
-  TestIAMManagedPolicyLimits( ) {
+  @BeforeClass
+  static void init( ) {
     getCloudInfo( )
-    this.testAcct= "${NAME_PREFIX}man-pol-test-limits"
+    testAcct= "${NAME_PREFIX}man-pol-test-limits"
     createAccount(testAcct)
-    this.testAcctAdminCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
   }
 
   @AfterClass
-  void tearDownAfterClass( ) {
+  static void tearDownAfterClass( ) {
     deleteAccount( testAcct )
   }
 
   private YouAre getIamClient(
       AWSCredentialsProvider credentialsProvider = testAcctAdminCredentials
   ) {
-    AWSCredentials creds = credentialsProvider.getCredentials( );
+    AWSCredentials creds = credentialsProvider.getCredentials( )
     getYouAreClient( creds.AWSAccessKeyId, creds.AWSSecretKey, IAM_ENDPOINT )
   }
 
@@ -75,7 +77,7 @@ class TestIAMManagedPolicyLimits {
             Math.max( groupPolicyAttachmentLimit, Math.max( rolePolicyAttachmentLimit, userPolicyAttachmentLimit ) )
 
         print( 'Putting policy quota for account' )
-        getIamClient( new StaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) ) ).with{
+        getIamClient( new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) ) ).with{
           putAccountPolicy( new PutAccountPolicyRequest(
               accountName: testAcct,
               policyName: 'policy',

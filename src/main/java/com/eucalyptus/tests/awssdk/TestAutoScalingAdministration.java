@@ -22,7 +22,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
 import com.amazonaws.services.autoscaling.model.*;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,8 +43,6 @@ public class TestAutoScalingAdministration {
     public void AutoscalingAdminitrationTest() throws Exception {
         testInfo(this.getClass().getSimpleName());
         getCloudInfo();
-
-
 
         // End discovery, start test
         final List<Runnable> cleanupTasks = new ArrayList<Runnable>();
@@ -72,7 +70,7 @@ public class TestAutoScalingAdministration {
             print( "Creating launch configuration: " + launchConfigurationName );
             as_user.createLaunchConfiguration(new CreateLaunchConfigurationRequest()
                     .withImageId(IMAGE_ID)
-                    .withInstanceType("m1.small")
+                    .withInstanceType(N4j.INSTANCE_TYPE)
                     .withLaunchConfigurationName(launchConfigurationName)
             );
             cleanupTasks.add( new Runnable() {

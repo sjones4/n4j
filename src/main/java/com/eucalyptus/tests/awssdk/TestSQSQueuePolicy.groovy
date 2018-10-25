@@ -15,8 +15,8 @@ import com.amazonaws.services.sqs.model.SetQueueAttributesRequest
 import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.Test
+import org.junit.BeforeClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.IAM_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.SQS_ENDPOINT
@@ -42,7 +42,7 @@ import static com.eucalyptus.tests.awssdk.N4j.youAre
 class TestSQSQueuePolicy {
 
   @BeforeClass
-  void init() throws Exception {
+  static void init() throws Exception {
     print("### PRE SUITE SETUP - ${this.getClass().simpleName}")
     getCloudInfoAndSqs( )
   }

@@ -1,16 +1,14 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
 import com.amazonaws.services.sqs.model.Message;
-import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.google.common.collect.ImmutableMap;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,15 +20,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSMessageExpirationPeriod {
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSMessageExpirationPeriod.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -43,15 +41,15 @@ public class TestSQSMessageExpirationPeriod {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSMessageExpirationPeriod.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -80,7 +78,7 @@ public class TestSQSMessageExpirationPeriod {
 
     Map<String, String> attributeMap = new HashMap<String, String>();
     attributeMap.put("VisibilityTimeout","0");
-    attributeMap.put("MessageRetentionPeriod", "75");
+    attributeMap.put("MessageRetentionPeriod", "70");
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
     createQueueRequest.setAttributes(attributeMap);
     createQueueRequest.setQueueName(queueName);
@@ -94,8 +92,8 @@ public class TestSQSMessageExpirationPeriod {
     long endTime1Secs = startTime1Secs;
     long endTime2Secs = startTime2Secs;
 
-    // Poll for 90 seconds
-    for (int i = 0; i < 90; i++) {
+    // Poll for 80 seconds
+    for (int i = 0; i < 75; i++) {
       long startTimeLoop = System.currentTimeMillis();
       ReceiveMessageResult receiveMessageResult = accountSQSClient.receiveMessage(queueUrl);
       if (receiveMessageResult != null && receiveMessageResult.getMessages() != null) {
@@ -113,7 +111,7 @@ public class TestSQSMessageExpirationPeriod {
     }
 
     // first message should have been gone after 75 seconds, and the second one gone after 60 seconds
-    assertThat(Math.abs(75 - (endTime1Secs - startTime1Secs)) < errorSecs, "First message should be gone after 75 seconds");
+    assertThat(Math.abs(70 - (endTime1Secs - startTime1Secs)) < errorSecs, "First message should be gone after 70 seconds");
     assertThat(Math.abs(60 - (endTime2Secs - startTime2Secs)) < errorSecs, "Second message should be gone after 60 seconds");
   }
 

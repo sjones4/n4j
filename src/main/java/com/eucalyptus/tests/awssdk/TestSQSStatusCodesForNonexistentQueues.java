@@ -14,16 +14,15 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static com.eucalyptus.tests.awssdk.N4j.assertThat;
 import static com.eucalyptus.tests.awssdk.N4j.synchronizedCreateAccount;
@@ -41,23 +40,23 @@ import static com.eucalyptus.tests.awssdk.N4j.testInfo;
 public class TestSQSStatusCodesForNonexistentQueues {
 
 
-  private String account;
-  private String otherAccount;
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS accountUserSQSClient;
-  private AmazonSQS otherAccountSQSClient;
-  private AmazonSQS otherAccountUserSQSClient;
+  private static String account;
+  private static String otherAccount;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS accountUserSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS otherAccountUserSQSClient;
 
-  private String accountId;
-  private String queueUrl;
-  private String bogusQueueName;
-  private String bogusQueueUrl;
-  private Collection<NamedAmazonSQS> clients;
+  private static String accountId;
+  private static String queueUrl;
+  private static String bogusQueueName;
+  private static String bogusQueueUrl;
+  private static Collection<NamedAmazonSQS> clients;
 
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSStatusCodesForNonexistentQueues.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -93,15 +92,15 @@ public class TestSQSStatusCodesForNonexistentQueues {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSStatusCodesForNonexistentQueues.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -149,7 +148,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
     @Test
-  public void testAddPermission() throws Exception {
+  public void testAddPermission() {
     testInfo(this.getClass().getSimpleName() + " - testAddPermission");
     Command command = new Command("AddPermission") {
       @Override
@@ -164,7 +163,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testChangeMessageVisibility() throws Exception {
+  public void testChangeMessageVisibility() {
     testInfo(this.getClass().getSimpleName() + " - testChangeMessageVisibility");
     Command command = new Command("ChangeMessageVisibility") {
       @Override
@@ -178,12 +177,12 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testChangeMessageVisibilityBatch() throws Exception {
+  public void testChangeMessageVisibilityBatch() {
     testInfo(this.getClass().getSimpleName() + " - testChangeMessageVisibilityBatch");
     Command command = new Command("ChangeMessageVisibilityBatch") {
       @Override
       public void runCommand(AmazonSQS sqs) throws AmazonServiceException {
-        List<ChangeMessageVisibilityBatchRequestEntry> x = new ArrayList<ChangeMessageVisibilityBatchRequestEntry>();
+        List<ChangeMessageVisibilityBatchRequestEntry> x = new ArrayList<>( );
         ChangeMessageVisibilityBatchRequestEntry e = new ChangeMessageVisibilityBatchRequestEntry();
         e.setReceiptHandle("blah");
         e.setVisibilityTimeout(0);
@@ -198,7 +197,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testDeleteMessage() throws Exception {
+  public void testDeleteMessage() {
     testInfo(this.getClass().getSimpleName() + " - testDeleteMessage");
     Command command = new Command("DeleteMessage") {
       @Override
@@ -212,12 +211,12 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testDeleteMessageBatch() throws Exception {
+  public void testDeleteMessageBatch() {
     testInfo(this.getClass().getSimpleName() + " - testDeleteMessageBatch");
     Command command = new Command("DeleteMessageBatch") {
       @Override
       public void runCommand(AmazonSQS sqs) throws AmazonServiceException {
-        List<DeleteMessageBatchRequestEntry> x = new ArrayList<DeleteMessageBatchRequestEntry>();
+        List<DeleteMessageBatchRequestEntry> x = new ArrayList<>( );
         DeleteMessageBatchRequestEntry e = new DeleteMessageBatchRequestEntry();
         e.setReceiptHandle("blah");
         e.setId("id");
@@ -231,7 +230,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testDeleteQueue() throws Exception {
+  public void testDeleteQueue() {
     testInfo(this.getClass().getSimpleName() + " - testDeleteQueue");
     Command command = new Command("DeleteQueue") {
       @Override
@@ -245,7 +244,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testGetQueueAttributes() throws Exception {
+  public void testGetQueueAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testGetQueueAttributes");
     Command command = new Command("GetQueueAttributes") {
       @Override
@@ -259,7 +258,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testGetQueueUrl() throws Exception {
+  public void testGetQueueUrl() {
     testInfo(this.getClass().getSimpleName() + " - testGetQueueUrl");
     Command command = new Command("GetQueueUrl") {
       @Override
@@ -276,7 +275,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testListDeadLetterSourceQueues() throws Exception {
+  public void testListDeadLetterSourceQueues() {
     testInfo(this.getClass().getSimpleName() + " - testListDeadLetterSourceQueues");
     Command command =       new Command("ListDeadLetterSourceQueues") {
       @Override
@@ -292,7 +291,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testPurgeQueue() throws Exception {
+  public void testPurgeQueue() {
     testInfo(this.getClass().getSimpleName() + " - testPurgeQueue");
     Command command = new Command("PurgeQueue") {
       @Override
@@ -308,7 +307,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testReceiveMessage() throws Exception {
+  public void testReceiveMessage() {
     testInfo(this.getClass().getSimpleName() + " - testReceiveMessage");
     Command command = new Command("ReceiveMessage") {
       @Override
@@ -322,7 +321,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testRemovePermission() throws Exception {
+  public void testRemovePermission() {
     testInfo(this.getClass().getSimpleName() + " - testRemovePermission");
     Command command = new Command("RemovePermission") {
       @Override
@@ -336,7 +335,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testSendMessage() throws Exception {
+  public void testSendMessage() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessage");
     Command command = new Command("SendMessage") {
       @Override
@@ -350,12 +349,12 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testSendMessageBatch() throws Exception {
+  public void testSendMessageBatch() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatch");
     Command command = new Command("SendMessageBatch") {
       @Override
       public void runCommand(AmazonSQS sqs) throws AmazonServiceException {
-        List<SendMessageBatchRequestEntry> x = new ArrayList<SendMessageBatchRequestEntry>();
+        List<SendMessageBatchRequestEntry> x = new ArrayList<>( );
         SendMessageBatchRequestEntry e = new SendMessageBatchRequestEntry();
         e.setMessageBody("hello");
         e.setId("id");
@@ -369,7 +368,7 @@ public class TestSQSStatusCodesForNonexistentQueues {
   }
 
   @Test
-  public void testSetQueueAttributes() throws Exception {
+  public void testSetQueueAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testSetQueueAttributes");
     Command command = new Command("SetQueueAttributes") {
       @Override

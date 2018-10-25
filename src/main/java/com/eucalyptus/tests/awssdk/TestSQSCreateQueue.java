@@ -9,9 +9,9 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -26,24 +26,28 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSCreateQueue {
 
-  private int MAX_QUEUE_NAME_LENGTH_CHARS;
-  private int MAX_DELAY_SECONDS;
-  private int MAX_MAXIMUM_MESSAGE_SIZE;
-  private int MAX_MESSAGE_RETENTION_PERIOD;
-  private int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS;
-  private int MAX_VISIBILITY_TIMEOUT;
-  private int MAX_MAX_RECEIVE_COUNT;
-  private String region;
+  private static final int ARN_REGION_FIELD = 3;
+  private static final int ARN_ACCOUNT_FIELD = 4;
+  private static final int ARN_QUEUE_NAME_FIELD = 5;
 
-  private String account;
-  private String otherAccount;
+  private static int MAX_QUEUE_NAME_LENGTH_CHARS;
+  private static int MAX_DELAY_SECONDS;
+  private static int MAX_MAXIMUM_MESSAGE_SIZE;
+  private static int MAX_MESSAGE_RETENTION_PERIOD;
+  private static int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS;
+  private static int MAX_VISIBILITY_TIMEOUT;
+  private static int MAX_MAX_RECEIVE_COUNT;
+  private static String region;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static String account;
+  private static String otherAccount;
+
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
   
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSCreateQueue.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -64,15 +68,15 @@ public class TestSQSCreateQueue {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSCreateQueue.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -106,7 +110,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testQueueName() throws Exception {
+  public void testQueueName() {
     testInfo(this.getClass().getSimpleName() + " - testQueueName");
     // fail due to bad characters
     String badCharsQueueName = "@#%#$%#@$%#@$%";
@@ -133,7 +137,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testDelaySeconds() throws Exception {
+  public void testDelaySeconds() {
     testInfo(this.getClass().getSimpleName() + " - testDelaySeconds");
     String queueName = "queue_delay_seconds";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -142,7 +146,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testMessageRetentionPeriod() throws Exception {
+  public void testMessageRetentionPeriod() {
     testInfo(this.getClass().getSimpleName() + " - MessageRetentionPeriod");
     String queueName = "queue_message_retention_period";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -151,7 +155,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testMaximumMessageSize() throws Exception {
+  public void testMaximumMessageSize() {
     testInfo(this.getClass().getSimpleName() + " - testMaximumMessageSize");
     String queueName = "queue_maximum_message_size";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -159,7 +163,7 @@ public class TestSQSCreateQueue {
     helpTestSingleValueNumericAttribute(createQueueRequest, "MaximumMessageSize", 1024, MAX_MAXIMUM_MESSAGE_SIZE);
   }
   @Test
-  public void testReceiveMessageWaitTimeSeconds() throws Exception {
+  public void testReceiveMessageWaitTimeSeconds() {
     testInfo(this.getClass().getSimpleName() + " - testReceiveMessageWaitTimeSeconds");
     String queueName = "queue_receive_message_wait_time_seconds";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -168,7 +172,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testVisibilityTimeout() throws Exception {
+  public void testVisibilityTimeout() {
     testInfo(this.getClass().getSimpleName() + " - testVisibilityTimeout");
     String queueName = "queue_visibility_timeout";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -319,7 +323,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testPolicy() throws Exception {
+  public void testPolicy() {
     testInfo(this.getClass().getSimpleName() + " - testPolicy");
     String queueName = "queue_policy";
 
@@ -384,7 +388,7 @@ public class TestSQSCreateQueue {
  }
 
   @Test
-  public void testBadAttributes() throws Exception {
+  public void testBadAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testBadAttributes");
     String queueName = "queue_bad_attributes";
 
@@ -422,7 +426,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testRedrivePolicyJSON() throws Exception {
+  public void testRedrivePolicyJSON() {
     testInfo(this.getClass().getSimpleName() + " - testRedrivePolicyJSON");
     assertThat("{}".equals(redrivePolicyJSON(null, null)), "no args");
     assertThat("{\"maxReceiveCount\":\"5\"}".equals(redrivePolicyJSON(null, "5")), "max receive count");
@@ -438,7 +442,7 @@ public class TestSQSCreateQueue {
   }
 
   @Test
-  public void testChangeArnField() throws Exception {
+  public void testChangeArnField() {
     testInfo(this.getClass().getSimpleName() + " - testChangeArnField");
     assertThat("Y:X:X:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",0,"Y")), "Test Field 0");
     assertThat("X:Y:X:X:X:X:X:X:X".equals(changeArnField("X:X:X:X:X:X:X:X:X",1,"Y")), "Test Field 1");
@@ -529,17 +533,13 @@ public class TestSQSCreateQueue {
     return Joiner.on(':').join(parts);
   }
 
-  private static final int ARN_REGION_FIELD = 3;
-  private static final int ARN_ACCOUNT_FIELD = 4;
-  private static final int ARN_QUEUE_NAME_FIELD = 5;
-
-  private String defaultIfNullOrJustWhitespace(String target, String defaultValue) {
+  private static String defaultIfNullOrJustWhitespace(String target, String defaultValue) {
     if (target == null) return defaultValue;
     if (target.trim().isEmpty()) return defaultValue;
     return target;
   }
 
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

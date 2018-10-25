@@ -5,6 +5,7 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.handlers.RequestHandler2
+import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
 import com.amazonaws.services.identitymanagement.model.CreateAccessKeyRequest
@@ -15,13 +16,12 @@ import com.github.sjones4.youcan.youprop.YouProp
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.minimalInit;
-import static N4j.CLC_IP;
-import static N4j.EC2_ENDPOINT;
 import static N4j.ACCESS_KEY;
-import static N4j.SECRET_KEY;
+import static N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.isVPC;
 
 /**
  * This application tests EC2 VPC default VPC.
@@ -32,7 +32,6 @@ import static N4j.SECRET_KEY;
  */
 class TestEC2VPCDefaultVPC {
 
-  private final String host
   private final AWSCredentialsProvider credentials
 
   public static void main( String[] args ) throws Exception {
@@ -41,31 +40,24 @@ class TestEC2VPCDefaultVPC {
 
   public TestEC2VPCDefaultVPC(){
     minimalInit()
-    this.host=CLC_IP
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-            .resolve( servicePath )
-            .toString()
   }
 
   private AmazonEC2Client getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2Client ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( EC2_ENDPOINT )
+    ec2.setEndpoint( N4j.EC2_ENDPOINT )
     ec2
   }
 
   private YouProp getYouPropClient( final AWSCredentialsProvider credentials ) {
     final YouProp youProp = new YouPropClient( credentials )
-    youProp.setEndpoint( cloudUri( "/services/Properties/" ) )
+    youProp.setEndpoint( N4j.PROPERTIES_ENDPOINT )
     youProp
   }
 
   private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials ) {
     final YouAreClient euare = new YouAreClient( credentials )
-    euare.setEndpoint( cloudUri( "/services/Euare" ) )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare
   }
 
@@ -77,7 +69,7 @@ class TestEC2VPCDefaultVPC {
         request.addParameter( "DelegateAccount", asAccount )
       }
     } );
-    euare.setEndpoint( cloudUri( "/services/Euare" ) )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare;
   }
 
@@ -93,8 +85,15 @@ class TestEC2VPCDefaultVPC {
 
   @Test
   public void EC2VPCDefaultVPCTest( ) throws Exception {
+
     final YouProp prop = getYouPropClient( credentials )
     final YouAreClient euare = getYouAreClient( credentials );
+
+    final AmazonEC2 ec2 = getEC2Client( credentials )
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     final String namePrefix = UUID.randomUUID().toString() + "-";
     print( "Using resource prefix for test: " + namePrefix );

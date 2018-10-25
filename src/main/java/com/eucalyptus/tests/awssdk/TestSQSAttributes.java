@@ -3,17 +3,15 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
-import com.amazonaws.services.sqs.model.GetQueueAttributesRequest;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
-import com.amazonaws.services.sqs.model.SetQueueAttributesRequest;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.net.URL;
 import java.util.Collections;
@@ -29,15 +27,16 @@ import static com.eucalyptus.tests.awssdk.N4j.testInfo;
  * Created by ethomas on 10/4/16.
  */
 public class TestSQSAttributes {
-  private String account;
-  private String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static String account;
+  private static String otherAccount;
+
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSAttributes.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -50,15 +49,15 @@ public class TestSQSAttributes {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown( ) {
+    print("### POST SUITE CLEANUP - " + TestSQSAttributes.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -80,7 +79,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testSetQueueAttributesOtherAccount() throws Exception {
+  public void testSetQueueAttributesOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testSetQueueAttributesOtherAccount");
     String queueName = "queue_name_set_attributes_other_account";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -115,7 +114,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testSetAttributesNonExistentQueue() throws Exception {
+  public void testSetAttributesNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testSetAttributesNonExistentQueue");
     String queueName = "queue_name_set_attributes_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -123,7 +122,6 @@ public class TestSQSAttributes {
       // just some attribute
       accountSQSClient.setQueueAttributes(queueUrl + "-bogus",
         ImmutableMap.of("DelaySeconds", "30"));
-      SetQueueAttributesRequest setQueueAttributesRequest = new SetQueueAttributesRequest();
       assertThat(false, "Should fail setting attribute on non-existent queue");
     } catch (AmazonServiceException e) {
       assertThat(e.getStatusCode() == 400, "Correctly fail setting attribute on non-existent queue");
@@ -131,7 +129,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testSetReadOnlyQueueAttributes() throws Exception {
+  public void testSetReadOnlyQueueAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testSetAttributesNonExistentQueue");
     String queueName = "queue_name_set_read_only_queue_attributes";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -145,7 +143,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testSetBogusQueueAttributes() throws Exception {
+  public void testSetBogusQueueAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testSetAttributesNonExistentQueue");
     String queueName = "queue_name_set_bogus_queue_attributes";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -159,7 +157,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testGetQueueAttributesOtherAccount() throws Exception {
+  public void testGetQueueAttributesOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testGetQueueAttributesOtherAccount");
     String queueName = "queue_name_get_attributes_other_account";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -192,7 +190,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testGetAttributesNonExistentQueue() throws Exception {
+  public void testGetAttributesNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testGetAttributesNonExistentQueue");
     String queueName = "queue_name_get_attributes_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -206,7 +204,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testGetBogusQueueAttributes() throws Exception {
+  public void testGetBogusQueueAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testGetAttributesNonExistentQueue");
     String queueName = "queue_name_get_bogus_queue_attributes";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -237,7 +235,7 @@ public class TestSQSAttributes {
 
 
   @Test
-  public void testGetAttributesOnCreateQueue() throws Exception {
+  public void testGetAttributesOnCreateQueue() {
     testInfo(this.getClass().getSimpleName() + " - testGetAttributesOnCreateQueue");
     String otherQueueName = "queue_name_get_attributes_on_create_queue_1";
     String otherQueueUrl = accountSQSClient.createQueue(otherQueueName).getQueueUrl();
@@ -273,7 +271,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testGetAttributesOnSetAttributesQueue() throws Exception {
+  public void testGetAttributesOnSetAttributesQueue() {
     testInfo(this.getClass().getSimpleName() + " - testGetAttributesOnSetAttributesQueue");
     String otherQueueName = "queue_name_get_set_atttributes_queue_1";
     String otherQueueUrl = accountSQSClient.createQueue(otherQueueName).getQueueUrl();
@@ -310,7 +308,7 @@ public class TestSQSAttributes {
   }
 
   @Test
-  public void testChangeSomeAttributes() throws Exception {
+  public void testChangeSomeAttributes() {
     testInfo(this.getClass().getSimpleName() + " - testChangeSomeAttributes");
     String otherQueueName = "queue_name_change_some_atttributes_queue_1";
     String otherQueueUrl = accountSQSClient.createQueue(otherQueueName).getQueueUrl();
@@ -365,7 +363,7 @@ public class TestSQSAttributes {
 
 
   @Test
-  public void testGetAttributesFilter() throws Exception {
+  public void testGetAttributesFilter() {
     testInfo(this.getClass().getSimpleName() + " - testGetAttributesFilter");
     String otherQueueName = "queue_name_get_atttributes_filter_1";
     String otherQueueUrl = accountSQSClient.createQueue(otherQueueName).getQueueUrl();

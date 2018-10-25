@@ -20,13 +20,13 @@
 package com.eucalyptus.tests.awssdk;
 
 import com.amazonaws.services.identitymanagement.model.*;
-import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
+import org.junit.Test;
 
 /**
  * This application tests management of IAM roles.

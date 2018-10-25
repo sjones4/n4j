@@ -19,18 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.tests.awssdk;
 
+import static com.eucalyptus.tests.awssdk.N4j.ec2;
+import static com.eucalyptus.tests.awssdk.N4j.print;
+import static com.eucalyptus.tests.awssdk.N4j.youAre;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.services.identitymanagement.model.*;
-import org.testng.annotations.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import static com.eucalyptus.tests.awssdk.N4j.*;
 
 /**
  * This tests EC2 RunInstances using with instance profiles.
@@ -44,8 +46,8 @@ public class TestEC2InstanceProfile {
 
     @Test
     public void EC2InstanceProfileTest() throws Exception {
-        testInfo(this.getClass().getSimpleName());
-        getCloudInfo();
+        N4j.testInfo(this.getClass().getSimpleName());
+        N4j.getCloudInfo();
 
         final List<Runnable> cleanupTasks = new ArrayList<>();
         try {
@@ -64,7 +66,7 @@ public class TestEC2InstanceProfile {
             print( "Using key for test: " + keyName );
 
             // Create role
-            final String roleName = NAME_PREFIX + "RoleTest";
+            final String roleName = N4j.NAME_PREFIX + "RoleTest";
             print("Creating role: " + roleName);
             youAre.createRole(new CreateRoleRequest()
                     .withRoleName(roleName)
@@ -106,7 +108,7 @@ public class TestEC2InstanceProfile {
                 print("Running instance with instance profile ARN");
                 final RunInstancesResult runResult =
                         ec2.runInstances(new RunInstancesRequest()
-                                .withImageId(IMAGE_ID)
+                                .withImageId(N4j.IMAGE_ID)
                                 .withKeyName(keyName)
                                 .withMinCount(1)
                                 .withMaxCount(1)
@@ -124,9 +126,9 @@ public class TestEC2InstanceProfile {
 
                 // Verify instance profile used for instance
                 print("Verifying run instances response references instance profile");
-                assertThat(runResult.getReservation().getInstances().get(0).getIamInstanceProfile() != null, "Expected instance profile");
-                assertThat(profileArn.equals(runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn()), "Unexpected instance profile ARN: " + runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn());
-                assertThat(runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getId() != null, "Expected instance profile ID");
+                Assert.assertTrue( "Expected instance profile", runResult.getReservation().getInstances().get(0).getIamInstanceProfile() != null );
+                Assert.assertTrue( "Unexpected instance profile ARN: " + runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn(), profileArn.equals(runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn()) );
+                Assert.assertTrue( "Expected instance profile ID", runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getId() != null );
 
                 //
                 print("Terminating instance: " + instanceId);
@@ -138,7 +140,7 @@ public class TestEC2InstanceProfile {
                 print("Running instance with instance profile name");
                 final RunInstancesResult runResult =
                         ec2.runInstances(new RunInstancesRequest()
-                                .withImageId(IMAGE_ID)
+                                .withImageId(N4j.IMAGE_ID)
                                 .withKeyName(keyName)
                                 .withMinCount(1)
                                 .withMaxCount(1)
@@ -156,9 +158,9 @@ public class TestEC2InstanceProfile {
 
                 // Verify instance profile used for instance
                 print("Verifying run instances response references instance profile");
-                assertThat(runResult.getReservation().getInstances().get(0).getIamInstanceProfile() != null, "Expected instance profile");
-                assertThat(profileArn.equals(runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn()), "Unexpected instance profile ARN: " + runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn());
-                assertThat(runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getId() != null, "Expected instance profile ID");
+                Assert.assertTrue( "Expected instance profile", runResult.getReservation().getInstances().get(0).getIamInstanceProfile() != null );
+                Assert.assertTrue( "Unexpected instance profile ARN: " + runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn(), profileArn.equals(runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getArn()) );
+                Assert.assertTrue( "Expected instance profile ID", runResult.getReservation().getInstances().get(0).getIamInstanceProfile().getId() != null );
 
                 // Set role policy allowing describe instances, describe instance status, etc
                 final String rolePolicyName = "role-policy-1";
@@ -176,7 +178,7 @@ public class TestEC2InstanceProfile {
                             "      \"Resource\": \"*\",\n" +
                             "      \"Condition\": {\n" +
                             "        \"ArnEquals\": {\n" +
-                            "          \"ec2:SourceInstanceARN\": \"arn:aws:ec2::"+ACCOUNT_ID+":instance/"+instanceId+"\"\n" +
+                            "          \"ec2:SourceInstanceARN\": \"arn:aws:ec2::"+N4j.ACCOUNT_ID+":instance/"+instanceId+"\"\n" +
                             "        }\n" +
                             "      }\n" +
                             "    }\n" +
@@ -229,12 +231,12 @@ public class TestEC2InstanceProfile {
             completed = instanceStatusResult.getInstanceStatuses().size() == 1;
             if (completed) {
                 az = instanceStatusResult.getInstanceStatuses().get(0).getAvailabilityZone();
-                assertThat(expectedId.equals(instanceStatusResult.getInstanceStatuses().get(0).getInstanceId()), "Incorrect instance id");
-                assertThat(state.equals(instanceStatusResult.getInstanceStatuses().get(0).getInstanceState().getName()), "Incorrect instance state");
+                Assert.assertTrue( "Incorrect instance id", expectedId.equals(instanceStatusResult.getInstanceStatuses().get(0).getInstanceId()) );
+                Assert.assertTrue( "Incorrect instance state", state.equals(instanceStatusResult.getInstanceStatuses().get(0).getInstanceState().getName()) );
             }
             Thread.sleep(5000);
         }
-        assertThat(completed, "Instance not reported within the expected timeout");
+        Assert.assertTrue( "Instance not reported within the expected timeout", completed );
         print("Instance reported " + state + " in " + (System.currentTimeMillis() - startTime) + "ms");
         return az;
     }

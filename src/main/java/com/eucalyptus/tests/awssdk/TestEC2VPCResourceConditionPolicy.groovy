@@ -15,14 +15,13 @@ import com.github.sjones4.youcan.youare.YouAre
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
-
-import org.testng.annotations.Test;
+import org.junit.Assert
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
-import static N4j.CLC_IP
-import static N4j.EC2_ENDPOINT
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests IAM policy for EC2 VPC resource conditions.
@@ -33,7 +32,6 @@ import static N4j.minimalInit
  */
 class TestEC2VPCResourceConditionPolicy {
 
-  private final String host;
   private final AWSCredentialsProvider credentials
 
   public static void main( String[] args ) throws Exception {
@@ -42,31 +40,24 @@ class TestEC2VPCResourceConditionPolicy {
 
   public TestEC2VPCResourceConditionPolicy() {
     minimalInit()
-    this.host=CLC_IP
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
   }
 
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( EC2_ENDPOINT )
+    ec2.setEndpoint( N4j.EC2_ENDPOINT )
     ec2
   }
 
   private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials  ) {
     final YouAreClient euare = new YouAreClient( credentials )
-    euare.setEndpoint( cloudUri( "/services/Euare/" ) )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare
   }
 
   private boolean assertThat( boolean condition,
                               String message ){
-    assert condition : message
+    Assert.assertTrue( message, condition )
     true
   }
 
@@ -77,6 +68,13 @@ class TestEC2VPCResourceConditionPolicy {
   @Test
   public void EC2VPCResourceConditionPolicyTest( ) throws Exception {
     final String namePrefix = UUID.randomUUID().toString() + "-"
+    final AmazonEC2 ec2 = getEC2Client( credentials )
+
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
+
     print( "Using resource prefix for test: ${namePrefix}" )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>

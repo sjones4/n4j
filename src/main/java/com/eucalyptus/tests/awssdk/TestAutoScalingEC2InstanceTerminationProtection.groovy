@@ -20,12 +20,11 @@ import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.ModifyInstanceAttributeRequest
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest
-import org.testng.annotations.Test
+import org.junit.Test
 
 import static N4j.ACCESS_KEY
-import static N4j.CLC_IP
 import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static N4j.getCloudInfo
 
 
 /**
@@ -37,7 +36,6 @@ import static N4j.minimalInit
  */
 class TestAutoScalingEC2InstanceTerminationProtection {
 
-  private final String host
   private final AWSCredentialsProvider credentials
 
   public static void main( String[] args ) throws Exception {
@@ -45,26 +43,19 @@ class TestAutoScalingEC2InstanceTerminationProtection {
   }
 
   public TestAutoScalingEC2InstanceTerminationProtection( ){
-    minimalInit( )
-    this.host = CLC_IP
+    getCloudInfo( )
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
   }
 
   private AmazonAutoScaling getAutoScalingClient( final AWSCredentialsProvider credentials ) {
     final AmazonAutoScaling auto = new AmazonAutoScalingClient( credentials )
-    auto.endpoint = cloudUri( '/services/AutoScaling' )
+    auto.endpoint = N4j.AS_ENDPOINT
     auto
   }
 
   private AmazonEC2Client getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2Client ec2 = new AmazonEC2Client( credentials )
-    ec2.endpoint = cloudUri( '/services/compute' )
+    ec2.endpoint = N4j.EC2_ENDPOINT
     ec2
   }
 
@@ -123,7 +114,7 @@ class TestAutoScalingEC2InstanceTerminationProtection {
             instanceMonitoring: new InstanceMonitoring(
               enabled: false
             ),
-            instanceType: 'm1.small',
+            instanceType: N4j.INSTANCE_TYPE,
             keyName: keyName,
             launchConfigurationName: configName
         ) )

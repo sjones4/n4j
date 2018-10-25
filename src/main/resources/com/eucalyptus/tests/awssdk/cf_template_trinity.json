@@ -1,0 +1,239 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Load balanced and auto scaled web site. Auto-scaled based on the CPU utilization of the web servers. Instances are load balanced with a simple health check against the default web page.",
+
+  "Parameters" : {
+    "ElbAccountId" : {
+      "Description" : "Elastic load balancing account id for the region",
+      "Type" : "String"
+    },
+
+    "InstanceType" : {
+      "Description" : "WebServer EC2 instance type",
+      "Type" : "String",
+      "Default" : "m1.small",
+      "AllowedValues" : [ "t1.micro", "t2.nano", "t2.micro", "t2.small", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+
+    "Image" : {
+      "Description" : "Web server image",
+      "Type" : "String",
+      "AllowedPattern" : "[ae]mi-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?",
+      "ConstraintDescription" : "must be a valid EC2 image identifier."
+    },
+
+    "SSHLocation" : {
+      "Description" : "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    }
+  },
+
+  "Resources" : {
+    "Bucket": {
+      "Type": "AWS::S3::Bucket"
+    },
+
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "Bucket"},
+        "PolicyDocument": {
+          "Version": "2008-10-17",
+          "Statement": [ {
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [ "", [ "arn:aws:s3:::", { "Ref": "Bucket" }, "/AWSLogs/", { "Ref": "AWS::AccountId" }, "/*" ] ]
+              },
+              "Principal": { "AWS": { "Ref": "ElbAccountId" } },
+              "Action": [ "s3:PutObject" ]
+            }
+          ]
+        }
+      }
+    },
+
+    "WebServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : { "Fn::GetAZs" : ""},
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+        "MinSize" : "1",
+        "MaxSize" : "3",
+        "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" } ]
+      },
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "MinInstancesInService": "1",
+          "MaxBatchSize": "1",
+          "PauseTime" : "PT15M",
+          "WaitOnResourceSignals": "true"
+        }
+      }
+    },
+
+    "LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata" : {
+        "Comment" : "Install a simple application"
+      },
+      "Properties" : {
+        "ImageId" : { "Ref" : "Image" },
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
+        "InstanceType"   : { "Ref" : "InstanceType" },
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/usr/bin/python -tt\n",
+          "import SimpleHTTPServer, BaseHTTPServer\n",
+          "\n",
+          "class StaticHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):\n",
+          "  def do_GET(self):\n",
+          "    self.send_response( 200 )\n",
+          "    self.send_header('Content-Type', 'text/plain; charset=utf-8')\n",
+          "    self.end_headers( )\n",
+          "    self.wfile.write(\"Hello\")\n",
+          "    self.wfile.close( )\n",
+          "\n",
+          "BaseHTTPServer.HTTPServer( (\"\", 80), StaticHandler ).serve_forever( )\n"
+        ]]}}
+      }
+    },
+
+    "WebServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "WebServerGroup" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+
+    "WebServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "WebServerGroup" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+
+    "CPUAlarmHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Scale-up if CPU > 90% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "90",
+        "AlarmActions": [ { "Ref": "WebServerScaleUpPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "WebServerGroup" }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold"
+      }
+    },
+
+    "CPUAlarmLow": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Scale-down if CPU < 70% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "70",
+        "AlarmActions": [ { "Ref": "WebServerScaleDownPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "WebServerGroup" }
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold"
+      }
+    },
+
+    "ElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "DependsOn": "BucketPolicy",
+      "Properties" : {
+        "AccessLoggingPolicy" : {
+          "EmitInterval" : 60,
+          "Enabled" : true,
+          "S3BucketName" : { "Ref" : "Bucket" }
+        },
+        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "CrossZone" : "true",
+        "HealthCheck" : {
+          "Target" : "HTTP:80/",
+          "HealthyThreshold" : "3",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "30",
+          "Timeout" : "5"
+        },
+        "LBCookieStickinessPolicy": [ {
+          "CookieExpirationPeriod": "60",
+          "PolicyName": "CookiePolicy"
+        } ],
+        "Listeners" : [ {
+          "LoadBalancerPort" : "80",
+          "InstancePort" : "80",
+          "Protocol" : "HTTP",
+          "PolicyNames": [ "CookiePolicy" ]
+        } ]
+      }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access and HTTP from the load balancer only",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : { "Ref" : "SSHLocation"}
+        },
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : "80",
+            "ToPort" : "80",
+            "SourceSecurityGroupOwnerId" : {"Fn::GetAtt" : ["ElasticLoadBalancer", "SourceSecurityGroup.OwnerAlias"]},
+            "SourceSecurityGroupName" : {"Fn::GetAtt" : ["ElasticLoadBalancer", "SourceSecurityGroup.GroupName"]}
+          } ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "URL" : {
+      "Description" : "The URL of the website",
+      "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}]]}
+    },
+    "LoadBalancerName" : {
+      "Description" : "Name of the Elastic Load Balancer",
+      "Value" :  { "Ref": "ElasticLoadBalancer" }
+    },
+    "WebServerGroupName" : {
+      "Description" : "Name of the web server Auto Scaling Group",
+      "Value" :  { "Ref": "WebServerGroup" }
+    },
+    "BucketName": {
+      "Description" : "Name of the bucket used for ELB access logs",
+      "Value" :  { "Ref": "Bucket" }
+    }
+  }
+}

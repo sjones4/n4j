@@ -5,13 +5,14 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-
-import org.testng.annotations.Test;
+import org.junit.Assert
+import org.junit.Test
 
 import static N4j.ACCESS_KEY
 import static N4j.EC2_ENDPOINT
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests DNS names for EC2 VPC instances / enis.
@@ -24,11 +25,11 @@ class TestEC2VPCDnsNames {
 
   private final AWSCredentialsProvider credentials
 
-  public static void main( String[] args ) throws Exception {
+  static void main(String[] args ) throws Exception {
     new TestEC2VPCDnsNames( ).EC2VPCDnsNamesTest( )
   }
 
-  public TestEC2VPCDnsNames( ) {
+  TestEC2VPCDnsNames( ) {
     minimalInit()
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
@@ -41,7 +42,7 @@ class TestEC2VPCDnsNames {
 
   private boolean assertThat( boolean condition,
                               String message ){
-    assert condition : message
+    Assert.assertTrue( message, condition )
     true
   }
 
@@ -50,8 +51,13 @@ class TestEC2VPCDnsNames {
   }
 
   @Test
-  public void EC2VPCDnsNamesTest( ) throws Exception {
+  void EC2VPCDnsNamesTest( ) throws Exception {
     final AmazonEC2Client ec2 = getEC2Client( credentials )
+
+    if ( !isVPC(ec2) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     // Find an image to use
     final String imageId = ec2.describeImages( new DescribeImagesRequest(
@@ -187,9 +193,9 @@ class TestEC2VPCDnsNames {
             reservations?.getAt( 0 )?.instances?.getAt( 0 )?.with {
               boolean enableDnsHostnames = vpcIdToDnsHostnamesEnabled.get( vpcId ) ?: false
               assertThat( publicIpAddress != null && !publicIpAddress.isEmpty( ), "Expected public IP address" )
+              assertThat( privateDnsName != null && privateDnsName.contains( privateIpAddress.replace('.','-') )
+                  && privateDnsName.contains('internal'), "Invalid private DNS name: ${privateDnsName}" )
               if ( enableDnsHostnames ) {
-                assertThat( privateDnsName != null && privateDnsName.contains( privateIpAddress.replace('.','-') )
-                    && privateDnsName.contains('internal'), "Invalid private DNS name: ${privateDnsName}" )
                 assertThat( publicDnsName != null && publicDnsName.contains( publicIpAddress.replace('.','-') ),
                     "Invalid public DNS name: ${publicDnsName}" )
 
@@ -210,7 +216,6 @@ class TestEC2VPCDnsNames {
                   }
                 }
               } else {
-                assertThat( privateDnsName == null || privateDnsName.isEmpty( ), "Unexpected private DNS name: ${privateDnsName}" )
                 assertThat( publicDnsName == null || publicDnsName.isEmpty( ), "Unexpected public DNS name: ${publicDnsName}" )
                 networkInterfaces?.getAt( 0 )?.with {
                   assertThat( privateDnsName == null || privateDnsName.isEmpty( ), "Unexpected ENI private DNS name: ${privateDnsName}" )

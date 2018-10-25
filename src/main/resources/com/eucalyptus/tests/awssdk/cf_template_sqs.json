@@ -1,0 +1,88 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+
+  "Description": "Test template for SQS resources",
+
+  "Resources": {
+    "Queue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "DeadLetterQueue",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 5
+        },
+        "DelaySeconds": "10",
+        "MaximumMessageSize": "65536",
+        "MessageRetentionPeriod": "1209600",
+        "VisibilityTimeout": "20",
+        "ReceiveMessageWaitTimeSeconds": "5",
+        "QueueName": "queue1"
+      }
+    },
+    "DeadLetterQueue": {
+      "Type": "AWS::SQS::Queue"
+    },
+    "QueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": {
+            "Action": "sqs:*",
+            "Principal": {
+              "AWS": {
+                "Ref": "AWS::AccountId"
+              }
+            },
+            "Effect": "Allow"
+          }
+        },
+        "Queues": [
+          {
+            "Ref": "Queue"
+          },
+          {
+            "Ref": "DeadLetterQueue"
+          }
+        ]
+      }
+    }
+  },
+
+  "Outputs": {
+    "QueueURL": {
+      "Description": "URL of the queue",
+      "Value": {
+        "Ref": "Queue"
+      }
+    },
+    "QueueARN": {
+      "Description": "ARN of the queue",
+      "Value": {
+        "Fn::GetAtt": [
+          "Queue",
+          "Arn"
+        ]
+      }
+    },
+    "DeadLetterQueueURL": {
+      "Description": "URL of the dead letter queue",
+      "Value": {
+        "Ref": "DeadLetterQueue"
+      }
+    },
+    "DeadLetterQueueARN": {
+      "Description": "ARN of the dead letter queue",
+      "Value": {
+        "Fn::GetAtt": [
+          "DeadLetterQueue",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

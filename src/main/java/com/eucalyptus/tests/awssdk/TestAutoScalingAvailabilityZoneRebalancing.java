@@ -22,7 +22,7 @@ package com.eucalyptus.tests.awssdk;
 import com.amazonaws.services.autoscaling.AmazonAutoScaling;
 import com.amazonaws.services.autoscaling.model.*;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;

@@ -26,12 +26,11 @@ import com.amazonaws.services.ec2.model.DescribeImagesRequest
 import com.amazonaws.services.ec2.model.DetachInternetGatewayRequest
 import com.amazonaws.services.ec2.model.Filter
 
-import org.testng.annotations.Test;
+import org.junit.Test;
 
 import static N4j.ACCESS_KEY
-import static N4j.CLC_IP
 import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static N4j.getCloudInfo
 
 /**
  * This application tests Auto Scaling use of EC2 VPC functionality.
@@ -42,7 +41,6 @@ import static N4j.minimalInit
  */
 class TestAutoScalingEC2VPC {
 
-  private final String host;
   private final AWSCredentialsProvider credentials
 
   public static void main( String[] args ) throws Exception {
@@ -51,31 +49,24 @@ class TestAutoScalingEC2VPC {
   }
 
   public TestAutoScalingEC2VPC() {
-    minimalInit()
-    this.host = CLC_IP;
+    getCloudInfo()
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-            .resolve( servicePath )
-            .toString()
   }
 
   private AmazonAutoScaling getAutoScalingClient( ) {
     final AmazonAutoScaling asc = new AmazonAutoScalingClient( credentials )
-    asc.setEndpoint( cloudUri( "/services/AutoScaling/" ) )
+    asc.setEndpoint( N4j.AS_ENDPOINT )
     asc
   }
 
   private AmazonEC2 getEc2Client( ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( cloudUri( "/services/compute/" ) )
+    ec2.setEndpoint( N4j.EC2_ENDPOINT )
     ec2
   }
 
   private String instanceType() {
-    return "m1.small"
+    return N4j.INSTANCE_TYPE
   }
 
   private void assertThat( boolean condition,

@@ -3,11 +3,12 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement
 import com.amazonaws.services.identitymanagement.model.*
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.*
 
@@ -24,9 +25,9 @@ import static com.eucalyptus.tests.awssdk.N4j.*
  */
 class TestIAMManagedPolicyManagement {
 
-  private final AmazonIdentityManagement testAccountAdminIamClient
-  private final String testAcct
-  private final testEucalyptusSpecificFunctionality
+  private static AmazonIdentityManagement testAccountAdminIamClient
+  private static String testAcct
+  private static testEucalyptusSpecificFunctionality
 
   // Alternative for testing against aws/iam
 //  TestIAMManagedPolicyManagement( ) {
@@ -36,21 +37,22 @@ class TestIAMManagedPolicyManagement {
 //    N4j.NAME_PREFIX = eucaUUID() + "-"
 //  }
 
-  TestIAMManagedPolicyManagement( ) {
+  @BeforeClass
+  static void init( ) {
     getCloudInfo( )
-    this.testAcct= "${NAME_PREFIX}man-pol-test-acct"
+    testAcct= "${NAME_PREFIX}man-pol-test-acct"
     createAccount(testAcct)
-    AWSCredentialsProvider testAcctAdminCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
-    this.testAccountAdminIamClient = getIamClient( testAcctAdminCredentials )
-    this.testEucalyptusSpecificFunctionality = true
+    AWSCredentialsProvider testAcctAdminCredentials = new AWSStaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
+    testAccountAdminIamClient = getIamClient( testAcctAdminCredentials )
+    testEucalyptusSpecificFunctionality = true
   }
 
   @AfterClass
-  void tearDownAfterClass( ) {
+  static void tearDownAfterClass( ) {
     deleteAccount( testAcct )
   }
 
-  private AmazonIdentityManagement getIamClient( AWSCredentialsProvider credentialsProvider ) {
+  private static AmazonIdentityManagement getIamClient( AWSCredentialsProvider credentialsProvider ) {
     AWSCredentials creds = credentialsProvider.getCredentials( )
     getYouAreClient( creds.AWSAccessKeyId, creds.AWSSecretKey, IAM_ENDPOINT )
   }

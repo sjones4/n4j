@@ -40,10 +40,11 @@ import com.amazonaws.services.autoscaling.model.LaunchConfiguration;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.*;
-import org.testng.AssertJUnit;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.Assert;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,8 +72,8 @@ public class Eutester4jTest {
 	 * @throws java.lang.Exception
 	 */
 	@BeforeClass
-	public void setUpBeforeClass() throws Exception {
-        testInfo(this.getClass().getSimpleName());
+	public static void setUpBeforeClass() throws Exception {
+        testInfo(Eutester4jTest.class.getSimpleName());
         getCloudInfo();
 		
 //		ec2Endpoint = "http://ec2.us-west-1.amazonaws.com"; //AWS
@@ -89,7 +90,7 @@ public class Eutester4jTest {
 	 * @throws java.lang.Exception
 	 */
 	@AfterClass
-	public void tearDownAfterClass() throws Exception {
+	public static void tearDownAfterClass() throws Exception {
 //		sleep(60); // give the system a chance to complete test actions
 		deleteKeyPair(keyName);
 		deleteSecurityGroup(secGroupName);
@@ -101,7 +102,7 @@ public class Eutester4jTest {
 	 * Test that invalid access key prevents execution of ec2 commands. There should be an exception caught
 	 * After the test, credentials are reset to values present before the test ran.
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testInvalidAccessKey() {
 		AWSCredentials creds = new BasicAWSCredentials("badAccessKey",SECRET_KEY);
 		AmazonEC2 ec2Conn = new AmazonEC2Client(creds);
@@ -110,7 +111,7 @@ public class Eutester4jTest {
 			ec2Conn.describeAvailabilityZones();
 		} catch (Exception e) {
 			print("Got Expected Failure: " + e.getMessage());
-			AssertJUnit.assertTrue(e.getMessage().length() > 0);
+			Assert.assertTrue(e.getMessage().length() > 0);
 		} 
 	}
 	
@@ -118,7 +119,7 @@ public class Eutester4jTest {
 	 * Test that invalid secret key prevents execution of ec2 commands. There should be an exception caught.
 	 * After the test, credentials are reset to values present before the test ran
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testInvalidSecretKey() {
 		AWSCredentials creds = new BasicAWSCredentials(ACCESS_KEY,"badSecretKey");
 		AmazonEC2 ec2Conn = new AmazonEC2Client(creds);
@@ -127,7 +128,7 @@ public class Eutester4jTest {
 			ec2Conn.describeAvailabilityZones();
 		} catch (Exception e) {
 			print("Got Expected Failure: " + e.getMessage());
-			AssertJUnit.assertTrue(e.getMessage().length() > 0);
+			Assert.assertTrue(e.getMessage().length() > 0);
 		} 
 	}
 	
@@ -135,16 +136,16 @@ public class Eutester4jTest {
 	 * Test that valid credentials have a successful connection by verifying
 	 * a simple ec2 command (describeAvalabilityZones) returns some zones
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testGoodCreds() {
 		DescribeAvailabilityZonesResult availabilityZonesResult = ec2.describeAvailabilityZones();
-		AssertJUnit.assertTrue(availabilityZonesResult.getAvailabilityZones().size() >= 1);
+		Assert.assertTrue(availabilityZonesResult.getAvailabilityZones().size() >= 1);
 	}
 	
 	/**
 	 * Test that security group can be created then deletes the group
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testCreateSecurityGroup() {
 		String name = eucaUUID();
 		String desc = eucaUUID();
@@ -155,7 +156,7 @@ public class Eutester4jTest {
 		try {
 			createSecurityGroup(name, desc);
 			secGroups = describeSecurityGroups();
-			AssertJUnit.assertTrue(secGroups.size() > initialSize);
+			Assert.assertTrue(secGroups.size() > initialSize);
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -166,7 +167,7 @@ public class Eutester4jTest {
 	/**
 	 * Test that security group can be deleted
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testDeleteSecurityGroup() {
 		String name = eucaUUID();
 		String desc = eucaUUID();
@@ -179,7 +180,7 @@ public class Eutester4jTest {
 			
 			deleteSecurityGroup(name);
 			secGroups = describeSecurityGroups();
-			AssertJUnit.assertTrue(secGroups.size() < initialSize);
+			Assert.assertTrue(secGroups.size() < initialSize);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -188,11 +189,12 @@ public class Eutester4jTest {
 	/**
 	 * Test running instances also tests get instance count
 	 */
-	@Test(enabled=false)
+	@Ignore
+	@Test
 	public void testRunInstances(){
 		int initalInstanceCount = getInstancesList().size();
 		runInstances(IMAGE_ID, keyName, INSTANCE_TYPE, securityGroups, 1, 1);
-		AssertJUnit.assertTrue(getInstancesList().size() > initalInstanceCount);
+		Assert.assertTrue(getInstancesList().size() > initalInstanceCount);
 		
 		// terminate after the test
 		List<String> instanceIds = new ArrayList<String>();
@@ -209,7 +211,8 @@ public class Eutester4jTest {
 	 * appears there is a compatibility issue with euca supporting getState() for instances
 	 * it is always returning null
 	 */
-	@Test(enabled=false)
+	@Ignore
+	@Test
 	public void testStopInstances(){
 		runInstances(IMAGE_ID, keyName, INSTANCE_TYPE, securityGroups, 1, 1);
 		List<String> instanceIds = new ArrayList<String>();
@@ -227,7 +230,7 @@ public class Eutester4jTest {
 		while(!getLastlaunchedInstance().get(0).getState().getName().equals("running")){}
 		stopInstances(instanceIds);
 		while(!getLastlaunchedInstance().get(0).getState().getName().equals("stopped")){}
-		AssertJUnit.assertTrue(getLastlaunchedInstance().get(0).getState().getName().equals("stopped"));
+		Assert.assertTrue(getLastlaunchedInstance().get(0).getState().getName().equals("stopped"));
 		// after test terminate the instance
 		terminateInstances(instanceIds);
 	}
@@ -238,7 +241,8 @@ public class Eutester4jTest {
 	 * appears there is a compatibility issue with euca supporting getState() for instances
 	 * it is always returning null
 	 */
-	@Test(enabled=false)
+	@Ignore
+	@Test
 	public void testTerminateInstances(){
 		runInstances(IMAGE_ID, keyName, INSTANCE_TYPE, securityGroups, 1, 1);
 		List<String> instanceIds = new ArrayList<String>();
@@ -249,25 +253,25 @@ public class Eutester4jTest {
 		terminateInstances(instanceIds);
 		print("State after terminate = " + getLastlaunchedInstance().get(0).getState().getName());
 		while(!getLastlaunchedInstance().get(0).getState().getName().equals("terminated")){}
-		AssertJUnit.assertTrue(getLastlaunchedInstance().get(0).getState().getName().equals("terminated"));
+		Assert.assertTrue(getLastlaunchedInstance().get(0).getState().getName().equals("terminated"));
 	}
 	
 	/**
 	 * Tests createKeyPair, getKeyPairCount and deleteKeyPair
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testCreateKeyPair() {
 		String keyName = "test key";
 		int initialKeyPairCount = getKeyPairCount();
 		createKeyPair(keyName);
-		AssertJUnit.assertTrue(getKeyPairCount() > initialKeyPairCount);
+		Assert.assertTrue(getKeyPairCount() > initialKeyPairCount);
 		deleteKeyPair(keyName);
 	}
 	
 	/**
 	 * Tests create, describe and delete launch configurations
 	 */
-	@Test(enabled=true)
+	@Test
 	public void testBasicLaunchConfig(){
         String launchConfig = "LC-" + eucaUUID();
 		try {
@@ -276,7 +280,7 @@ public class Eutester4jTest {
 			int initialSize = launchConfigs.size();
 			deleteLaunchConfig(launchConfig);
 			launchConfigs = describeLaunchConfigs();
-			AssertJUnit.assertTrue(launchConfigs.size() < initialSize);
+			Assert.assertTrue(launchConfigs.size() < initialSize);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

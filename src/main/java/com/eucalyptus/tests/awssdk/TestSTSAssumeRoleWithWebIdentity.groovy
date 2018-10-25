@@ -37,11 +37,10 @@ import com.github.sjones4.youcan.youprop.YouProp
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.DescribePropertiesRequest
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
 import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 import static com.eucalyptus.tests.awssdk.N4j.NAME_PREFIX
@@ -77,18 +76,6 @@ import java.security.spec.RSAPrivateKeySpec
  */
 class TestSTSAssumeRoleWithWebIdentity {
 
-
-  /**
-  * Called after all the tests in a class
-  *
-  * @throws java.lang.Exception
-  **/
-  @AfterClass
-  public void tearDownAfterClass() throws Exception {
-      N4j.deleteAccount(testAcct)
-  }
-
-  private final String host
   private final String path
   private final String domainAndPort
   private final String domain
@@ -165,7 +152,6 @@ class TestSTSAssumeRoleWithWebIdentity {
     this.credentials = new AWSStaticCredentialsProvider( N4j.getUserCreds(testAcct, testUser) )
 
     // configurable / detected values
-    host = CLC_IP
     path = '/pathhere'
     domainAndPort = "s3.${sniffDomain()}:8773".toString( )
     domain = domainAndPort.contains(':') ?
@@ -174,40 +160,44 @@ class TestSTSAssumeRoleWithWebIdentity {
     thumbprint = sniffThumbprint("https://${domainAndPort}")
   }
 
-  private String cloudUri(String servicePath) {
-    URI.create("http://${host}:8773/")
-            .resolve(servicePath)
-            .toString()
+  /**
+   * Called after all the tests in a class
+   *
+   * @throws java.lang.Exception
+   */
+  @AfterClass
+  public void tearDownAfterClass() throws Exception {
+    N4j.deleteAccount(testAcct)
   }
 
   private AWSSecurityTokenService getStsClient() {
     final AWSSecurityTokenService sts = new AWSSecurityTokenServiceClient(new AnonymousAWSCredentials())
-    sts.setEndpoint(cloudUri('/services/Tokens'))
+    sts.setEndpoint(N4j.TOKENS_ENDPOINT)
     sts
   }
 
   private AmazonS3 getS3Client(final AWSCredentialsProvider credentials) {
     final AmazonS3 s3 = new AmazonS3Client(credentials, new ClientConfiguration(signerOverride: 'S3SignerType'))
     s3.setS3ClientOptions(new S3ClientOptions(pathStyleAccess: true))
-    s3.setEndpoint(cloudUri("/services/objectstorage"))
+    s3.setEndpoint(N4j.S3_ENDPOINT)
     s3
   }
 
   private AmazonIdentityManagement getIamClient(final AWSCredentialsProvider credentials) {
     final AmazonIdentityManagement iam = new AmazonIdentityManagementClient(credentials)
-    iam.setEndpoint(cloudUri('/services/Euare'))
+    iam.setEndpoint(N4j.IAM_ENDPOINT)
     iam
   }
 
   private AmazonEC2 getEC2Client(final AWSCredentialsProvider credentials) {
     final AmazonEC2 ec2 = new AmazonEC2Client(credentials)
-    ec2.setEndpoint(cloudUri("/services/compute"))
+    ec2.setEndpoint(N4j.EC2_ENDPOINT)
     ec2
   }
 
   private YouProp getYouPropClient(final AWSCredentialsProvider credentials) {
     new YouPropClient(credentials).with {
-      setEndpoint(cloudUri("/services/Properties"))
+      setEndpoint(N4j.PROPERTIES_ENDPOINT)
       it
     }
   }

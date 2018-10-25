@@ -21,11 +21,12 @@ import com.amazonaws.services.s3.model.PutObjectRequest
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult
-import org.testng.annotations.AfterClass
-import org.testng.annotations.AfterMethod
-import org.testng.annotations.BeforeClass
-import org.testng.annotations.BeforeMethod
-import org.testng.annotations.Test
+import static org.junit.Assert.*
+import org.junit.AfterClass
+import org.junit.After
+import org.junit.BeforeClass
+import org.junit.Before
+import org.junit.Test
 
 import java.nio.charset.StandardCharsets
 
@@ -45,7 +46,6 @@ import static com.eucalyptus.tests.awssdk.N4j.getYouAreClient
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount
 import static com.eucalyptus.tests.awssdk.N4j.print
 import static com.eucalyptus.tests.awssdk.N4j.testInfo
-import static org.testng.Assert.*
 
 /**
  * Test functionality for S3 bucket policies
@@ -53,6 +53,7 @@ import static org.testng.Assert.*
  * Related eucalyptus issues:
  *   https://eucalyptus.atlassian.net/browse/EUCA-651
  *   https://eucalyptus.atlassian.net/browse/EUCA-13195
+ *   https://eucalyptus.atlassian.net/browse/EUCA-13370
  *
  * Relevant aws documentation:
  *   http://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html
@@ -70,24 +71,24 @@ class S3BucketPolicyTests {
   private List<Runnable> cleanupTasks
 
   // test shared
-  private AmazonS3Client s3
-  private String account
-  private Owner owner
-  private String ownerName
-  private String ownerId
-  private String requestorAccount
-  private String requestorAccountNumber
-  private String requestorAccountAdminUserArn
-  private AWSCredentials requestorCredentials
-  private AmazonS3Client requestorS3
-  private AmazonIdentityManagement requestorIam
-  private AWSCredentials requestorUserCredentials
-  private AmazonS3Client requestorUserS3
-  private int policyChangeSleepSecs = 5
-  private int bucketPolicyDeletionSleepSeconds = 0 // sleep necessary with aws
+  private static AmazonS3Client s3
+  private static String account
+  private static Owner owner
+  private static String ownerName
+  private static String ownerId
+  private static String requestorAccount
+  private static String requestorAccountNumber
+  private static String requestorAccountAdminUserArn
+  private static AWSCredentials requestorCredentials
+  private static AmazonS3Client requestorS3
+  private static AmazonIdentityManagement requestorIam
+  private static AWSCredentials requestorUserCredentials
+  private static AmazonS3Client requestorUserS3
+  private static int policyChangeSleepSecs = 5
+  private static int bucketPolicyDeletionSleepSeconds = 0 // sleep necessary with aws
 
   @BeforeClass
-  void init()  {
+  static void init()  {
     print("### PRE SUITE SETUP - ${getClass().simpleName}")
     try {
       getCloudInfo( )
@@ -118,7 +119,7 @@ class S3BucketPolicyTests {
   }
 
   @AfterClass
-  void teardown() {
+  static void teardown() {
     print("### POST SUITE CLEANUP - ${getClass().simpleName}")
     if ( account ) {
       deleteAccount( account )
@@ -157,14 +158,14 @@ class S3BucketPolicyTests {
 //    requestorUserS3.setRegion( Region.getRegion( Regions.US_WEST_1 ) )
 //  }
 
-  @BeforeMethod
+  @Before
   void setup() throws Exception {
     print("Initializing bucket name and clean up tasks")
     bucketName = "b${eucaUUID()}".toLowerCase( )
     cleanupTasks = [ ]
   }
 
-  @AfterMethod
+  @After
   void cleanup() throws Exception {
     Collections.reverse(cleanupTasks)
     for (final Runnable cleanupTask : cleanupTasks) {
@@ -196,14 +197,14 @@ class S3BucketPolicyTests {
         @Override
         void afterResponse( final Request<?> request, final Response<?> response ) {
           print( "${account}: Got response status code ${response.httpResponse.statusCode}" )
-          assertEquals( 204, response.httpResponse.statusCode, 'Status code' )
+          assertEquals( 'Status code', 204, response.httpResponse.statusCode )
         }
-      };
+      }
 
       print( "Setting bucket ${bucketName} policy ${policy}" )
-      s3.addRequestHandler( statusCodeCheckingHandler );
+      s3.addRequestHandler( statusCodeCheckingHandler )
       setBucketPolicy( bucketName, policy )
-      s3.removeRequestHandler( statusCodeCheckingHandler );
+      s3.removeRequestHandler( statusCodeCheckingHandler )
 
       print( "Getting bucket ${bucketName} policy" )
       String roundTripPolicy = getBucketPolicy( bucketName ).policyText
@@ -211,9 +212,9 @@ class S3BucketPolicyTests {
       assertThat( policy == roundTripPolicy, "Policy changed on set/get" )
 
       print( "Deleting bucket ${bucketName} policy" )
-      s3.addRequestHandler( statusCodeCheckingHandler );
+      s3.addRequestHandler( statusCodeCheckingHandler )
       deleteBucketPolicy( bucketName )
-      s3.removeRequestHandler( statusCodeCheckingHandler );
+      s3.removeRequestHandler( statusCodeCheckingHandler )
 
       assertThat( getBucketPolicy( bucketName ).policyText == null, 'Expected null bucket policy when none set' )
     }
@@ -279,7 +280,33 @@ class S3BucketPolicyTests {
         fail( "Expected access denied for cross account access with no permissions" )
       } catch ( AmazonServiceException e ) {
         print( "Got expected object access error: ${e}" )
-        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
+      }
+    }
+  }
+
+  @Test
+  void testPutAccessDeniedWithNoPermissions( ) {
+    testInfo( "${getClass().simpleName}.testPutAccessDeniedWithNoPermissions" )
+    createBucket( bucketName )
+
+    requestorS3.with {
+      print( "Putting object foo to bucket ${bucketName} as ${requestorAccount}" )
+      try {
+        putObject( new PutObjectRequest(
+            bucketName,
+            'foo',
+            new ByteArrayInputStream('content'.getBytes(StandardCharsets.UTF_8)),
+            new ObjectMetadata( )
+        ) )
+        cleanupTasks.add{
+          print( "${account}: Deleting object foo from bucket ${bucketName}" )
+          s3.deleteObject( bucketName, 'foo' )
+        }
+        fail( "Expected access denied for cross account access with no permissions" )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected object access error: ${e}" )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
       }
     }
   }
@@ -310,7 +337,50 @@ class S3BucketPolicyTests {
     requestorS3.with {
       print( "Getting object foo from bucket ${bucketName} as ${requestorAccount}" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
+    }
+  }
+
+  @Test
+  void testBucketPolicyAllowsPutAccess( ) {
+    testInfo( "${getClass().simpleName}.testBucketPolicyAllowsPutAccess" )
+    createBucket( bucketName )
+    String policy1 = """{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"${requestorAccountNumber}"},"Action":"s3:PutObject","Resource":"arn:aws:s3:::${bucketName}/foo"}]}"""
+    s3.with {
+      print( "Setting bucket ${bucketName} policy ${policy1}" )
+      setBucketPolicy( bucketName, policy1 )
+    }
+
+    requestorS3.with {
+      try {
+        print( "Putting object bar to bucket ${bucketName} as ${requestorAccount} (should fail)" )
+        putObject( new PutObjectRequest(
+            bucketName,
+            'bar',
+            new ByteArrayInputStream('content'.getBytes(StandardCharsets.UTF_8)),
+            new ObjectMetadata( )
+        ) )
+        cleanupTasks.add{
+          print( "${account}: Deleting object bar from bucket ${bucketName}" )
+          s3.deleteObject( bucketName, 'bar' )
+        }
+        fail( "Expected access denied for cross account put with no permission for object" )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected object access error: ${e}" )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
+      }
+
+      print( "Putting object foo to bucket ${bucketName} as ${requestorAccount}" )
+      putObject( new PutObjectRequest(
+          bucketName,
+          'foo',
+          new ByteArrayInputStream('content'.getBytes(StandardCharsets.UTF_8)),
+          new ObjectMetadata( )
+      ) )
+      cleanupTasks.add{
+        print( "${account}: Deleting object foo from bucket ${bucketName}" )
+        s3.deleteObject( bucketName, 'foo' )
+      }
     }
   }
 
@@ -328,7 +398,7 @@ class S3BucketPolicyTests {
     requestorS3.with {
       print( "Getting object foo from bucket ${bucketName} as ${requestorAccount}" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
   }
 
@@ -349,7 +419,7 @@ class S3BucketPolicyTests {
         fail( "Expected access denied by bucket policy" )
       } catch ( AmazonServiceException e ) {
         print( "Got expected object access error: ${e}" )
-        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
       }
     }
   }
@@ -386,7 +456,7 @@ class S3BucketPolicyTests {
     requestorS3.with {
       print( "Getting object FOO from bucket ${bucketName} as ${requestorAccount}" )
       String content1 = getObjectAsString( bucketName, 'FOO' )
-      assertEquals( content1, 'content', 'Content for FOO' )
+      assertEquals( 'Content for FOO', 'content', content1 )
 
       print( "Getting object foo from bucket ${bucketName}" )
       try {
@@ -394,7 +464,7 @@ class S3BucketPolicyTests {
         fail( "Expected access denied by bucket policy" )
       } catch ( AmazonServiceException e ) {
         print( "Got expected object access error: ${e}" )
-        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
       }
     }
   }
@@ -438,7 +508,7 @@ class S3BucketPolicyTests {
     print( "Accessing object ${objectUrl}" )
     String content = new URL( objectUrl ).
         getText( connectTimeout: 10000, readTimeout: 10000, useCaches: false, allowUserInteraction: false )
-    assertEquals( content, 'content', 'Content for foo from url' )
+    assertEquals( 'Content for foo from url', 'content', content )
   }
 
   /**
@@ -477,7 +547,7 @@ class S3BucketPolicyTests {
     requestorS3.with {
       print( "Getting object foo from bucket ${bucketName} as admin in ${requestorAccount}" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
     s3.with {
       print( "Removing bucket ${bucketName} policy" )
@@ -486,7 +556,7 @@ class S3BucketPolicyTests {
     requestorS3.with {
       print( "Getting object foo from bucket ${bucketName} as admin in ${requestorAccount} with no bucket policy" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
 
     String userPolicy = """\
@@ -510,7 +580,7 @@ class S3BucketPolicyTests {
         fail( "Expected access denied due to no user policy" )
       } catch ( AmazonServiceException e ) {
         print( "Got expected object access error: ${e}" )
-        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
       }
     }
     print( "Putting ${requestorUser} policy allowing foo object access for bucket ${userPolicy}" )
@@ -531,7 +601,7 @@ class S3BucketPolicyTests {
     requestorUserS3.with {
       print( "Getting object foo from bucket ${bucketName} as user in ${requestorAccount}" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
   }
 
@@ -568,12 +638,12 @@ class S3BucketPolicyTests {
     }
 
     AccessControlList acl = new AccessControlList()
-    acl.grantPermission(new CanonicalGrantee(ownerId), Permission.FullControl);
+    acl.grantPermission(new CanonicalGrantee(ownerId), Permission.FullControl)
     createObject( requestorS3, bucketName, 'foo', 'content', acl )
     requestorS3.with {
       print( "Getting object foo from bucket ${bucketName} as admin in ${requestorAccount} with no acl permission" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
     s3.with {
       print( "Removing bucket ${bucketName} policy" )
@@ -612,7 +682,7 @@ class S3BucketPolicyTests {
     requestorUserS3.with {
       print( "Getting object foo from bucket ${bucketName} as user in ${requestorAccount} with no acl permission" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
   }
 
@@ -652,7 +722,7 @@ class S3BucketPolicyTests {
     requestorS3.with {
       print( "Getting object foo from bucket ${bucketName} as admin in ${requestorAccount}" )
       String content = getObjectAsString( bucketName, 'foo' )
-      assertEquals( content, 'content', 'Content for foo' )
+      assertEquals( 'Content for foo', 'content', content )
     }
 
     String userPolicy = """\
@@ -689,7 +759,7 @@ class S3BucketPolicyTests {
         fail( "Expected access denied due to user policy not sufficient to grant access" )
       } catch ( AmazonServiceException e ) {
         print( "Got expected object access error: ${e}" )
-        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
       }
     }
 
@@ -706,7 +776,7 @@ class S3BucketPolicyTests {
         fail( "Expected access denied due to no bucket policy" )
       } catch ( AmazonServiceException e ) {
         print( "Got expected object access error: ${e}" )
-        assertEquals( e.errorCode, 'AccessDenied', 'Error code for access failure' )
+        assertEquals( 'Error code for access failure', 'AccessDenied', e.errorCode )
       }
     }
   }
@@ -739,7 +809,7 @@ class S3BucketPolicyTests {
     }
   }
 
-  private GetCallerIdentityResult getCallerAccount(final AWSCredentials creds ) {
+  private static GetCallerIdentityResult getCallerAccount(final AWSCredentials creds ) {
     new AWSSecurityTokenServiceClient( creds ).with {
       endpoint = TOKENS_ENDPOINT
       getCallerIdentity( new GetCallerIdentityRequest( ) )

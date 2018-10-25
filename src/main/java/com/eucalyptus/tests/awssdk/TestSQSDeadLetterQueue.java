@@ -6,11 +6,13 @@ import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.google.common.collect.ImmutableMap;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static com.eucalyptus.tests.awssdk.N4j.*;
 import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
@@ -19,15 +21,15 @@ import static com.eucalyptus.tests.awssdk.N4j.synchronizedDeleteAccount;
  * Created by ethomas on 10/6/16.
  */
 public class TestSQSDeadLetterQueue {
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSDeadLetterQueue.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -47,8 +49,8 @@ public class TestSQSDeadLetterQueue {
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSDeadLetterQueue.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -129,25 +131,24 @@ public class TestSQSDeadLetterQueue {
     // send a message on the first queue
     String messageId = accountSQSClient.sendMessage(queue1Url, "hello").getMessageId();
 
-    verifyNoMessagesOnQueue(accountSQSClient, queue2Url, 5);
-    verifyNoMessagesOnQueue(accountSQSClient, queue3Url, 5);
+    verifyNoMessagesOnQueues(accountSQSClient, Arrays.asList(queue2Url, queue3Url), 5);
 
     // receive the message 5 times.
     for (int i = 0; i < 5; i++) {
       receiveSpecificMessage(accountSQSClient, queue1Url, messageId, 5);
     }
 
-    verifyNoMessagesOnQueue(accountSQSClient, queue1Url, 5);
-    verifyNoMessagesOnQueue(accountSQSClient, queue3Url, 5);
+    verifyNoMessagesOnQueues(accountSQSClient, Arrays.asList(queue1Url, queue3Url), 5);
 
     // receive the message 10 times.
     for (int i = 0; i < 10; i++) {
       receiveSpecificMessage(accountSQSClient, queue2Url, messageId, 5);
     }
-    verifyNoMessagesOnQueue(accountSQSClient, queue1Url, 5);
-    verifyNoMessagesOnQueue(accountSQSClient, queue2Url, 5);
+
+    verifyNoMessagesOnQueues(accountSQSClient, Arrays.asList(queue1Url, queue2Url), 5);
+
     Message message = receiveSpecificMessage(accountSQSClient, queue3Url, messageId, 60);
-    assertThat("16".equals(message.getAttributes().get("ApproximateReceiveCount")), "Should receive 6 times");
+    assertThat("16".equals(message.getAttributes().get("ApproximateReceiveCount")), "Should receive 16 times");
 
   }
 
@@ -214,10 +215,16 @@ public class TestSQSDeadLetterQueue {
   }
 
   private void verifyNoMessagesOnQueue(AmazonSQS sqsClient, String queueUrl, int maxTries) throws InterruptedException {
+    verifyNoMessagesOnQueues( sqsClient, Arrays.asList( queueUrl ), maxTries );
+  }
+
+  private void verifyNoMessagesOnQueues( AmazonSQS sqsClient, List<String> queueUrls, int maxTries) throws InterruptedException {
     for (int i=0;i<maxTries;i++) {
-      ReceiveMessageResult receiveMessageResult = sqsClient.receiveMessage(queueUrl);
-      assertThat(!(receiveMessageResult != null && receiveMessageResult.getMessages() != null &&
-        !receiveMessageResult.getMessages().isEmpty()), "Should not have any messages on the queue currently");
+      for (String queueUrl : queueUrls) {
+        ReceiveMessageResult receiveMessageResult = sqsClient.receiveMessage( queueUrl );
+        assertThat( !( receiveMessageResult != null && receiveMessageResult.getMessages( ) != null &&
+            !receiveMessageResult.getMessages( ).isEmpty( ) ), "Should not have any messages on the queue currently" );
+      }
       Thread.sleep(1000L);
     }
   }

@@ -13,9 +13,9 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URL;
@@ -33,19 +33,19 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSReceiveMessage {
 
-  private int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS;
-  private int MAX_VISIBILITY_TIMEOUT;
-  private int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
+  private static int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS;
+  private static int MAX_VISIBILITY_TIMEOUT;
+  private static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES;
 
-  private String account;
-  private String otherAccount;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSReceiveMessage.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -61,15 +61,15 @@ public class TestSQSReceiveMessage {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSReceiveMessage.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -108,7 +108,7 @@ public class TestSQSReceiveMessage {
   }
 
   @Test
-  public void testReceiveMessageOtherAccount() throws Exception {
+  public void testReceiveMessageOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testReceiveMessageOtherAccount");
     String queueName = "queue_name_receive_message_other_account";
     String otherAccountQueueUrl = otherAccountSQSClient.createQueue(queueName).getQueueUrl();
@@ -121,7 +121,7 @@ public class TestSQSReceiveMessage {
   }
 
   @Test
-  public void testReceiveMessageNonExistentQueue() throws Exception {
+  public void testReceiveMessageNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testReceiveMessageNonExistentQueue");
     String queueName = "queue_name_receive_message_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -134,7 +134,7 @@ public class TestSQSReceiveMessage {
   }
 
   @Test
-  public void testWaitTimeSeconds() throws Exception {
+  public void testWaitTimeSeconds() {
     testInfo(this.getClass().getSimpleName() + " - testWaitTimeSeconds");
     String queueName = "queue_name_receive_message_wait_time_seconds";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -163,7 +163,7 @@ public class TestSQSReceiveMessage {
   }
 
   @Test
-  public void testVisibilityTimeout() throws Exception {
+  public void testVisibilityTimeout() {
     testInfo(this.getClass().getSimpleName() + " - testVisibilityTimeout");
     String queueName = "queue_name_receive_message_visibility_timeout";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -193,7 +193,7 @@ public class TestSQSReceiveMessage {
   }
 
   @Test
-  public void testMaxNumberOfMessages() throws Exception {
+  public void testMaxNumberOfMessages() {
     testInfo(this.getClass().getSimpleName() + " - testMaxNumberOfMessages");
     String queueName = "queue_name_receive_message_max_num_messages";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -321,7 +321,7 @@ public class TestSQSReceiveMessage {
     assertThat(actualMessageAttributeNames.equals(Collections.singleton("MA1")), "Successfully tested 'MA1' being returned when 'MA1.*' as message attributes are used in ReceiveMessage");
 
     // no more attribute tests, just a couple more message attribute filters
-    receiveMessageRequest.setAttributeNames(Collections.EMPTY_SET);
+    receiveMessageRequest.setAttributeNames(Collections.emptySet());
     // use MA.*, should get all attributes in this case
     receiveMessageRequest.setMessageAttributeNames(Collections.singleton("MA.*"));
     message = receiveMessage(receiveMessageRequest, messageId);
@@ -365,7 +365,7 @@ public class TestSQSReceiveMessage {
   }
 
   @Test
-  public void testReceiveMaxNumberOfMessages() throws Exception {
+  public void testReceiveMaxNumberOfMessages() {
     testInfo(this.getClass().getSimpleName() + " - testMaxNumberOfMessages");
     String queueName = "queue_name_receive_message_max_number_of_messages";
     CreateQueueRequest createQueueRequest = new CreateQueueRequest();
@@ -399,7 +399,7 @@ public class TestSQSReceiveMessage {
       }
     }
   }
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

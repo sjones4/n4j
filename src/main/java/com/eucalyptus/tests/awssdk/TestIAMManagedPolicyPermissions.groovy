@@ -3,8 +3,9 @@ package com.eucalyptus.tests.awssdk
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicSessionCredentials
-import com.amazonaws.internal.StaticCredentialsProvider
+import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.DescribeImagesRequest
@@ -14,8 +15,9 @@ import com.amazonaws.services.identitymanagement.model.*
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest
-import org.testng.annotations.AfterClass
-import org.testng.annotations.Test
+import org.junit.AfterClass
+import org.junit.BeforeClass
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.*
 
@@ -30,23 +32,24 @@ import static com.eucalyptus.tests.awssdk.N4j.*
  */
 class TestIAMManagedPolicyPermissions {
 
-  private final AWSCredentialsProvider testAcctAdminCredentials
-  private final String testAcct
-  private final AWSCredentialsProvider testAcctUserCredentials
-  private final String testUser
+  private static AWSCredentialsProvider testAcctAdminCredentials
+  private static String testAcct
+  private static AWSCredentialsProvider testAcctUserCredentials
+  private static String testUser
 
-  TestIAMManagedPolicyPermissions( ) {
+  @BeforeClass
+  static void init() {
     getCloudInfo( )
-    this.testAcct = "${NAME_PREFIX}man-pol-per-test-acct"
-    this.testUser = "${NAME_PREFIX}user"
+    testAcct = "${NAME_PREFIX}man-pol-per-test-acct"
+    testUser = "${NAME_PREFIX}user"
     createAccount(testAcct)
-    this.testAcctAdminCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
+    testAcctAdminCredentials = new AWSStaticCredentialsProvider( getUserCreds(testAcct, 'admin') )
     createUser(testAcct, testUser)
-    this.testAcctUserCredentials = new StaticCredentialsProvider( getUserCreds(testAcct, testUser) )
+    testAcctUserCredentials = new AWSStaticCredentialsProvider( getUserCreds(testAcct, testUser) )
   }
 
   @AfterClass
-  void tearDownAfterClass( ) {
+  static void tearDownAfterClass( ) {
     deleteAccount( testAcct )
   }
 
@@ -58,17 +61,19 @@ class TestIAMManagedPolicyPermissions {
   }
 
   private AWSSecurityTokenService getStsClient(final AWSCredentialsProvider credentialsProvider) {
-    AWSSecurityTokenServiceClient sts = new AWSSecurityTokenServiceClient(credentialsProvider)
-    sts.setEndpoint(TOKENS_ENDPOINT)
-    sts
+    AWSSecurityTokenServiceClient.builder( )
+        .withCredentials( credentialsProvider )
+        .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration(TOKENS_ENDPOINT, 'eucalyptus') )
+        .build( )
   }
 
   private AmazonEC2 getEc2Client(
       AWSCredentialsProvider credentialsProvider = testAcctAdminCredentials
   ) {
-    AmazonEC2 ec2 = new AmazonEC2Client(credentialsProvider)
-    ec2.setEndpoint(EC2_ENDPOINT)
-    ec2
+    AmazonEC2Client.builder( )
+        .withCredentials( credentialsProvider )
+        .withEndpointConfiguration( new AwsClientBuilder.EndpointConfiguration(EC2_ENDPOINT, 'eucalyptus') )
+        .build( )
   }
 
   @Test
@@ -288,7 +293,7 @@ class TestIAMManagedPolicyPermissions {
         final AWSCredentialsProvider roleCredentialsProvider = new AWSCredentialsProvider() {
           AWSCredentials awsCredentials = null
           @Override
-          public AWSCredentials getCredentials( ) {
+          AWSCredentials getCredentials( ) {
             if ( awsCredentials == null ) {
               N4j.print "Getting credentials using assume role"
               awsCredentials = getStsClient( testAcctAdminCredentials ).with {
@@ -312,7 +317,7 @@ class TestIAMManagedPolicyPermissions {
           }
 
           @Override
-          public void refresh( ) {
+          void refresh( ) {
             awsCredentials = null
           }
         }
@@ -441,6 +446,9 @@ class TestIAMManagedPolicyPermissions {
             {"Statement":[{"Effect":"Allow","Principal":{"Service":["ec2.amazonaws.com"]},"Action":["sts:AssumeRole"]}]}
             '''.stripIndent()
         ))
+
+        print( "Sleeping 5 seconds so policies are applied" )
+        sleep( 5 )
 
         getIamClient( testAcctUserCredentials ).with{
           print( "Attaching policy ${policyArn} to group ${groupName}" )

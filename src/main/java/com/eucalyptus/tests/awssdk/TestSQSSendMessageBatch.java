@@ -21,14 +21,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,21 +41,21 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
 public class TestSQSSendMessageBatch {
 
 
-  private int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH;
-  private int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH;
-  private int MAX_DELAY_SECONDS;
-  private int MAX_MAXIMUM_MESSAGE_SIZE;
-  private int MAX_NUM_BATCH_ENTRIES;
-  private int MAX_BATCH_ID_LENGTH;
-  private String account;
-  private String otherAccount;
+  private static int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH;
+  private static int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH;
+  private static int MAX_DELAY_SECONDS;
+  private static int MAX_MAXIMUM_MESSAGE_SIZE;
+  private static int MAX_NUM_BATCH_ENTRIES;
+  private static int MAX_BATCH_ID_LENGTH;
+  private static String account;
+  private static String otherAccount;
 
-  private AmazonSQS accountSQSClient;
-  private AmazonSQS otherAccountSQSClient;
+  private static AmazonSQS accountSQSClient;
+  private static AmazonSQS otherAccountSQSClient;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSSendMessageBatch.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -75,15 +74,15 @@ public class TestSQSSendMessageBatch {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSSendMessageBatch.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -128,7 +127,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchOtherAccount() throws Exception {
+  public void testSendMessageBatchOtherAccount() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchOtherAccount");
     String queueName = "queue_name_send_message_batch_other_account";
     String otherAccountQueueUrl = otherAccountSQSClient.createQueue(queueName).getQueueUrl();
@@ -147,7 +146,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchNonExistentQueue() throws Exception {
+  public void testSendMessageBatchNonExistentQueue() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchNonExistentQueue");
     String queueName = "queue_name_send_message_batch_nonexistent_queue";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -224,7 +223,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchAttributeName() throws Exception {
+  public void testSendMessageBatchAttributeName() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchAttributeName");
     String queueName = "queue_name_send_message_batch_attribute_name";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -327,7 +326,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchAttributeValue() throws Exception {
+  public void testSendMessageBatchAttributeValue() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchAttributeValue");
     String queueName = "queue_name_send_message_batch_attribute_value";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -492,7 +491,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchBody() throws Exception {
+  public void testSendMessageBatchBody() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchBody");
     String queueName = "queue_name_send_message_batch_body";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -506,7 +505,7 @@ public class TestSQSSendMessageBatch {
 
     // null body
     try {
-      sendMessageBatchRequestEntry.setMessageBody((String) null);
+      sendMessageBatchRequestEntry.setMessageBody( null );
       accountSQSClient.sendMessageBatch(sendMessageBatchRequest);
       assertThat(false, "Should fail batch sending a message with a null body");
     } catch (AmazonServiceException e) {
@@ -534,7 +533,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchTooLongMessage() throws Exception {
+  public void testSendMessageBatchTooLongMessage() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchTooLongMessage");
     String queueName = "queue_name_send_message_batch_length";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -583,7 +582,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchSuccess() throws Exception {
+  public void testSendMessageBatchSuccess() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchSuccess");
     String queueName = "queue_name_send_message_batch_success";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -726,7 +725,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testSendMessageBatchId() throws Exception {
+  public void testSendMessageBatchId() {
     testInfo(this.getClass().getSimpleName() + " - testSendMessageBatchId");
     String queueName = "queue_name_send_message_batch_id";
     String queueUrl = accountSQSClient.createQueue(queueName).getQueueUrl();
@@ -837,7 +836,7 @@ public class TestSQSSendMessageBatch {
   }
 
   @Test
-  public void testMessagesMatch() throws Exception {
+  public void testMessagesMatch() {
     Message M_BODY_ONLY_1 = makeMessage("Body 1");
     Message M_BODY_ONLY_2 = makeMessage("Body 2");
     Message M_STRING_ATTR_1 = makeMessage("Body", "MA1", "String", "String value 1");
@@ -954,7 +953,7 @@ public class TestSQSSendMessageBatch {
     return sendMessageBatchRequest;
   }
 
-  private int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
+  private static int getLocalConfigInt(String propertySuffixInCapsAndUnderscores) throws IOException {
     String propertyName = "services.simplequeue." + propertySuffixInCapsAndUnderscores.toLowerCase();
     return Integer.parseInt(getConfigProperty(LOCAL_EUCTL_FILE, propertyName));
   }

@@ -1,40 +1,19 @@
 package com.eucalyptus.tests.awssdk;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
-import com.amazonaws.services.cloudwatch.model.Datapoint;
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsRequest;
-import com.amazonaws.services.cloudwatch.model.GetMetricStatisticsResult;
 import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
-import com.amazonaws.services.sqs.model.DeleteMessageBatchRequest;
-import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
-import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.ReceiveMessageResult;
 import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
 import com.amazonaws.services.sqs.model.SendMessageBatchRequestEntry;
 import com.amazonaws.services.sqs.model.SendMessageBatchResult;
-import com.amazonaws.services.sqs.model.SendMessageBatchResultEntry;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
-import com.beust.jcommander.internal.Maps;
-import com.google.common.collect.ImmutableList;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-import org.testng.internal.annotations.Sets;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -46,15 +25,15 @@ import static com.eucalyptus.tests.awssdk.N4j.*;
  */
 public class TestSQSLongPolling {
 
-  private String account;
+  private static String account;
 
-  private AmazonSQS accountSQSClient;
+  private static AmazonSQS accountSQSClient;
 
-  private ExecutorService pool;
+  private static ExecutorService pool;
 
   @BeforeClass
-  public void init() throws Exception {
-    print("### PRE SUITE SETUP - " + this.getClass().getSimpleName());
+  public static void init() throws Exception {
+    print("### PRE SUITE SETUP - " + TestSQSLongPolling.class.getSimpleName());
 
     try {
       getCloudInfoAndSqs();
@@ -65,15 +44,15 @@ public class TestSQSLongPolling {
     } catch (Exception e) {
       try {
         teardown();
-      } catch (Exception ie) {
+      } catch (Exception ignore) {
       }
       throw e;
     }
   }
 
   @AfterClass
-  public void teardown() throws Exception {
-    print("### POST SUITE CLEANUP - " + this.getClass().getSimpleName());
+  public static void teardown() {
+    print("### POST SUITE CLEANUP - " + TestSQSLongPolling.class.getSimpleName());
     if (account != null) {
       if (accountSQSClient != null) {
         ListQueuesResult listQueuesResult = accountSQSClient.listQueues();
@@ -116,20 +95,6 @@ public class TestSQSLongPolling {
   }
 
   @Test
-  public void testPollingTimeoutNoMessagesReceiveMessage10() throws Exception {
-    testInfo(this.getClass().getSimpleName() + " - testPollingTimeoutNoMessagesReceiveMessage10");
-    assertThat("true".equalsIgnoreCase(getConfigProperty(LOCAL_EUCTL_FILE, "services.simplequeue.enable_long_polling")), "Metric collection needs to be enabled");
-    testPollingTimeoutNoMessagesReceiptDelay(10);
-  }
-
-  @Test
-  public void testPollingTimeoutNoMessagesReceiveMessage15() throws Exception {
-    testInfo(this.getClass().getSimpleName() + " - testPollingTimeoutNoMessagesReceiveMessage15");
-    assertThat("true".equalsIgnoreCase(getConfigProperty(LOCAL_EUCTL_FILE, "services.simplequeue.enable_long_polling")), "Metric collection needs to be enabled");
-    testPollingTimeoutNoMessagesReceiptDelay(15);
-  }
-
-  @Test
   public void testPollingTimeoutNoMessagesReceiveMessage20() throws Exception {
     testInfo(this.getClass().getSimpleName() + " - testPollingTimeoutNoMessagesReceiveMessage20");
     assertThat("true".equalsIgnoreCase(getConfigProperty(LOCAL_EUCTL_FILE, "services.simplequeue.enable_long_polling")), "Metric collection needs to be enabled");
@@ -163,22 +128,16 @@ public class TestSQSLongPolling {
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
     long SLEEP_TIME_SECS = 5;
     long startTime = System.currentTimeMillis();
-    Future<ReceiveMessageResult> receiveMessageResultFuture = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<SendMessageResult> sendMessageResultFuture = pool.submit(new Callable<SendMessageResult>() {
-      @Override
-      public SendMessageResult call() throws Exception {
-        Thread.sleep(SLEEP_TIME_SECS * 1000L);
-        return accountSQSClient.sendMessage(queueUrl, "hello");
-      }
-    });
+    Future<ReceiveMessageResult> receiveMessageResultFuture = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<SendMessageResult> sendMessageResultFuture = pool.submit( ( ) -> {
+      Thread.sleep(SLEEP_TIME_SECS * 1000L);
+      return accountSQSClient.sendMessage(queueUrl, "hello");
+    } );
     ReceiveMessageResult receiveMessageResult = receiveMessageResultFuture.get();
     long endTime = System.currentTimeMillis();
     long durationSecs = (endTime - startTime) / 1000L;
@@ -199,26 +158,20 @@ public class TestSQSLongPolling {
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
     long SLEEP_TIME_SECS = 5;
     long startTime = System.currentTimeMillis();
-    Future<ReceiveMessageResult> receiveMessageResultFuture = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<SendMessageResult> sendMessageResultFuture = pool.submit(new Callable<SendMessageResult>() {
-      @Override
-      public SendMessageResult call() throws Exception {
-        Thread.sleep(SLEEP_TIME_SECS * 1000L);
-        SendMessageRequest sendMessageRequest = new SendMessageRequest();
-        sendMessageRequest.setMessageBody("hello");
-        sendMessageRequest.setQueueUrl(queueUrl);
-        sendMessageRequest.setDelaySeconds(SEND_MESSAGE_DELAY_SECONDS);
-        return accountSQSClient.sendMessage(sendMessageRequest);
-      }
-    });
+    Future<ReceiveMessageResult> receiveMessageResultFuture = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<SendMessageResult> sendMessageResultFuture = pool.submit( ( ) -> {
+      Thread.sleep(SLEEP_TIME_SECS * 1000L);
+      SendMessageRequest sendMessageRequest = new SendMessageRequest();
+      sendMessageRequest.setMessageBody("hello");
+      sendMessageRequest.setQueueUrl(queueUrl);
+      sendMessageRequest.setDelaySeconds(SEND_MESSAGE_DELAY_SECONDS);
+      return accountSQSClient.sendMessage(sendMessageRequest);
+    } );
     ReceiveMessageResult receiveMessageResult = receiveMessageResultFuture.get();
     long endTime = System.currentTimeMillis();
     long durationSecs = (endTime - startTime) / 1000L;
@@ -239,22 +192,16 @@ public class TestSQSLongPolling {
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
     long SLEEP_TIME_SECS = 5;
     long startTime = System.currentTimeMillis();
-    Future<ReceiveMessageResult> receiveMessageResultFuture = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<SendMessageResult> sendMessageResultFuture = pool.submit(new Callable<SendMessageResult>() {
-      @Override
-      public SendMessageResult call() throws Exception {
-        Thread.sleep(SLEEP_TIME_SECS * 1000L);
-        return accountSQSClient.sendMessage(queueUrl, "hello");
-      }
-    });
+    Future<ReceiveMessageResult> receiveMessageResultFuture = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<SendMessageResult> sendMessageResultFuture = pool.submit( ( ) -> {
+      Thread.sleep(SLEEP_TIME_SECS * 1000L);
+      return accountSQSClient.sendMessage(queueUrl, "hello");
+    } );
     ReceiveMessageResult receiveMessageResult = receiveMessageResultFuture.get();
     long endTime = System.currentTimeMillis();
     long durationSecs = (endTime - startTime) / 1000L;
@@ -274,42 +221,33 @@ public class TestSQSLongPolling {
     int DELAY_2 = 15;
     int MAX_DELAY = Math.max(DELAY_1, DELAY_2);
     long startTime = System.currentTimeMillis();
-    Future<ReceiveMessageResult> receiveMessageResultFuture1 = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<ReceiveMessageResult> receiveMessageResultFuture2 = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<SendMessageBatchResult> sendMessageBatchResultFuture = pool.submit(new Callable<SendMessageBatchResult>() {
-      @Override
-      public SendMessageBatchResult call() throws Exception {
-        SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest();
-        sendMessageBatchRequest.setQueueUrl(queueUrl);
-        SendMessageBatchRequestEntry entry1 = new SendMessageBatchRequestEntry();
-        entry1.setId("id1");
-        entry1.setMessageBody("hello");
-        entry1.setDelaySeconds(DELAY_1);
-        sendMessageBatchRequest.getEntries().add(entry1);
-        SendMessageBatchRequestEntry entry2 = new SendMessageBatchRequestEntry();
-        entry2.setId("id2");
-        entry2.setMessageBody("hello");
-        entry2.setDelaySeconds(DELAY_2);
-        sendMessageBatchRequest.getEntries().add(entry2);
-        return accountSQSClient.sendMessageBatch(sendMessageBatchRequest);
-      }
-    });
+    Future<ReceiveMessageResult> receiveMessageResultFuture1 = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<ReceiveMessageResult> receiveMessageResultFuture2 = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(20);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<SendMessageBatchResult> sendMessageBatchResultFuture = pool.submit( ( ) -> {
+      SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest();
+      sendMessageBatchRequest.setQueueUrl(queueUrl);
+      SendMessageBatchRequestEntry entry1 = new SendMessageBatchRequestEntry();
+      entry1.setId("id1");
+      entry1.setMessageBody("hello");
+      entry1.setDelaySeconds(DELAY_1);
+      sendMessageBatchRequest.getEntries().add(entry1);
+      SendMessageBatchRequestEntry entry2 = new SendMessageBatchRequestEntry();
+      entry2.setId("id2");
+      entry2.setMessageBody("hello");
+      entry2.setDelaySeconds(DELAY_2);
+      sendMessageBatchRequest.getEntries().add(entry2);
+      return accountSQSClient.sendMessageBatch(sendMessageBatchRequest);
+    } );
     ReceiveMessageResult receiveMessageResult1 = receiveMessageResultFuture1.get();
     ReceiveMessageResult receiveMessageResult2 = receiveMessageResultFuture2.get();
     long endTime = System.currentTimeMillis();
@@ -327,39 +265,30 @@ public class TestSQSLongPolling {
     createQueueRequest.setQueueName(queueName);
     String queueUrl = accountSQSClient.createQueue(createQueueRequest).getQueueUrl();
     int DELAY_1 = 5;
-    int MAX_DELAY = 20; // second message will not be received
+    int MAX_DELAY = 10; // second message will not be received
     long startTime = System.currentTimeMillis();
-    Future<ReceiveMessageResult> receiveMessageResultFuture1 = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<ReceiveMessageResult> receiveMessageResultFuture2 = pool.submit(new Callable<ReceiveMessageResult>() {
-      @Override
-      public ReceiveMessageResult call() throws Exception {
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
-        receiveMessageRequest.setWaitTimeSeconds(20);
-        receiveMessageRequest.setQueueUrl(queueUrl);
-        return accountSQSClient.receiveMessage(receiveMessageRequest);
-      }
-    });
-    Future<SendMessageBatchResult> sendMessageBatchResultFuture = pool.submit(new Callable<SendMessageBatchResult>() {
-      @Override
-      public SendMessageBatchResult call() throws Exception {
-        SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest();
-        sendMessageBatchRequest.setQueueUrl(queueUrl);
-        SendMessageBatchRequestEntry entry1 = new SendMessageBatchRequestEntry();
-        entry1.setId("id1");
-        entry1.setMessageBody("hello");
-        entry1.setDelaySeconds(DELAY_1);
-        sendMessageBatchRequest.getEntries().add(entry1);
-        return accountSQSClient.sendMessageBatch(sendMessageBatchRequest);
-      }
-    });
+    Future<ReceiveMessageResult> receiveMessageResultFuture1 = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(MAX_DELAY);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<ReceiveMessageResult> receiveMessageResultFuture2 = pool.submit( ( ) -> {
+      ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
+      receiveMessageRequest.setWaitTimeSeconds(MAX_DELAY);
+      receiveMessageRequest.setQueueUrl(queueUrl);
+      return accountSQSClient.receiveMessage(receiveMessageRequest);
+    } );
+    Future<SendMessageBatchResult> sendMessageBatchResultFuture = pool.submit( ( ) -> {
+      SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest();
+      sendMessageBatchRequest.setQueueUrl(queueUrl);
+      SendMessageBatchRequestEntry entry1 = new SendMessageBatchRequestEntry();
+      entry1.setId("id1");
+      entry1.setMessageBody("hello");
+      entry1.setDelaySeconds(DELAY_1);
+      sendMessageBatchRequest.getEntries().add(entry1);
+      return accountSQSClient.sendMessageBatch(sendMessageBatchRequest);
+    } );
     ReceiveMessageResult receiveMessageResult1 = receiveMessageResultFuture1.get();
     ReceiveMessageResult receiveMessageResult2 = receiveMessageResultFuture2.get();
     long endTime = System.currentTimeMillis();

@@ -19,13 +19,12 @@ import com.github.sjones4.youcan.youprop.YouProp
 import com.github.sjones4.youcan.youprop.YouPropClient
 import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 
-import org.testng.annotations.Test;
+import org.junit.Test
 
 import static N4j.ACCESS_KEY
-import static N4j.EC2_ENDPOINT
-import static N4j.CLC_IP
 import static N4j.SECRET_KEY
 import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**
  * This application tests quotas and limits for EC2 VPC resources.
@@ -36,40 +35,32 @@ import static N4j.minimalInit
  */
 class TestEC2VPCQuotasLimits {
 
-  private final String host
   private final AWSCredentialsProvider credentials
 
-  public static void main( String[] args ) throws Exception {
+  static void main(String[] args ) throws Exception {
     new TestEC2VPCQuotasLimits( ).EC2VPCQuotasLimitsTest( )
   }
 
-  public TestEC2VPCQuotasLimits() {
+  TestEC2VPCQuotasLimits() {
     minimalInit()
-    this.host = CLC_IP
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private String cloudUri( String servicePath ) {
-    URI.create( "http://" + host + ":8773/" )
-        .resolve( servicePath )
-        .toString()
   }
 
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
     final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( EC2_ENDPOINT )
+    ec2.setEndpoint( N4j.EC2_ENDPOINT )
     ec2
   }
 
   private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials  ) {
     final YouAreClient euare = new YouAreClient( credentials )
-    euare.setEndpoint( cloudUri( "/services/Euare/" ) )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare
   }
 
   private YouProp getYouPropClient( final AWSCredentialsProvider credentials ) {
     final YouProp youProp = new YouPropClient( credentials )
-    youProp.setEndpoint( cloudUri( "/services/Properties/" ) )
+    youProp.setEndpoint( N4j.PROPERTIES_ENDPOINT )
     youProp
   }
 
@@ -84,8 +75,14 @@ class TestEC2VPCQuotasLimits {
   }
 
   @Test
-  public void EC2VPCQuotasLimitsTest( ) throws Exception {
+  void EC2VPCQuotasLimitsTest( ) throws Exception {
     final YouProp prop = getYouPropClient( credentials )
+    final AmazonEC2 ec20 = getEC2Client( credentials )
+
+    if ( !isVPC(ec20) ) {
+      print("Unsupported networking mode. VPC required.")
+      return
+    }
 
     // End discovery, start test
     final String namePrefix = UUID.randomUUID().toString() + "-"
@@ -193,7 +190,7 @@ class TestEC2VPCQuotasLimits {
         print( "Creating access key for admin account: ${accountName}" )
         YouAre adminIam = getYouAreClient( credentials )
         adminIam.addRequestHandler( new RequestHandler2(){
-          public void beforeRequest(final Request<?> request) {
+          void beforeRequest(final Request<?> request) {
             request.addParameter( "DelegateAccount", accountName )
           }
         } )
@@ -233,7 +230,7 @@ class TestEC2VPCQuotasLimits {
                         "ec2:quota-internetgatewaynumber":"3"
                       }
                     }
-                  },
+                  }
               ]
             }
           """.stripIndent( )
@@ -289,6 +286,12 @@ class TestEC2VPCQuotasLimits {
           print( "Deleting VPC 1 ${vpcId_1}" )
           deleteVpc( new DeleteVpcRequest( vpcId: vpcId_1 ) )
         }
+
+        print( "Attaching internet gateway 1 ${internetGatewayId} to vpc ${vpcId_1}" )
+        attachInternetGateway( new AttachInternetGatewayRequest(
+            vpcId: vpcId_1,
+            internetGatewayId: internetGatewayId
+        ) )
 
         print( 'Creating VPC 2' )
         String vpcId_2 = createVpc( new CreateVpcRequest( cidrBlock: '10.2.2.0/24' ) ).with {
@@ -487,6 +490,8 @@ class TestEC2VPCQuotasLimits {
               ipPermissions: [
                   new IpPermission(
                       ipProtocol: number,
+                      fromPort: 1,
+                      toPort: 1,
                       ipRanges: [ '0.0.0.0/0' ]
                   )
               ]

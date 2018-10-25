@@ -6,8 +6,8 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-
-import org.testng.annotations.Test;
+import org.junit.Assert
+import org.junit.Test
 
 import static N4j.ACCESS_KEY
 import static N4j.EC2_ENDPOINT
@@ -26,11 +26,11 @@ class TestEC2VPCNetworkAclEntryManagement {
   private final AWSCredentialsProvider credentials
 
 
-  public static void main( String[] args ) throws Exception {
+  static void main(String[] args ) throws Exception {
     new TestEC2VPCNetworkAclEntryManagement( ).EC2VPCNetworkAclEntryManagementTest( )
   }
 
-    public TestEC2VPCNetworkAclEntryManagement(){
+  TestEC2VPCNetworkAclEntryManagement(){
         minimalInit()
         this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
     }
@@ -43,7 +43,7 @@ class TestEC2VPCNetworkAclEntryManagement {
 
   private boolean assertThat( boolean condition,
                               String message ){
-    assert condition : message
+    Assert.assertTrue( message, condition )
     true
   }
 
@@ -52,16 +52,16 @@ class TestEC2VPCNetworkAclEntryManagement {
   }
 
   @Test
-  public void EC2VPCNetworkAclEntryManagementTest( ) throws Exception {
+  void EC2VPCNetworkAclEntryManagementTest( ) throws Exception {
     final AmazonEC2 ec2 = getEC2Client( credentials )
 
     // Find an AZ to use
-    final DescribeAvailabilityZonesResult azResult = ec2.describeAvailabilityZones();
+    final DescribeAvailabilityZonesResult azResult = ec2.describeAvailabilityZones()
 
-    assertThat( azResult.getAvailabilityZones().size() > 0, "Availability zone not found" );
+    assertThat( azResult.getAvailabilityZones().size() > 0, "Availability zone not found" )
 
-    final String availabilityZone = azResult.getAvailabilityZones().get( 0 ).getZoneName();
-    print( "Using availability zone: " + availabilityZone );
+    final String availabilityZone = azResult.getAvailabilityZones().get( 0 ).getZoneName()
+    print( "Using availability zone: " + availabilityZone )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
@@ -145,9 +145,9 @@ class TestEC2VPCNetworkAclEntryManagement {
         print( "Verifying network ACL entries for ${networkAclId}" )
         describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] ) ).with {
           assertThat( networkAcls.size( ) == 1, "Expected one network ACL, but was: ${networkAcls.size( )}" )
-          networkAcls[0].with {
+          networkAcls.getAt(0).with {
             assertThat( entries.size( ) == 6, "Expected 6 entries, but was: ${entries.size( )}" )
-            entries[0].with {
+            entries.getAt(0).with {
               assertThat( ruleNumber == 1, "Expected rule number 1, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'allow', "Expected rule action allow, but was: ${ruleAction}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
@@ -156,10 +156,10 @@ class TestEC2VPCNetworkAclEntryManagement {
               assertThat( icmpTypeCode != null, "Expected icmp type and code" )
               icmpTypeCode.with {
                 assertThat( type == 8, "Expected icmp type 8, but was: ${type}" )
-                assertThat( code == -1, "Expected icmp code -1, but was: ${type}" )
+                assertThat( code == -1, "Expected icmp code 1, but was: ${code}" )
               }
             }
-            entries[1].with {
+            entries.getAt(1).with {
               assertThat( ruleNumber == 300, "Expected rule number 300, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'allow', "Expected rule action allow, but was: ${ruleAction}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
@@ -171,21 +171,21 @@ class TestEC2VPCNetworkAclEntryManagement {
                 assertThat( to == 59, "Expected to port 59, but was: ${to}" )
               }
             }
-            entries[2].with {
+            entries.getAt(2).with {
               assertThat( ruleNumber == 32767, "Expected rule number 32767, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'deny', "Expected rule action deny, but was: ${ruleAction}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
               assertThat( cidrBlock == '0.0.0.0/0', "Expected cidr 0.0.0.0/0, but was: ${cidrBlock}" )
               assertThat( protocol == '-1', "Expected protocol -1, but was: ${protocol}" )
             }
-            entries[3].with {
+            entries.getAt(3).with {
               assertThat( ruleNumber == 200, "Expected rule number 200, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'allow', "Expected rule action allow, but was: ${ruleAction}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
               assertThat( cidrBlock == '0.0.0.0/0', "Expected cidr 0.0.0.0/0, but was: ${cidrBlock}" )
               assertThat( protocol == '-1', "Expected protocol -1, but was: ${protocol}" )
             }
-            entries[4].with {
+            entries.getAt(4).with {
               assertThat( ruleNumber == 300, "Expected rule number 300, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'allow', "Expected rule action allow, but was: ${ruleAction}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
@@ -196,7 +196,7 @@ class TestEC2VPCNetworkAclEntryManagement {
                 assertThat( to == 22, "Expected to port 22, but was: ${to}" )
               }
             }
-            entries[5].with {
+            entries.getAt(5).with {
               assertThat( ruleNumber == 32767, "Expected rule number 32767, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'deny', "Expected rule action deny, but was: ${ruleAction}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
@@ -216,25 +216,25 @@ class TestEC2VPCNetworkAclEntryManagement {
         print( "Verifying imcp protocol entry deleted for ${networkAclId}" )
         describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] ) ).with {
           assertThat( networkAcls.size( ) == 1, "Expected one network ACL, but was: ${networkAcls.size( )}" )
-          networkAcls[0].with {
+          networkAcls.getAt(0).with {
             assertThat( entries.size( ) == 5, "Expected 5 entries, but was: ${entries.size( )}" )
-            entries[0].with {
+            entries.getAt(0).with {
               assertThat( ruleNumber == 300, "Expected rule number 300, but was: ${ruleNumber}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
             }
-            entries[1].with {
+            entries.getAt(1).with {
               assertThat( ruleNumber == 32767, "Expected rule number 32767, but was: ${ruleNumber}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
             }
-            entries[2].with {
+            entries.getAt(2).with {
               assertThat( ruleNumber == 200, "Expected rule number 200, but was: ${ruleNumber}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
             }
-            entries[3].with {
+            entries.getAt(3).with {
               assertThat( ruleNumber == 300, "Expected rule number 300, but was: ${ruleNumber}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
             }
-            entries[4].with {
+            entries.getAt(4).with {
               assertThat( ruleNumber == 32767, "Expected rule number 32767, but was: ${ruleNumber}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
             }
@@ -258,21 +258,21 @@ class TestEC2VPCNetworkAclEntryManagement {
         print( "Verifying tcp protocol entry replaced for ${networkAclId}" )
         describeNetworkAcls( new DescribeNetworkAclsRequest( networkAclIds: [ networkAclId ] ) ).with {
           assertThat( networkAcls.size( ) == 1, "Expected one network ACL, but was: ${networkAcls.size( )}" )
-          networkAcls[0].with {
+          networkAcls.getAt(0).with {
             assertThat( entries.size( ) == 5, "Expected 5 entries, but was: ${entries.size( )}" )
-            entries[0].with {
+            entries.getAt(0).with {
               assertThat( ruleNumber == 300, "Expected rule number 300, but was: ${ruleNumber}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
             }
-            entries[1].with {
+            entries.getAt(1).with {
               assertThat( ruleNumber == 32767, "Expected rule number 32767, but was: ${ruleNumber}" )
               assertThat( egress, "Expected egress rule, but was: ingress" )
             }
-            entries[2].with {
+            entries.getAt(2).with {
               assertThat( ruleNumber == 200, "Expected rule number 200, but was: ${ruleNumber}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
             }
-            entries[3].with {
+            entries.getAt(3).with {
               assertThat( ruleNumber == 300, "Expected rule number 300, but was: ${ruleNumber}" )
               assertThat( ruleAction == 'allow', "Expected rule action allow, but was: ${ruleAction}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
@@ -284,7 +284,7 @@ class TestEC2VPCNetworkAclEntryManagement {
                 assertThat( to == 42, "Expected to port 42, but was: ${to}" )
               }
             }
-            entries[4].with {
+            entries.getAt(4).with {
               assertThat( ruleNumber == 32767, "Expected rule number 32767, but was: ${ruleNumber}" )
               assertThat( !egress, "Expected ingress rule, but was: egress" )
             }

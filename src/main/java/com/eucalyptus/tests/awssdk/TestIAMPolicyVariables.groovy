@@ -10,13 +10,9 @@ import com.amazonaws.services.identitymanagement.model.*
 import com.github.sjones4.youcan.youare.YouAreClient
 import com.github.sjones4.youcan.youare.model.CreateAccountRequest
 import com.github.sjones4.youcan.youare.model.DeleteAccountRequest
-import org.testng.annotations.Test
 
-import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
-import static com.eucalyptus.tests.awssdk.N4j.CLC_IP
-import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
-import static com.eucalyptus.tests.awssdk.N4j.minimalInit
-import static com.eucalyptus.tests.awssdk.N4j.testInfo
+import org.junit.Assert
+import org.junit.Test
 
 /**
  * Tests IAM policy variables.
@@ -32,30 +28,23 @@ import static com.eucalyptus.tests.awssdk.N4j.testInfo
  */
 class TestIAMPolicyVariables {
 
-  private final String host;
-  private final AWSCredentialsProvider credentials;
-
   TestIAMPolicyVariables( ) {
-    minimalInit()
-    this.host=CLC_IP
-    this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
+    N4j.initEndpoints( )
   }
 
-  private String cloudUri( String host, String servicePath ) {
-    URI.create( "http://${host}:8773/" )
-        .resolve( servicePath )
-        .toString( )
+  private YouAreClient getYouAreClient( ) {
+    getYouAreClient( new AWSStaticCredentialsProvider( new BasicAWSCredentials( N4j.ACCESS_KEY, N4j.SECRET_KEY ) ) )
   }
 
-  private YouAreClient getYouAreClient( final AWSCredentialsProvider clientCredentials = credentials  ) {
-    final YouAreClient euare = new YouAreClient( clientCredentials )
-    euare.setEndpoint( cloudUri( host, '/services/Euare' ) )
+  private YouAreClient getYouAreClient( final AWSCredentialsProvider credentials ) {
+    final YouAreClient euare = new YouAreClient( credentials )
+    euare.setEndpoint( N4j.IAM_ENDPOINT )
     euare
   }
 
   @Test
-  public void testIAMPolicyVariables( ) throws Exception {
-    testInfo(this.getClass().getSimpleName());
+  void testIAMPolicyVariables( ) throws Exception {
+    N4j.testInfo(this.getClass().getSimpleName())
     final String namePrefix = UUID.randomUUID().toString().substring(0,8) + "-"
     N4j.print( "Using resource prefix for test: ${namePrefix}" )
 
@@ -68,7 +57,7 @@ class TestIAMPolicyVariables {
         String adminAccountNumber = createAccount(new CreateAccountRequest(accountName: accountName)).with {
           account?.accountId
         }
-        N4j.assertThat( adminAccountNumber != null, "Expected account number" )
+        Assert.assertTrue("Expected account number", adminAccountNumber != null)
         N4j.print( "Created test account with number: ${adminAccountNumber}" )
         cleanupTasks.add {
           N4j.print("Deleting test account: ${accountName}")
@@ -78,7 +67,7 @@ class TestIAMPolicyVariables {
         N4j.print("Creating access key for test account admin user: ${accountName}")
         getYouAreClient( ).with {
           addRequestHandler(new RequestHandler2() {
-            public void beforeRequest(final Request<?> request) {
+            void beforeRequest(final Request<?> request) {
               request.addParameter("DelegateAccount", accountName)
             }
           })
@@ -198,7 +187,7 @@ class TestIAMPolicyVariables {
 
         N4j.print( "Listing access keys using user credentials" )
         listAccessKeys( ).with {
-          N4j.assertThat( !accessKeyMetadata.isEmpty( ), "Expected access key" )
+          Assert.assertTrue("Expected access key", !accessKeyMetadata.isEmpty())
           accessKeyMetadata.each { AccessKeyMetadata key ->
             N4j.print( "Listed access key: ${key.accessKeyId}" )
           }
@@ -212,7 +201,7 @@ class TestIAMPolicyVariables {
         try {
           N4j.print( "Creating access key for admin using users credentials, should fail" )
           createAccessKey( new CreateAccessKeyRequest( userName: 'admin' ) )
-          N4j.assertThat( false, "Expected key creation to fail for admin user due to permissions" )
+          Assert.assertTrue("Expected key creation to fail for admin user due to permissions", false)
         } catch ( AmazonServiceException e ) {
           N4j.print( "Expected error creating key without permission: ${e}" )
         }
@@ -234,7 +223,7 @@ class TestIAMPolicyVariables {
         try {
           N4j.print( "Creating login profile for admin using users credentials, should fail" )
           createLoginProfile( new CreateLoginProfileRequest( userName: 'admin', password: "p@55w0Rd!" ) )
-          N4j.assertThat( false, "Expected login profile creation to fail for admin user due to permissions" )
+          Assert.assertTrue("Expected login profile creation to fail for admin user due to permissions", false)
         } catch ( AmazonServiceException e ) {
           N4j.print( "Expected error creating login profile without permission: ${e}" )
         }

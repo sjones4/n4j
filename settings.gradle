@@ -1,0 +1,6 @@
+/*
+ * Gradle settings for n4j
+ *
+ */
+rootProject.name = 'n4j'
+
