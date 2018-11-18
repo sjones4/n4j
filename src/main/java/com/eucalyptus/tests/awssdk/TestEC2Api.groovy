@@ -12,12 +12,17 @@ import com.amazonaws.services.ec2.model.AssignIpv6AddressesRequest
 import com.amazonaws.services.ec2.model.AssociateSubnetCidrBlockRequest
 import com.amazonaws.services.ec2.model.AssociateVpcCidrBlockRequest
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest
+import com.amazonaws.services.ec2.model.AvailabilityZone
+import com.amazonaws.services.ec2.model.CreateDefaultSubnetRequest
+import com.amazonaws.services.ec2.model.CreateDefaultVpcRequest
 import com.amazonaws.services.ec2.model.CreateEgressOnlyInternetGatewayRequest
 import com.amazonaws.services.ec2.model.CreateKeyPairRequest
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
 import com.amazonaws.services.ec2.model.DeleteEgressOnlyInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DeleteKeyPairRequest
 import com.amazonaws.services.ec2.model.DeleteSecurityGroupRequest
+import com.amazonaws.services.ec2.model.DeleteSubnetRequest
+import com.amazonaws.services.ec2.model.DeleteVpcRequest
 import com.amazonaws.services.ec2.model.DescribeAggregateIdFormatRequest
 import com.amazonaws.services.ec2.model.DescribeEgressOnlyInternetGatewaysRequest
 import com.amazonaws.services.ec2.model.DescribeElasticGpusRequest
@@ -36,11 +41,13 @@ import com.amazonaws.services.ec2.model.DescribePrincipalIdFormatRequest
 import com.amazonaws.services.ec2.model.DescribeScheduledInstanceAvailabilityRequest
 import com.amazonaws.services.ec2.model.DescribeScheduledInstancesRequest
 import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest
+import com.amazonaws.services.ec2.model.DescribeSubnetsRequest
 import com.amazonaws.services.ec2.model.DescribeVolumesModificationsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcEndpointConnectionNotificationsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcEndpointConnectionsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcEndpointServiceConfigurationsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcEndpointServicePermissionsRequest
+import com.amazonaws.services.ec2.model.DescribeVpcsRequest
 import com.amazonaws.services.ec2.model.DisassociateSubnetCidrBlockRequest
 import com.amazonaws.services.ec2.model.DisassociateVpcCidrBlockRequest
 import com.amazonaws.services.ec2.model.Filter
@@ -60,7 +67,9 @@ import com.amazonaws.services.ec2.model.ScheduledInstanceRecurrenceRequest
 import com.amazonaws.services.ec2.model.ScheduledInstancesLaunchSpecification
 import com.amazonaws.services.ec2.model.SlotDateTimeRangeRequest
 import com.amazonaws.services.ec2.model.SlotStartTimeRangeRequest
+import com.amazonaws.services.ec2.model.Subnet
 import com.amazonaws.services.ec2.model.UnassignIpv6AddressesRequest
+import com.amazonaws.services.ec2.model.Vpc
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -360,7 +369,7 @@ class TestEC2Api {
 
   @Ignore
   @Test // Enable when functionality is fixed
-  void testUnknownAccessKeyError( ) throws Exception {
+  void testUnknownAccessKeyError( ) {
     N4j.testInfo("${this.getClass().simpleName}.testUnknownAccessKeyError")
 
     try {
@@ -376,7 +385,123 @@ class TestEC2Api {
   }
 
   @Test
-  void testIpv6Stubs( ) throws Exception {
+  void testDefaultVpcCreation( ) {
+    N4j.testInfo( "${this.getClass().simpleName}.testDefaultVpcCreation" )
+
+    ec2Client.with{
+      // check for and remove default vpc
+      describeSubnets( new DescribeSubnetsRequest(
+          filters: [ new Filter( name: 'default-for-az', values: ['true'] ) ]
+      ) ).with {
+        for ( final Subnet subnet : subnets ) {
+          N4j.print( "Deleting default subnet: ${subnet}" )
+          deleteSubnet( new DeleteSubnetRequest( subnetId: subnet.subnetId ) )
+        }
+      }
+      describeVpcs( new DescribeVpcsRequest(
+          filters: [ new Filter( name: 'isDefault', values: ['true'] ) ]
+      ) ).with {
+        for ( final Vpc vpc : vpcs ) {
+          N4j.print( "Deleting default vpc: ${vpc}" )
+          deleteVpc( new DeleteVpcRequest( vpcId: vpc.vpcId ) )
+        }
+      }
+
+      // create default vpc
+      N4j.print( 'Creating default vpc' )
+      createDefaultVpc( new CreateDefaultVpcRequest( ) )
+
+      // verify default vpc
+      boolean hasDefaultVpc = describeVpcs( new DescribeVpcsRequest(
+          filters: [ new Filter( name: 'isDefault', values: ['true'] ) ]
+      ) ).with {
+        boolean found = false
+        for ( final Vpc vpc : vpcs ) {
+          N4j.print( "Found default vpc: ${vpc}" )
+          found = true
+        }
+        found
+      }
+      Assert.assertTrue( "Expected to find default vpc with filter isDefault=true", hasDefaultVpc )
+      String zone = describeAvailabilityZones( ).with {
+        availabilityZones.each { AvailabilityZone zone ->
+          boolean hasDefaultSubnet = describeSubnets( new DescribeSubnetsRequest(
+              filters: [
+                  new Filter( name: 'default-for-az', values: ['true'] ),
+                  new Filter( name: 'availability-zone', values: [zone.zoneName] ),
+              ]
+          ) ).with {
+            boolean found = false
+            for ( final Subnet subnet : subnets ) {
+              N4j.print( "Found default subnet for zone ${zone.zoneName}: ${subnet}" )
+              found = true
+            }
+            found
+          }
+          Assert.assertTrue( "Expected to find default subnet for zone ${zone.zoneName} with filter default-for-az=true", hasDefaultSubnet )
+        }
+        availabilityZones.getAt(0)?.zoneName
+      }
+
+      // delete default subnet from a zone
+      N4j.print( "Deleting default subnet for zone ${zone}" )
+      describeSubnets( new DescribeSubnetsRequest(
+          filters: [
+              new Filter( name: 'default-for-az', values: ['true'] ),
+              new Filter( name: 'availability-zone', values: [zone] ),
+          ]
+      ) ).with {
+        for ( final Subnet subnet : subnets ) {
+          N4j.print( "Deleting default subnet for zone ${zone}: ${subnet}" )
+          deleteSubnet( new DeleteSubnetRequest( subnetId: subnet.subnetId ) )
+        }
+      }
+
+      // create default subnet in a zone
+      N4j.print( "Creating default subnet for zone ${zone}" )
+      createDefaultSubnet( new CreateDefaultSubnetRequest( availabilityZone: zone ) )
+
+      // verify default subnet fo zone
+      describeSubnets( new DescribeSubnetsRequest(
+          filters: [
+              new Filter( name: 'default-for-az', values: ['true'] ),
+              new Filter( name: 'availability-zone', values: [zone] ),
+          ]
+      ) ).with {
+        boolean found = false
+        for ( final Subnet subnet : subnets ) {
+          N4j.print( "Found default subnet for zone ${zone}: ${subnet}" )
+          found = true
+        }
+        Assert.assertTrue( "Expected to find default subnet for zone ${zone} with filter default-for-az=true", found )
+      }
+
+      // test create duplicate default vpc
+      N4j.print( "Testing error for creation of duplicate default vpc" )
+      try {
+        createDefaultVpc( new CreateDefaultVpcRequest( ) )
+        Assert.fail( "Expected failure due to duplicate default vpc" )
+      } catch ( AmazonServiceException e ) {
+        print( "Expected error: ${e}" )
+        N4j.assertThat( 'DefaultVpcAlreadyExists' == e.errorCode,
+            "Expected error code DefaultVpcAlreadyExists, but was: ${e.errorCode}" )
+      }
+
+      // test create duplicate default subnet
+      N4j.print( "Testing error for creation of duplicate default subnet in zone ${zone}" )
+      try {
+        createDefaultSubnet( new CreateDefaultSubnetRequest( availabilityZone: zone) )
+        Assert.fail( "Expected failure due to duplicate default subnet in zone ${zone}" )
+      } catch ( AmazonServiceException e ) {
+        print( "Expected error: ${e}" )
+        N4j.assertThat( 'DefaultSubnetAlreadyExistsInAvailabilityZone' == e.errorCode,
+            "Expected error code DefaultSubnetAlreadyExistsInAvailabilityZone, but was: ${e.errorCode}" )
+      }
+    }
+  }
+
+  @Test
+  void testIpv6Stubs( ) {
     N4j.testInfo( "${this.getClass().simpleName}.testIpv6Stubs" )
 
     ec2Client.with{
@@ -491,7 +616,7 @@ class TestEC2Api {
   }
 
   @Test
-  void testScheduledInstanceStubs( ) throws Exception {
+  void testScheduledInstanceStubs( ) {
     N4j.testInfo( "${this.getClass().simpleName}.testScheduledInstanceStubs" )
 
     ec2Client.with{
@@ -578,7 +703,7 @@ class TestEC2Api {
   }
 
   @Test
-  void testHostsStubs( ) throws Exception {
+  void testHostsStubs( ) {
     N4j.testInfo( "${this.getClass().simpleName}.testHostsStubs" )
 
     ec2Client.with{
@@ -676,7 +801,7 @@ class TestEC2Api {
   }
 
   @Test
-  void testFleetStubs( ) throws Exception {
+  void testFleetStubs( ) {
     N4j.testInfo("${this.getClass().simpleName}.testFleetStubs")
 
     ec2Client.with {
@@ -768,7 +893,7 @@ class TestEC2Api {
   }
 
   @Test
-  void testVpcStubs( ) throws Exception {
+  void testVpcStubs( ) {
     N4j.testInfo("${this.getClass().simpleName}.testVpcStubs")
 
     ec2Client.with {
