@@ -1230,22 +1230,19 @@ public class N4j {
         });
 
         CreateAccessKeyRequest createAccessKeyRequest = new CreateAccessKeyRequest().withUserName(userName);
-        String newKeys = String.valueOf(youAre.createAccessKey(createAccessKeyRequest));
+        CreateAccessKeyResult result = youAre.createAccessKey(createAccessKeyRequest);
+        AccessKey accessKey = result.getAccessKey();
         print("Created new access key for user " + userName);
 
         // get accesskey from key gen result request
-        int start = newKeys.lastIndexOf("AccessKeyId:") + 13;
-        int end = newKeys.lastIndexOf(",Status");
-        String accessKey = newKeys.substring(start, end);
-        print("Access Key: " + accessKey);
+        String accessKeyId = accessKey.getAccessKeyId();
+        print("Access Key: " + accessKeyId);
 
         // get secretkey from key gen result request
-        start = newKeys.lastIndexOf("SecretAccessKey:") + 17;
-        end = newKeys.lastIndexOf(",CreateDate:");
-        String secretKey = newKeys.substring(start, end);
+        String secretKey = accessKey.getSecretAccessKey();
         print("Secret Key: " + secretKey.substring( 0, 3 ) + "..." + secretKey.substring( secretKey.length() - 3 ) );
 
-        return new BasicAWSCredentials(accessKey, secretKey);
+        return new BasicAWSCredentials(accessKeyId, secretKey);
     }
 
     public static void createAccount(String accountName) {
@@ -1300,19 +1297,16 @@ public class N4j {
         });
 
         CreateAccessKeyRequest createAccessKeyRequest = new CreateAccessKeyRequest().withUserName(userName);
-        String newKeys = String.valueOf(youAre.createAccessKey(createAccessKeyRequest));
+        CreateAccessKeyResult result = youAre.createAccessKey(createAccessKeyRequest);
+        AccessKey accessKey = result.getAccessKey();
         print("Created new access key for user " + userName);
 
         // get accesskey from key gen result request
-        int start = newKeys.lastIndexOf("AccessKeyId:") + 13;
-        int end = newKeys.lastIndexOf(",Status");
-        String accessKey = newKeys.substring(start, end);
-        keys.put("ak", accessKey);
+        String accessKeyId = accessKey.getAccessKeyId();
+        keys.put("ak", accessKeyId);
 
         // get secretkey from key gen result request
-        start = newKeys.lastIndexOf("SecretAccessKey:") + 17;
-        end = newKeys.lastIndexOf(",CreateDate:");
-        String secretKey = newKeys.substring(start, end);
+        String secretKey = accessKey.getSecretAccessKey();
         keys.put("sk", secretKey);
 
         return keys;
