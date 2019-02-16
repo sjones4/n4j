@@ -11,28 +11,17 @@ import com.eucalyptus.tests.awssdk.N4j;
 import com.eucalyptus.tests.awssdk.TestEC2VPCAssociationManagement;
 import com.eucalyptus.tests.awssdk.TestEC2VPCAttributeManagement;
 import com.eucalyptus.tests.awssdk.TestEC2VPCDefaultVPC;
-import com.eucalyptus.tests.awssdk.TestEC2VPCDnsNames;
 import com.eucalyptus.tests.awssdk.TestEC2VPCElasticIPs;
-import com.eucalyptus.tests.awssdk.TestEC2VPCFilteringNonVPCResources;
 import com.eucalyptus.tests.awssdk.TestEC2VPCManagement;
-import com.eucalyptus.tests.awssdk.TestEC2VPCModifyInstanceSecurityGroups;
-import com.eucalyptus.tests.awssdk.TestEC2VPCNATGatewayManagement;
 import com.eucalyptus.tests.awssdk.TestEC2VPCNetworkAclEntryManagement;
-import com.eucalyptus.tests.awssdk.TestEC2VPCNetworkInterfaceAttach;
 import com.eucalyptus.tests.awssdk.TestEC2VPCNetworkInterfaces;
 import com.eucalyptus.tests.awssdk.TestEC2VPCQuotasLimits;
-import com.eucalyptus.tests.awssdk.TestEC2VPCResourceConditionPolicy;
-import com.eucalyptus.tests.awssdk.TestEC2VPCRoutes;
-import com.eucalyptus.tests.awssdk.TestEC2VPCRunInstanceNetworkInterfaces;
 import com.eucalyptus.tests.awssdk.TestEC2VPCSecurityGroupEgressRules;
 import com.eucalyptus.tests.awssdk.TestEC2VPCSecurityGroups;
 import com.eucalyptus.tests.awssdk.TestEC2VPCSecurityGroupsInstancesAttributes;
-import com.eucalyptus.tests.awssdk.TestEC2VPCStartStop;
 import com.eucalyptus.tests.awssdk.TestEC2VPCSubnetAvailableAddresses;
 import com.eucalyptus.tests.awssdk.TestEC2VPCTaggingFiltering;
 import com.eucalyptus.tests.awssdk.TestEC2VPCValidation;
-import com.eucalyptus.tests.awssdk.TestELBDefaultVPC;
-import com.eucalyptus.tests.awssdk.TestELBVPC;
 
 @RunWith(Suite.class)
 @SuiteClasses({
