@@ -304,6 +304,9 @@ class TestEC2IAMConditionKeys {
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
       }
 
+      print("Waiting for volume ${volumeId}")
+      waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
+
       print( 'Creating snapshot for delete test' )
       snapshotId = createSnapshot( new CreateSnapshotRequest(
           description: 'A snapshot for deletion testing',
@@ -332,9 +335,6 @@ class TestEC2IAMConditionKeys {
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
       }
     }
-
-    print("Waiting for volume ${volumeId}")
-    waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
 
     print("Waiting for snapshot ${snapshotId}")
     waitForSnapshots( accountEc2, TimeUnit.MINUTES.toMillis(5) )
@@ -1188,6 +1188,9 @@ class TestEC2IAMConditionKeys {
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
       }
 
+      print("Waiting for volume ${volumeId}")
+      waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
+
       print( "Creating snapshot from volume: ${volumeId}" )
       snapshotId = createSnapshot( new CreateSnapshotRequest(
           volumeId: volumeId,
@@ -1375,9 +1378,6 @@ class TestEC2IAMConditionKeys {
         Assert.assertEquals( 'Snapshot tag count', tags.size(), 1 )
       }
 
-      print("Waiting for volume ${volumeId}")
-      waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
-
       print("Waiting for snapshot ${snapshotId}")
       waitForSnapshots( accountEc2, TimeUnit.MINUTES.toMillis(5) )
 
@@ -1491,18 +1491,8 @@ class TestEC2IAMConditionKeys {
         deleteVolume( new DeleteVolumeRequest( volumeId: volumeId_2 ) )
       }
 
-      for ( int n = 0; n < 60; n += 5 ) {
-        N4j.sleep( 5 )
-        if ( describeVolumes( new DescribeVolumesRequest( filters: [
-            new Filter( name: 'volume-id', values: [ volumeId_1, volumeId_2 ] ),
-            new Filter( name: 'status', values: [ 'available' ] ),
-        ] ) ).with{ !volumes.empty } ) {
-          print( "Volumes available: ${volumeId_1} ${volumeId_2}" )
-          break
-        } else {
-          print( "Waiting for volumes to be available: ${volumeId_1} ${volumeId_2}" )
-        }
-      }
+      print("Waiting for volumes ${volumeId_1} ${volumeId_2}")
+      waitForVolumes( accountEc2, TimeUnit.MINUTES.toMillis(5) )
 
       print( "Creating snapshot from volume ${volumeId_1}" )
       snapshotId = createSnapshot( new CreateSnapshotRequest(
