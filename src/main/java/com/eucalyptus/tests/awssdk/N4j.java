@@ -442,6 +442,7 @@ public class N4j {
     public static Runnable disableAuthorizationCache( ) {
       final long expiry = getAuthorizationExpiry( );
       setAuthorizationExpiry(0);
+      sleep(11); // sleep to allow property change to propagate
       return () -> setAuthorizationExpiry( expiry / 1000 );
     }
 
