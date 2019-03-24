@@ -28,9 +28,9 @@ import com.amazonaws.services.ec2.model.Filter
 
 import org.junit.Test;
 
-import static N4j.ACCESS_KEY
-import static N4j.SECRET_KEY
-import static N4j.getCloudInfo
+import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo
 
 /**
  * This application tests Auto Scaling use of EC2 VPC functionality.

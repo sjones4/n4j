@@ -25,9 +25,9 @@ import com.amazonaws.services.elasticloadbalancing.model.EnableAvailabilityZones
 import com.amazonaws.services.elasticloadbalancing.model.Listener
 import org.junit.Test;
 
-import static N4j.ACCESS_KEY
-import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.minimalInit
 import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**

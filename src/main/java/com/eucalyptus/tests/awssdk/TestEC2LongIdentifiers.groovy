@@ -14,7 +14,7 @@ import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 import org.junit.After
 import org.junit.Test
 
-import static N4j.*
+import static com.eucalyptus.tests.awssdk.N4j.*
 
 /**
  * This application tests EC2 long identifier functionality.

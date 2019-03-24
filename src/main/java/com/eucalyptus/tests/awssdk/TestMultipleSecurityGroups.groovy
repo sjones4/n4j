@@ -5,7 +5,7 @@ import com.amazonaws.services.autoscaling.model.*
 import com.amazonaws.services.ec2.model.*
 import org.junit.Test
 
-import static N4j.*
+import static com.eucalyptus.tests.awssdk.N4j.*
 
 /**
  * Test functionality for multiple (EC2-Classic) security groups.
