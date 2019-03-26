@@ -1,4 +1,4 @@
-FROM gradle:4.1-jdk8
+FROM gradle:5.3-jdk11
 
 ADD [ "n4j.sh", "build.gradle", "settings.gradle", "endpoints.xml", "3wolfmoon-download.jpg", "test.dat", "/home/gradle/n4j/" ]
 ADD [ "src", "/home/gradle/n4j/src/" ]
