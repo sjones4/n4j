@@ -16,7 +16,7 @@ echo "Running test ${N4J_TEST} against ${N4J_CLC_IP}"
 sleep 5
 
 "${GRADLE}" --no-daemon \
-  -Dtest.single="${N4J_TEST}" \
+  -Dtest.filter="${N4J_TEST}" \
   -Dclcip="${N4J_CLC_IP}" \
   ${N4J_OPTS} \
   clean \
