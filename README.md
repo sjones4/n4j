@@ -5,7 +5,7 @@ The framework is written in Java and primarily uses the Amazon SDK for Java. JUn
 
 Prerequisites
 ------
-1. Java (JDK8), e.g. yum install java-1.8.0-openjdk-devel
+1. Java (8 or 11), e.g. yum install java-11-openjdk-devel
 
 2. A Eucalyptus cloud to test
 
@@ -14,22 +14,19 @@ Installation
 Clone the git repository:
 
 ```
-  git clone https://github.com/eucalyptus/n4j.git
+  git clone https://github.com/corymbia/n4j.git
   cd n4j
 ```
 
 Running Tests
 ------
-Gradle is used to compile/run tests:
+Gradle is used to compile tests:
 
 ```
-  ./gradlew -Dclcip=your_cloudcontroller_ip \
-            -Duser=user_to_log_into_host_as \
-            -Dpassword=host_user_password \
-            test
+  ./gradlew build
 ```
 
-The above command will fetch the required dependencies and an image to use to test the cloud (~500MB required)
+The above command will fetch the required dependencies and compile the tests.
 
 To run a particular test or test suite use:
 
@@ -37,11 +34,13 @@ To run a particular test or test suite use:
   ./gradlew -Dclcip=your_cloudcontroller_ip \
             -Duser=user_to_log_into_host_as \
             -Dpassword=host_user_password \
-            -Dtest.single=suite_or_test_name \
+            -Dtest.filter=suite_or_test_name \
             test
 ```
 
-Example of a suite is Ec2Suite, an example test is TestEC2DescribeInstanceStatus.
+This will fetch an image to use for testing the cloud (~500MB required)
+
+An example of a suite is Ec2Suite, an example test is TestEC2DescribeInstanceStatus.
 
 Test results are output to the console, an HTML report is also generated, e.g.:
 

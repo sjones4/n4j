@@ -55,9 +55,11 @@ Run unit tests. To run quick tests use: ./gradlew -Dclcip=CLC_IP_ADDR test \
     }
     systemProperty 'sun.net.http.allowRestrictedHeaders', 'true'
 
-    if ( !System.hasProperty( 'test.single' ) ) {
-      include 'com/eucalyptus/tests/suites/AllShortSuite.class'
+    filter {
+        includeTestsMatching '*' + System.getProperty( 'test.filter', 'com.eucalyptus.tests.suites.AllShortSuite' ) + '*'
     }
+
+    onlyIf{ System.getProperty( 'test.filter' ) }
 }
 
 dependencies {
