@@ -39,7 +39,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 
-import static N4j.*
+import static com.eucalyptus.tests.awssdk.N4j.*
 
 
 /**

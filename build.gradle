@@ -55,9 +55,11 @@ Run unit tests. To run quick tests use: ./gradlew -Dclcip=CLC_IP_ADDR test \
     }
     systemProperty 'sun.net.http.allowRestrictedHeaders', 'true'
 
-    if ( !System.hasProperty( 'test.single' ) ) {
-      include 'com/eucalyptus/tests/suites/AllShortSuite.class'
+    filter {
+        includeTestsMatching '*' + System.getProperty( 'test.filter', 'com.eucalyptus.tests.suites.AllShortSuite' ) + '*'
     }
+
+    onlyIf{ System.getProperty( 'test.filter' ) }
 }
 
 dependencies {
@@ -77,7 +79,11 @@ dependencies {
     compile 'com.jcraft:jsch:0.1.54'
     compile 'junit:junit:4.+'
     compile 'log4j:log4j:1.2.17'
-    compile 'org.codehaus.groovy:groovy-all:2.2.2'
+    compile 'com.sun.xml.bind:jaxb-core:2.3.0'
+    compile 'com.sun.xml.bind:jaxb-impl:2.3.0'
+    compile 'javax.xml.bind:jaxb-api:2.3.0'
+    compile 'org.codehaus.groovy:groovy:2.5.4'
+    compile 'org.codehaus.groovy:groovy-jsr223:2.5.4'
     compile 'org.jclouds.api:ec2:1.6.+'
     compile 'org.jclouds.driver:jclouds-log4j:1.6.+'
     compile 'org.jclouds:jclouds-compute:1.6.+'

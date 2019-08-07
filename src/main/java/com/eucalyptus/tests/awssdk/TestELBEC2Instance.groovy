@@ -33,9 +33,9 @@ import java.nio.charset.StandardCharsets
 import org.junit.Assert
 import org.junit.Test
 
-import static N4j.initEndpoints
-import static N4j.ACCESS_KEY
-import static N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.initEndpoints
+import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.ELB_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.SERVICES_ENDPOINT

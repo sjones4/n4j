@@ -9,7 +9,7 @@ import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
 import org.junit.Test
 
-import static N4j.*
+import static com.eucalyptus.tests.awssdk.N4j.*
 
 /**
  * This application tests tagging and filtering for EC2 VPC resources.

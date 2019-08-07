@@ -8,10 +8,10 @@ import com.amazonaws.services.ec2.model.*
 import org.junit.Assert
 import org.junit.Test
 
-import static N4j.ACCESS_KEY
-import static N4j.EC2_ENDPOINT
-import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
+import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.minimalInit
 import static com.eucalyptus.tests.awssdk.N4j.isVPC
 
 /**

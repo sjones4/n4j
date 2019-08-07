@@ -23,9 +23,9 @@ import com.amazonaws.services.identitymanagement.model.GetUserPolicyRequest
 import com.amazonaws.services.identitymanagement.model.PutUserPolicyRequest
 import org.junit.Test;
 
-import static N4j.ACCESS_KEY
-import static N4j.SECRET_KEY
-import static N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.minimalInit
 
 /**
  * This application tests IAM policy resource ARNs for ELB load balancers.

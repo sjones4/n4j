@@ -23,9 +23,9 @@ import org.junit.Test
 
 import java.nio.charset.StandardCharsets
 
-import static N4j.minimalInit
-import static N4j.ACCESS_KEY
-import static N4j.SECRET_KEY
+import static com.eucalyptus.tests.awssdk.N4j.minimalInit
+import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
+import static com.eucalyptus.tests.awssdk.N4j.SECRET_KEY
 
 /**
  * Tests IAM x-amz-copy-source and x-amz-metadata-directive condition keys for S3.
