@@ -11,6 +11,7 @@ import com.eucalyptus.tests.awssdk.*;
     Ec2ShortSuite.class,
 
     // tests
+    TestEC2EbsImageRegistration.class,
     TestEC2IAMConditionKeys.class,
     TestEC2InstanceBundle.class,
     TestEC2InstanceProfile.class,

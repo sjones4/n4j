@@ -4,9 +4,8 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.*
-import org.junit.Test;
+import org.junit.Test
 
 import static com.eucalyptus.tests.awssdk.N4j.ACCESS_KEY
 import static com.eucalyptus.tests.awssdk.N4j.EC2_ENDPOINT
@@ -26,37 +25,26 @@ class TestEC2VPCStartStop {
   private final AWSCredentialsProvider credentials
   private final String cidrPrefix = '172.26.64'
 
-  public static void main( String[] args ) throws Exception {
-    new TestEC2VPCStartStop( ).EC2VPCStartStopTest( )
-  }
-
-  public TestEC2VPCStartStop( ) {
+  TestEC2VPCStartStop( ) {
     minimalInit()
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
   }
 
   private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
-    final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( EC2_ENDPOINT )
-    ec2
+    N4j.getEc2Client(credentials, EC2_ENDPOINT)
   }
 
-  private boolean assertThat( boolean condition,
-                              String message ){
-    assert condition : message
-    true
-  }
-
-  private void print( String text ) {
-    System.out.println( text )
+  private void assertThat( boolean condition,
+                           String message ){
+    N4j.assertThat(condition, message)
   }
 
   @Test
-  public void EC2VPCStartStopTest( ) throws Exception {
+  void EC2VPCStartStopTest( ) throws Exception {
     final AmazonEC2 ec2 = getEC2Client( credentials )
 
     if ( !isVPC(ec2) ) {
-      print("Unsupported networking mode. VPC required.")
+      N4j.print("Unsupported networking mode. VPC required.")
       return
     }
 
@@ -70,28 +58,28 @@ class TestEC2VPCStartStop {
       images?.getAt( 0 )?.imageId
     }
     assertThat( imageId != null , "Image not found (ebs)" )
-    print( "Using image: ${imageId}" )
+    N4j.print( "Using image: ${imageId}" )
 
     // Discover SSH key
     final String keyName = ec2.describeKeyPairs().with {
       keyPairs?.getAt(0)?.keyName
     }
-    print( "Using key pair: " + keyName );
+    N4j.print( "Using key pair: " + keyName )
 
     final List<Runnable> cleanupTasks = [] as List<Runnable>
     try {
       ec2.with {
-        print('Creating internet gateway')
+        N4j.print('Creating internet gateway')
         String internetGatewayId = createInternetGateway(new CreateInternetGatewayRequest()).with {
           internetGateway.internetGatewayId
         }
-        print("Created internet gateway with id ${internetGatewayId}")
+        N4j.print("Created internet gateway with id ${internetGatewayId}")
         cleanupTasks.add {
-          print("Deleting internet gateway ${internetGatewayId}")
+          N4j.print("Deleting internet gateway ${internetGatewayId}")
           deleteInternetGateway(new DeleteInternetGatewayRequest(internetGatewayId: internetGatewayId))
         }
 
-        print('Creating VPC')
+        N4j.print('Creating VPC')
         String defaultDhcpOptionsId = null
         String vpcId = createVpc(new CreateVpcRequest(cidrBlock: "${cidrPrefix}.0/24")).with {
           vpc.with {
@@ -99,44 +87,44 @@ class TestEC2VPCStartStop {
             vpcId
           }
         }
-        print("Created VPC with id ${vpcId} and dhcp options id ${defaultDhcpOptionsId}")
+        N4j.print("Created VPC with id ${vpcId} and dhcp options id ${defaultDhcpOptionsId}")
         cleanupTasks.add {
-          print("Deleting VPC ${vpcId}")
+          N4j.print("Deleting VPC ${vpcId}")
           deleteVpc(new DeleteVpcRequest(vpcId: vpcId))
         }
 
-        print("Attaching internet gateway ${internetGatewayId} to VPC ${vpcId}")
+        N4j.print("Attaching internet gateway ${internetGatewayId} to VPC ${vpcId}")
         attachInternetGateway(new AttachInternetGatewayRequest(internetGatewayId: internetGatewayId, vpcId: vpcId))
         cleanupTasks.add {
-          print("Detaching internet gateway ${internetGatewayId} from VPC ${vpcId}")
+          N4j.print("Detaching internet gateway ${internetGatewayId} from VPC ${vpcId}")
           detachInternetGateway(new DetachInternetGatewayRequest(internetGatewayId: internetGatewayId, vpcId: vpcId))
         }
 
-        print('Creating subnet')
+        N4j.print('Creating subnet')
         String subnetId = createSubnet(new CreateSubnetRequest(vpcId: vpcId, cidrBlock: "${cidrPrefix}.0/24")).with {
           subnet.with {
             subnetId
           }
         }
-        print("Created subnet with id ${subnetId}")
+        N4j.print("Created subnet with id ${subnetId}")
         cleanupTasks.add {
-          print("Deleting subnet ${subnetId}")
+          N4j.print("Deleting subnet ${subnetId}")
           deleteSubnet(new DeleteSubnetRequest(subnetId: subnetId))
         }
 
-        print( "Allocating address" )
+        N4j.print( "Allocating address" )
         String allocationPublicIp = ''
         String allocationId = allocateAddress( new AllocateAddressRequest( domain: 'vpc' )).with {
           allocationPublicIp = publicIp
           allocationId
         }
-        print( "Allocated address ${allocationId}" )
+        N4j.print( "Allocated address ${allocationId}" )
         cleanupTasks.add{
-          print( "Releasing address ${allocationId}" )
+          N4j.print( "Releasing address ${allocationId}" )
           releaseAddress( new ReleaseAddressRequest( allocationId: allocationId ))
         }
 
-        print( "Running instance in subnet ${subnetId}" )
+        N4j.print( "Running instance in subnet ${subnetId}" )
         String expectedPrivateIp = "${cidrPrefix}.100"
         String instanceId = runInstances( new RunInstancesRequest(
             minCount: 1,
@@ -153,15 +141,15 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Instance running with identifier ${instanceId}" )
+        N4j.print( "Instance running with identifier ${instanceId}" )
         cleanupTasks.add{
-          print( "Terminating instance ${instanceId}" )
+          N4j.print( "Terminating instance ${instanceId}" )
           terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
 
-          print( "Waiting for instance ${instanceId} to terminate" )
+          N4j.print( "Waiting for instance ${instanceId} to terminate" )
           ( 1..25 ).find{
             sleep 5000
-            print( "Waiting for instance ${instanceId} to terminate, waited ${it*5}s" )
+            N4j.print( "Waiting for instance ${instanceId} to terminate, waited ${it*5}s" )
             describeInstances( new DescribeInstancesRequest(
                 instanceIds: [ instanceId ],
                 filters: [ new Filter( name: "instance-state-name", values: [ "terminated" ] ) ]
@@ -171,10 +159,10 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Waiting for instance ${instanceId} to start" )
+        N4j.print( "Waiting for instance ${instanceId} to start" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for instance ${instanceId} to start, waited ${it*5}s" )
+          N4j.print( "Waiting for instance ${instanceId} to start, waited ${it*5}s" )
           describeInstances( new DescribeInstancesRequest(
               instanceIds: [ instanceId ],
               filters: [ new Filter( name: "instance-state-name", values: [ "running" ] ) ]
@@ -183,7 +171,7 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Describing instance ${instanceId} to get ENI identifier" )
+        N4j.print( "Describing instance ${instanceId} to get ENI identifier" )
         String networkInterfaceId = describeInstances( new DescribeInstancesRequest(
             instanceIds: [ instanceId ]
         ) ).with {
@@ -192,13 +180,13 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Associating IP ${allocationPublicIp} with instance ${instanceId} network interface ${networkInterfaceId}" )
+        N4j.print( "Associating IP ${allocationPublicIp} with instance ${instanceId} network interface ${networkInterfaceId}" )
         associateAddress( new AssociateAddressRequest(
             allocationId: allocationId,
             networkInterfaceId: networkInterfaceId
         ) )
 
-        print( "Verifying instance details" )
+        N4j.print( "Verifying instance details" )
         describeInstances( new DescribeInstancesRequest(
             instanceIds: [ instanceId ]
         ) ).with {
@@ -212,13 +200,13 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Stopping instance ${instanceId}" )
+        N4j.print( "Stopping instance ${instanceId}" )
         stopInstances( new StopInstancesRequest( instanceIds: [ instanceId ] ) )
 
-        print( "Waiting for instance ${instanceId} to stop" )
+        N4j.print( "Waiting for instance ${instanceId} to stop" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for instance ${instanceId} to stop, waited ${it*5}s" )
+          N4j.print( "Waiting for instance ${instanceId} to stop, waited ${it*5}s" )
           describeInstances( new DescribeInstancesRequest(
               instanceIds: [ instanceId ],
               filters: [ new Filter( name: "instance-state-name", values: [ "stopped" ] ) ]
@@ -227,13 +215,13 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Starting instance ${instanceId}" )
+        N4j.print( "Starting instance ${instanceId}" )
         startInstances( new StartInstancesRequest( instanceIds: [ instanceId ] ) )
 
-        print( "Waiting for instance ${instanceId} to start" )
+        N4j.print( "Waiting for instance ${instanceId} to start" )
         ( 1..25 ).find{
           sleep 5000
-          print( "Waiting for instance ${instanceId} to start, waited ${it*5}s" )
+          N4j.print( "Waiting for instance ${instanceId} to start, waited ${it*5}s" )
           describeInstances( new DescribeInstancesRequest(
               instanceIds: [ instanceId ],
               filters: [ new Filter( name: "instance-state-name", values: [ "running" ] ) ]
@@ -242,7 +230,7 @@ class TestEC2VPCStartStop {
           }
         }
 
-        print( "Verifying instance details" )
+        N4j.print( "Verifying instance details" )
         describeInstances( new DescribeInstancesRequest(
             instanceIds: [ instanceId ]
         ) ).with {
@@ -258,7 +246,7 @@ class TestEC2VPCStartStop {
 
       }
 
-      print( "Test complete" )
+      N4j.print( "Test complete" )
     } finally {
       // Attempt to clean up anything we created
       cleanupTasks.reverseEach { Runnable cleanupTask ->
