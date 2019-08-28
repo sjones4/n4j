@@ -67,6 +67,8 @@ import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedInputStream;
@@ -287,6 +289,82 @@ public class S3MultiPartUploadTests {
       if (fos != null) {
         fos.close();
       }
+    }
+  }
+
+  @Test
+  public void contentTypeMultiPartUpload() throws Exception {
+    testInfo(this.getClass().getSimpleName() + " - contentTypeMultiPartUpload");
+    final File fileToPut = new File(eucaUUID());
+    FileOutputStream fos = new FileOutputStream(fileToPut);
+
+    try {
+      final String key = eucaUUID();
+      List<PartETag> partETags = Lists.newArrayList();
+      long partSize = randomBytes.length;
+      int numberOfParts = 1;
+
+      // Initiatate mpu
+      print(account + ": Initiating multipart upload for object " + key + " in bucket " + bucketName);
+      final ObjectMetadata objectMetadata = new ObjectMetadata();
+      objectMetadata.setContentType("application/octet-stream+random");
+      final InitiateMultipartUploadResult initiateMpuResult = s3.initiateMultipartUpload(
+          new InitiateMultipartUploadRequest(bucketName, key).withObjectMetadata(objectMetadata)
+      );
+
+      // Upload a few parts
+      for (int partNumber = 1; partNumber <= numberOfParts; partNumber++) {
+        print(account + ": Uploading part of size " + partSize + " bytes for object " + key + ", upload ID " + initiateMpuResult.getUploadId()
+            + ", part number " + partNumber);
+        partETags.add(s3.uploadPart(
+            new UploadPartRequest().withBucketName(bucketName).withKey(key).withUploadId(initiateMpuResult.getUploadId()).withPartNumber(partNumber)
+                .withInputStream(new ByteArrayInputStream(randomBytes)).withPartSize(partSize)).getPartETag());
+
+        // Write the bytes to a byte array output stream
+        fos.write(randomBytes);
+      }
+
+      fos.close();
+      cleanupTasks.add(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            print(account + ": Deleting file " + fileToPut.toPath());
+            Files.deleteIfExists(fileToPut.toPath());
+          } catch (IOException e) {
+            print("Unable to delete file " + fileToPut.toPath() + " due to " + e);
+          }
+        }
+      });
+
+      // Complete mpu
+      print(account + ": Completing multipart upload for object " + key + ", upload ID " + initiateMpuResult.getUploadId());
+      s3.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, initiateMpuResult.getUploadId(), partETags));
+      cleanupTasks.add(new Runnable() {
+        @Override
+        public void run() {
+          print(account + ": Deleting object " + key + " from bucket " + bucketName);
+          s3.deleteObject(bucketName, key);
+        }
+      });
+
+      // Compute md5 of uploaded object
+      String mpuMd5 = BinaryUtils.toHex(Md5Utils.computeMD5Hash(new FileInputStream(fileToPut)));
+
+      // Get the final object to compute the md5
+      print(account + ": Downloading object " + key);
+      S3Object s3Obj = s3.getObject(new GetObjectRequest(bucketName, key));
+      ObjectMetadata s3ObjMetadata = s3Obj.getObjectMetadata();
+      assertNotNull("Expected metadata", s3ObjMetadata);
+      print(account + ": Verifying content type for object " + key);
+      assertEquals("Content-Type Metadata",
+          "application/octet-stream+random",
+          s3ObjMetadata.getContentType());
+    } catch (AmazonServiceException ase) {
+      printException(ase);
+      assertThat(false, "Failed to run contentTypeMultiPartUpload");
+    } finally {
+      fos.close();
     }
   }
 
