@@ -34,6 +34,7 @@ import com.amazonaws.services.ec2.model.DescribeHostReservationOfferingsRequest
 import com.amazonaws.services.ec2.model.DescribeHostReservationsRequest
 import com.amazonaws.services.ec2.model.DescribeHostsRequest
 import com.amazonaws.services.ec2.model.DescribeInstanceCreditSpecificationsRequest
+import com.amazonaws.services.ec2.model.DescribeInternetGatewaysRequest
 import com.amazonaws.services.ec2.model.DescribeLaunchTemplateVersionsRequest
 import com.amazonaws.services.ec2.model.DescribeLaunchTemplatesRequest
 import com.amazonaws.services.ec2.model.DescribeNetworkInterfacePermissionsRequest
@@ -48,11 +49,14 @@ import com.amazonaws.services.ec2.model.DescribeVpcEndpointConnectionsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcEndpointServiceConfigurationsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcEndpointServicePermissionsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcsRequest
+import com.amazonaws.services.ec2.model.DetachInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DisassociateSubnetCidrBlockRequest
 import com.amazonaws.services.ec2.model.DisassociateVpcCidrBlockRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.GetHostReservationPurchasePreviewRequest
 import com.amazonaws.services.ec2.model.ImportKeyPairRequest
+import com.amazonaws.services.ec2.model.InternetGateway
+import com.amazonaws.services.ec2.model.InternetGatewayAttachment
 import com.amazonaws.services.ec2.model.IpPermission
 import com.amazonaws.services.ec2.model.IpRange
 import com.amazonaws.services.ec2.model.ModifyHostsRequest
@@ -396,6 +400,19 @@ class TestEC2Api {
         for ( final Subnet subnet : subnets ) {
           N4j.print( "Deleting default subnet: ${subnet}" )
           deleteSubnet( new DeleteSubnetRequest( subnetId: subnet.subnetId ) )
+        }
+      }
+      describeInternetGateways( new DescribeInternetGatewaysRequest(
+          filters: [ new Filter( name: 'attachment.vpc-id', values: ['*'] ) ]
+      ) ).with {
+        for ( final InternetGateway gateway : internetGateways ) {
+          for ( final InternetGatewayAttachment attachment : gateway.attachments ) {
+            N4j.print( "Detaching internet gateway: ${gateway.internetGatewayId}, for vpc: ${attachment.vpcId}" )
+            detachInternetGateway( new DetachInternetGatewayRequest(
+                internetGatewayId: gateway.internetGatewayId,
+                vpcId: attachment.vpcId
+            ) )
+          }
         }
       }
       describeVpcs( new DescribeVpcsRequest(
