@@ -254,6 +254,30 @@ class TestCFTemplatesShort {
     stackCreateDelete( 's3-bucket-yaml-stack', s3Template )
   }
 
+  @Test
+  void testRoute53Template( ) {
+    String route53Template = '''\
+    AWSTemplateFormatVersion: 2010-09-09
+    Description: Route53 public HostedZone and RecordSetGroup
+    Resources:
+      HostedZone:
+        Type: AWS::Route53::HostedZone
+        Properties:
+          Name: example.com
+      RecordSetGroup:
+        Type: AWS::Route53::RecordSetGroup
+        Properties:
+          HostedZoneId: !Ref HostedZone
+          RecordSets:
+          - Name: name.example.com
+            Type: A
+            TTL: 300
+            ResourceRecords:
+            - "10.20.30.43"
+    '''.stripIndent( )
+    stackCreateDelete( 'route53-stack', route53Template )
+  }
+
   private void stackCreateDelete(
       final String stackName,
       final String stackTemplate,

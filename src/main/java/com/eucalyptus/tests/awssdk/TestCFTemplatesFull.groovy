@@ -26,6 +26,9 @@ import com.amazonaws.services.ec2.model.DescribeSecurityGroupsRequest
 import com.amazonaws.services.ec2.model.DescribeSubnetsRequest
 import com.amazonaws.services.ec2.model.DescribeTagsRequest
 import com.amazonaws.services.ec2.model.DescribeVpcsRequest
+import com.amazonaws.services.route53.model.GetHostedZoneRequest
+import com.amazonaws.services.route53.model.ListResourceRecordSetsRequest
+import com.amazonaws.services.route53.model.ListTagsForResourceRequest
 import com.amazonaws.services.simpleworkflow.model.DomainDeprecatedException
 import com.amazonaws.services.simpleworkflow.model.TypeDeprecatedException
 import com.github.sjones4.youcan.youserv.YouServ
@@ -105,6 +108,21 @@ class TestCFTemplatesFull {
       serviceStatuses.collect{ serviceStatus ->
         URI.create( serviceStatus.serviceId.uri ).host
       } as Set<String>
+    }
+  }
+
+  private String clookup( String cname, Set<String> dnsServers ) {
+    final Hashtable<String,String> env = new Hashtable<>()
+    env.put( Context.INITIAL_CONTEXT_FACTORY, 'com.sun.jndi.dns.DnsContextFactory' )
+    env.put( Context.PROVIDER_URL, dnsServers.collect{ ip -> "dns://${ip}/" }.join( ' ' ) )
+    env.put( Context.AUTHORITATIVE, 'true' )
+    final DirContext ictx = new InitialDirContext( env )
+    try {
+      final Attributes attrs = ictx.getAttributes( cname, ['CNAME'] as String[] )
+      final String name = attrs.get('cname')?.get( )
+      return name
+    } finally {
+      ictx.close()
     }
   }
 
@@ -497,6 +515,121 @@ class TestCFTemplatesFull {
 
       null
     }
+  }
+
+  /**
+   * Test for route53 private hosted zone, test should pass with any network mode
+   */
+  @Test
+  void testRoute53PrivateHostedZoneTemplate( ) {
+    stackCreateDelete( 'route53_private' )
+  }
+
+  /**
+   * Test for route53 public hosted zone with default soa/ns records
+   */
+  @Test
+  void testRoute53PublicHostedZoneTemplate( ) {
+    stackCreateDelete( 'route53_public_defaults', [], [:], {  Stack stack ->
+      String hostedZoneId = stack?.outputs?.getAt( 0 )?.getOutputValue()
+      String hostedZoneNameservers = stack?.outputs?.getAt( 1 )?.getOutputValue()
+
+      N4j.print( "Verifying stack for zone : ${hostedZoneId} / ${hostedZoneNameservers}" )
+      N4j.getRoute53Client(testAcctAdminCredentials, N4j.ROUTE53_ENDPOINT).with {
+        N4j.print( "Verifying hosted zone details : ${hostedZoneId}" )
+        getHostedZone(new GetHostedZoneRequest(id: hostedZoneId)).with {
+          Assert.assertNotNull('HostedZone', hostedZone)
+          Assert.assertEquals('ID', hostedZoneId, hostedZone.id)
+          Assert.assertEquals('Name', 'example.com.', hostedZone.name)
+
+          Assert.assertNotNull('HostedZone.HostedZoneConfig', hostedZone.config)
+          Assert.assertEquals('Comment', 'Public zone for example.com', hostedZone.config.comment)
+          Assert.assertNotNull('PrivateZone', hostedZone.config.privateZone)
+          Assert.assertFalse('PrivateZone', hostedZone.config.privateZone)
+        }
+
+        N4j.print( "Verifying hosted zone default records (soa/ns) : ${hostedZoneId}" )
+        listResourceRecordSets(new ListResourceRecordSetsRequest(hostedZoneId: hostedZoneId)).with {
+          Assert.assertNotNull('ResourceRecordSets', resourceRecordSets)
+          Assert.assertEquals('ResourceRecordSets count', 8, resourceRecordSets.size())
+          resourceRecordSets.each { rrset ->
+            if ('SOA'.equals(rrset.type)) {
+              Assert.assertEquals('RRSET name', 'example.com.', rrset.name)
+              Assert.assertNotNull('RRSET values', rrset.resourceRecords)
+              Assert.assertEquals('RRSET values count', 1, rrset.resourceRecords.size())
+            } else if ('NS'.equals(rrset.type)) {
+              Assert.assertEquals('RRSET name', 'example.com.', rrset.name)
+              Assert.assertNotNull('RRSET values', rrset.resourceRecords)
+            }
+          }
+        }
+
+        N4j.print( "Verifying tags for route53 stack : ${hostedZoneId}" )
+        Map<String,String> expectedTags = [
+            'aws:cloudformation:logical-id': 'HostedZone',
+            'aws:cloudformation:stack-name': 'route53-public-defaults',
+            'tag-1': 'example.com',
+            'tag-2': 'value-2',
+            'tag-3': 'value-3',
+            'tag-4': 'value-4',
+            'tag-5': 'value-5',
+        ]
+        listTagsForResource(new ListTagsForResourceRequest(
+            resourceType: 'hostedzone',
+            resourceId: hostedZoneId)).with {
+          Assert.assertNotNull('ResourceTagSet', resourceTagSet)
+          Assert.assertEquals('ResourceTagSet.resourceType', 'hostedzone', resourceTagSet.resourceType)
+          Assert.assertEquals('ResourceTagSet.resourceId', hostedZoneId, resourceTagSet.resourceId)
+          Assert.assertNotNull('ResourceTagSet.tags', resourceTagSet.tags)
+          Assert.assertEquals('ResourceTagSet.tags count', 8, resourceTagSet.tags.size())
+          resourceTagSet.tags.each { tag ->
+            if (expectedTags.containsKey(tag.key)) {
+              Assert.assertEquals('Tag value', expectedTags.get(tag.key), tag.value)
+            }
+          }
+        }
+      }
+
+      Set<String> dnsHosts = getDnsHosts(getServicesClient(testAcctAdminCredentials))
+      N4j.waitForIt('zone dns', { time ->
+        try {
+          lookup('name.example.com', dnsHosts)
+          return true
+        } catch (Exception e) {
+          return false;
+        }
+      }, 30000)
+      [
+          'name.example.com': '10.20.30.41',
+          'a1.example.com': '10.20.30.41',
+          'a2.example.com': '10.20.30.42',
+          'a3.example.com': '10.20.30.43',
+          'a4.example.com': '10.20.30.43',
+      ].forEach( { String name, String ip ->
+        N4j.print( "Looking up name ${name}" )
+        String resolvedIp = lookup(name, dnsHosts)
+        Assert.assertNotNull("Expected ip for ${name}", resolvedIp)
+        Assert.assertEquals("Resolved ip for ${name}", ip, resolvedIp)
+      } )
+      [
+          'cname.example.com': 'name.example.com.',
+      ].forEach( { String cname, String name ->
+        N4j.print( "Looking up cname ${cname}" )
+        String resolvedName = clookup(cname, dnsHosts)
+        Assert.assertNotNull("Expected name for ${cname}", resolvedName)
+        Assert.assertEquals("Resolved name for ${cname}", name, resolvedName)
+      } )
+
+      null
+    } )
+  }
+
+  /**
+   * Test for route53 public hosted zone with custom soa/ns records
+   */
+  @Test
+  void testRoute53PublicHostedZoneCustomTemplate( ) {
+    stackCreateDelete( 'route53_public_custom' )
   }
 
   private void stackCreateDelete(

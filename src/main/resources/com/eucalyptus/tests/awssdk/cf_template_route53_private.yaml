@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Route53 private HostedZone
+
+Parameters:
+
+  Zone:
+    Description: The zone to create
+    Type: String
+    Default: example.com
+
+Resources:
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.20.30.0/24
+      InstanceTenancy: default
+
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref Zone
+      HostedZoneConfig:
+        Comment: !Sub "Private zone for ${Zone} in ${Vpc}"
+      VPCs:
+        - VPCId: !Ref Vpc
+          VPCRegion: !Ref AWS::Region
+      HostedZoneTags:
+        - Key: tag-1
+          Value: !Ref Zone
+
+  ARecordSet:
+    Type: AWS::Route53::RecordSet
+    DependsOn: HostedZone
+    Properties:
+      HostedZoneName: !Ref Zone
+      Name: !Sub "name.${Zone}"
+      ResourceRecords:
+        - "10.20.30.43"
+      TTL: 300
+      Type: A
+
+  CNAMEARecordSet:
+    Type: AWS::Route53::RecordSet
+    DependsOn: HostedZone
+    Properties:
+      HostedZoneName: !Ref Zone
+      Name: !Sub "cname.${Zone}"
+      ResourceRecords:
+        - name
+      TTL: 300
+      Type: CNAME
+
+  AliasRecordSet:
+    Type: AWS::Route53::RecordSet
+    DependsOn: ARecordSet
+    Properties:
+      HostedZoneName: !Ref Zone
+      Name: !Sub "alias.${Zone}"
+      Type: A
+      AliasTarget:
+        DNSName: !Sub "name.${Zone}"
+        EvaluateTargetHealth: no
+        HostedZoneId: !Ref HostedZone
+
+Outputs:
+
+  HostedZoneId:
+    Description: The identifier for the private hosted zone
+    Value: !Ref HostedZone
