@@ -17,6 +17,7 @@ import org.junit.runners.Suite.SuiteClasses;
     Ec2VpcFullSuite.class,
     ElbFullSuite.class,
     IamSuite.class,
+    Route53Suite.class,
     S3FullSuite.class,
     SQSFullSuite.class,
 })
