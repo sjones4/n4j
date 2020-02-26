@@ -460,6 +460,10 @@ class TestCFTemplatesFull {
         ) ).with {
           Assert.assertEquals("Network ACL count", 1, networkAcls?.size()?:0 )
           networkAcls?.getAt(0)?.with {
+            N4j.print( "Got entries: ${entries}" )
+            Assert.assertNotNull('Network ACL has entries', entries )
+            Assert.assertEquals( 'Network ACL entry count', 9, entries.size() )
+
             N4j.print( "Got tags: ${tags}" )
             Assert.assertNotNull('Network ACL has tag', tags )
             Assert.assertEquals( 'Network ACL tag count', 4, tags.size() )
