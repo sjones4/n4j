@@ -1,0 +1,733 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  EC2 VPC Network ACL runtime test
+
+
+Parameters:
+
+  InstanceType:
+    Description: Instance type to use
+    Type: String
+    Default: t2.small
+
+  ImageId:
+    Description: Identifier for the CentOS 7 image
+    Type: String
+
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+
+
+Conditions:
+
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref 'KeyName'
+      - ''
+
+
+Resources:
+
+  WaitConditionHandle1:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  WaitCondition1:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref WaitConditionHandle1
+      Timeout: '600'
+
+  WaitConditionHandle2:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  WaitCondition2:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref WaitConditionHandle2
+      Timeout: '600'
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: "10.13.0.0/16"
+
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+
+  InternetGatewayAttach:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.13.101.0/24"
+
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.13.202.0/24"
+
+  Subnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.13.103.0/24"
+
+  Subnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: "10.13.204.0/24"
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+  Route:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttach
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet1
+      RouteTableId: !Ref RouteTable
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet2
+      RouteTableId: !Ref RouteTable
+
+  Subnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet3
+      RouteTableId: !Ref RouteTable
+
+  Subnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet4
+      RouteTableId: !Ref RouteTable
+
+  NetworkAcl:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+
+  InboundSshNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "100"
+      Protocol: "6"
+      PortRange:
+        From: 22
+        To: 22
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+
+  InboundIcmpRequestNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "110"
+      Protocol: "1"
+      Icmp:
+        Type: 8
+        Code: 0
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "10.13.0.0/16"
+
+  InboundIcmpResponseNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "120"
+      Protocol: "1"
+      Icmp:
+        Type: 0
+        Code: 0
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "10.13.0.0/16"
+
+  InboundTcp2000NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "200"
+      Protocol: "6"
+      PortRange:
+        From: 2000
+        To: 2100
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+
+  InboundUdp3000NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "210"
+      Protocol: "17"
+      PortRange:
+        From: 3000
+        To: 3000
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "10.0.0.0/8"
+
+  InboundSctp4000NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "220"
+      Protocol: "132"
+      PortRange:
+        From: 4000
+        To: 4000
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "10.13.0.0/16"
+
+  InboundEphemeralTcpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "1000"
+      Protocol: "6"
+      PortRange:
+        From: 32768
+        To: 60999
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+
+  InboundEphemeralUdpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "1010"
+      Protocol: "17"
+      PortRange:
+        From: 32768
+        To: 60999
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundDnsTcpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "100"
+      Protocol: "6"
+      PortRange:
+        From: 53
+        To: 53
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundDnsUdpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "110"
+      Protocol: "17"
+      PortRange:
+        From: 53
+        To: 53
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundNtpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "120"
+      Protocol: "17"
+      PortRange:
+        From: 123
+        To: 123
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundHTTPNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "130"
+      Protocol: "6"
+      PortRange:
+        From: 80
+        To: 80
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundHTTPSNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "140"
+      Protocol: "6"
+      PortRange:
+        From: 443
+        To: 443
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundIcmpRequestNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "150"
+      Protocol: "1"
+      Icmp:
+        Type: 8
+        Code: 0
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "10.13.0.0/16"
+
+  OutboundIcmpResponseNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "160"
+      Protocol: "1"
+      Icmp:
+        Type: 0
+        Code: 0
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "10.13.0.0/16"
+
+  OutboundServicesNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "170"
+      Protocol: "6"
+      PortRange:
+        From: 8773
+        To: 8773
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundTcp2000NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "200"
+      Protocol: "6"
+      PortRange:
+        From: 2000
+        To: 2100
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundUdp3000NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "210"
+      Protocol: "17"
+      PortRange:
+        From: 3000
+        To: 3000
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundSctp4000NetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "220"
+      Protocol: "132"
+      PortRange:
+        From: 4000
+        To: 4000
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundEphemeralTcpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "1000"
+      Protocol: "6"
+      PortRange:
+        From: 32768
+        To: 60999
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  OutboundEphemeralUdpNetworkAclEntry:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl
+      RuleNumber: "1010"
+      Protocol: "17"
+      PortRange:
+        From: 32768
+        To: 60999
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "0.0.0.0/0"
+
+  # Allow in/out by subnet 4 cidr
+  NetworkAcl2:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+
+  InboundNetworkAclEntry2:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl2
+      RuleNumber: "100"
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "10.13.204.0/24"
+
+  OutboundNetworkAclEntry2:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl2
+      RuleNumber: "100"
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "10.13.204.0/24"
+
+  # Allow in out by network interface 2 ip
+  NetworkAcl4:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+
+  InboundNetworkAclEntry4:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl4
+      RuleNumber: "100"
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: "false"
+      CidrBlock: "10.13.202.202/32"
+
+  OutboundIcmpBlockNetworkAclEntry4:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl4
+      RuleNumber: "100"
+      Protocol: "1"
+      Icmp:
+        Type: 8
+        Code: 0
+      RuleAction: deny
+      Egress: "true"
+      CidrBlock: "10.13.202.202/32"
+
+  OutboundNetworkAclEntry4:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref NetworkAcl4
+      RuleNumber: "200"
+      Protocol: "-1"
+      RuleAction: allow
+      Egress: "true"
+      CidrBlock: "10.13.202.202/32"
+
+  Subnet1NetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref Subnet1
+      NetworkAclId: !Ref NetworkAcl
+
+  Subnet2NetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref Subnet2
+      NetworkAclId: !Ref NetworkAcl2
+
+  Subnet3NetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref Subnet3
+      NetworkAclId: !Ref NetworkAcl
+
+  Subnet4NetworkAclAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      SubnetId: !Ref Subnet4
+      NetworkAclId: !Ref NetworkAcl4
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Open security group
+      SecurityGroupIngress:
+        - IpProtocol: "-1"
+          CidrIp: "0.0.0.0/0"
+
+  NetworkInterface1:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      GroupSet:
+        - !GetAtt SecurityGroup.GroupId
+      PrivateIpAddress: "10.13.101.101"
+      SubnetId: !Ref Subnet1
+
+  NetworkInterface2:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      GroupSet:
+        - !GetAtt SecurityGroup.GroupId
+      PrivateIpAddress: "10.13.202.202"
+      SubnetId: !Ref Subnet2
+
+  NetworkInterface3:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      GroupSet:
+        - !GetAtt SecurityGroup.GroupId
+      PrivateIpAddress: "10.13.103.103"
+      SubnetId: !Ref Subnet3
+
+  NetworkInterface4:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      GroupSet:
+        - !GetAtt SecurityGroup.GroupId
+      PrivateIpAddress: "10.13.204.204"
+      SubnetId: !Ref Subnet4
+
+  Eip1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  Eip2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  EipAssociation1:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt Eip1.AllocationId
+      NetworkInterfaceId: !Ref NetworkInterface1
+
+  EipAssociation2:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt Eip2.AllocationId
+      NetworkInterfaceId: !Ref NetworkInterface3
+
+  Instance1:
+    Type: AWS::EC2::Instance
+    DependsOn:
+     - EipAssociation1
+     - Instance2
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref KeyName
+        - !Ref AWS::NoValue
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          NetworkInterfaceId: !Ref NetworkInterface1
+        - DeviceIndex: 1
+          NetworkInterfaceId: !Ref NetworkInterface2
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          disable_root: 0
+          packages:
+           - nmap-ncat
+          write_files:
+           - path: /root/nacl_test.sh
+             permissions: "0755"
+             owner: root
+             content: |
+               #!/bin/bash
+               set -euxo pipefail
+
+               WAITCONDURL="${WaitConditionHandle1}"
+               COND_DATA="TEST0"
+               COND_REASON="initializing"
+
+               function cleanup {
+                 # Signal cloudformation wait condition handle
+                 echo "Final data: ${!COND_DATA}"
+                 curl -s -X PUT -H 'Content-Type:' \
+                   --data-binary '{"Status": "SUCCESS", "UniqueId": "result", "Data": "'"${!COND_DATA}"'", "Reason": "'"${!COND_REASON}"'" }' \
+                   ${!WAITCONDURL}
+               }
+               trap cleanup EXIT
+
+               # Tests
+               COND_REASON="testing"
+
+               # Test ping for allow all nacl
+               ping -I 10.13.202.202 -c 1 -w 10 -4 10.13.204.204
+               COND_DATA="${!COND_DATA}, PING204"
+
+               # Test send SCTP on allow all nacl
+               sleep 2
+               echo "SCTP204" | ncat --sctp -4 --source 10.13.202.202 10.13.204.204 20400
+               COND_DATA="${!COND_DATA}, SCTP204"
+
+               # Test ping permitted by restrictive nacl
+               ping -I 10.13.101.101 -c 1 -w 10 -4 10.13.103.103
+               COND_DATA="${!COND_DATA}, PING103"
+
+               # Test send TCP permitted by restrictive nacl
+               sleep 2
+               echo "TCP103" | ncat -4 --source 10.13.101.101 10.13.103.103 2000
+               COND_DATA="${!COND_DATA}, TCP103"
+
+               # Test send UDP permitted by restrictive nacl
+               sleep 2
+               echo "UDP103" | ncat --udp -4 --source 10.13.101.101 10.13.103.103 3000
+               COND_DATA="${!COND_DATA}, UDP103"
+
+               # Test send SCTP permitted by restrictive nacl
+               sleep 2
+               echo "SCTP103" | ncat --sctp -4 --source 10.13.101.101 10.13.103.103 4000
+               COND_DATA="${!COND_DATA}, SCTP103"
+
+               # Success
+               COND_DATA="${!COND_DATA}, TEST101"
+               COND_REASON="complete"
+          runcmd:
+           - ip link set dev eth1 up
+           - ip address add 10.13.202.202/24 dev eth1
+           - ip route add 10.13.128.0/17 via 10.13.202.1 dev eth1 src 10.13.202.202
+           - /root/nacl_test.sh
+
+  Instance2:
+    Type: AWS::EC2::Instance
+    DependsOn: EipAssociation2
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref KeyName
+        - !Ref AWS::NoValue
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          NetworkInterfaceId: !Ref NetworkInterface3
+        - DeviceIndex: 1
+          NetworkInterfaceId: !Ref NetworkInterface4
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          disable_root: 0
+          packages:
+           - nmap-ncat
+          write_files:
+           - path: /root/nacl_test.sh
+             permissions: "0755"
+             owner: root
+             content: |
+               #!/bin/bash
+               set -euxo pipefail
+
+               WAITCONDURL="${WaitConditionHandle2}"
+               COND_DATA="TEST0"
+               COND_REASON="initializing"
+
+               function cleanup {
+                 # Signal cloudformation wait condition handle
+                 echo "Final data: ${!COND_DATA}"
+                 curl -s -X PUT -H 'Content-Type:' \
+                   --data-binary '{"Status": "SUCCESS", "UniqueId": "result", "Data": "'"${!COND_DATA}"'", "Reason": "'"${!COND_REASON}"'" }' \
+                   ${!WAITCONDURL}
+               }
+               trap cleanup EXIT
+
+               # Tests
+               COND_REASON="testing"
+               COND_DATA="${!COND_DATA}"
+
+               # Listen for SCTP on allow all nacl
+               ncat --sctp --listen 10.13.204.204 20400 > /tmp/SCTP204.txt
+               COND_DATA="${!COND_DATA}, SCTP204"
+
+               # Listen for TCP on restrictive nacl
+               ncat --listen 10.13.103.103 2000 > /tmp/TCP103.txt
+               if [ "TCP103" != $(</tmp/TCP103.txt) ] ; then false; fi
+               COND_DATA="${!COND_DATA}, TCP103"
+
+               # Listen for UDP on restrictive nacl
+               ncat --udp --idle-timeout 1s --listen 10.13.103.103 3000 > /tmp/UDP103.txt || true
+               if [ "UDP103" != $(</tmp/UDP103.txt) ] ; then false; fi
+               COND_DATA="${!COND_DATA}, UDP103"
+
+               # Listen for SCTP on restrictive nacl
+               ncat --sctp --listen 10.13.103.103 4000 > /tmp/SCTP103.txt
+               if [ "SCTP103" != $(</tmp/SCTP103.txt) ] ; then false; fi
+               COND_DATA="${!COND_DATA}, SCTP103"
+
+               # Test ping blocked by nacl deny
+               if ! ping -I 10.13.204.204 -c 1 -w 5 -4 10.13.202.202 ; then
+                 COND_DATA="${!COND_DATA}, PING202"
+               else
+                 false
+               fi
+
+               # Success
+               COND_DATA="${!COND_DATA}, TEST101"
+               COND_REASON="complete"
+          runcmd:
+           - ip link set dev eth1 up
+           - ip address add 10.13.204.204/24 dev eth1
+           - ip route add 10.13.128.0/17 via 10.13.204.1 dev eth1 src 10.13.204.204
+           - /root/nacl_test.sh
+
+
+Outputs:
+
+  Result1:
+    Description: Result from Network ACL connectivity test instance 1
+    Value: !GetAtt WaitCondition1.Data
+
+  Result2:
+    Description: Result from Network ACL connectivity test instance 2
+    Value: !GetAtt WaitCondition2.Data
