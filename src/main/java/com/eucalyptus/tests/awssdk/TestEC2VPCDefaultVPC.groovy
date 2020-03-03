@@ -186,6 +186,43 @@ class TestEC2VPCDefaultVPC {
           }
         }
 
+        print( "Checking network acl for default vpc ${defaultVpcId}" )
+        describeNetworkAcls(new DescribeNetworkAclsRequest(
+            filters: [ new Filter( name: 'vpc-id', values: [ defaultVpcId ] ) ]
+        )).with {
+          assertThat( networkAcls != null && networkAcls.size() == 1, "Expected one network acl, but was: ${networkAcls.size()}" )
+          String defaultNetworkAclId = networkAcls.get(0).networkAclId
+          print( "Checking network acl details ${defaultNetworkAclId}" )
+          assertThat( defaultNetworkAclId != null, "Expected ACL identifier" )
+          assertThat( networkAcls.get(0).isDefault, "Expected ACL to be marked as default" )
+          assertThat( defaultVpcId == networkAcls.get(0).vpcId, "Expected ACL for vpc ${defaultVpcId} but got ${networkAcls.get(0).vpcId}" )
+
+          // verify ingress / egress entries
+          [true, false].each { egress ->
+            networkAcls.get(0).entries.each { entry ->
+              if (entry.egress == egress) {
+                if (entry.ruleNumber==100) {
+                  assertThat( "allow" == entry.ruleAction, "Expected allow action for ${egress?'egress':'ingress'} entry" )
+                } else if (entry.ruleNumber==32767) {
+                  assertThat( "deny" == entry.ruleAction, "Expected allow action for ${egress?'egress':'ingress'} entry" )
+                } else {
+                  assertThat(false, "Unexpected ${egress?'egress':'ingress'} entry: ${entry}")
+                }
+                assertThat( '-1' == entry.protocol, "Expected wildcard protocol for ${egress?'egress':'ingress'} entry" )
+                assertThat( '0.0.0.0/0' == entry.cidrBlock, "Expected 0/0 cidr for ${egress?'egress':'ingress'} entry" )
+              }
+            }
+          }
+
+          // verify associations
+          assertThat( zones.size() == networkAcls.get(0).associations.size(),
+              "Expected ACL association count(${networkAcls.get(0).associations.size()}) to match zone count(${zones.size()})" )
+          networkAcls.get(0).associations.each { naclAssociation ->
+            assertThat( defaultNetworkAclId == naclAssociation.networkAclId,
+                "Expected association id(${naclAssociation.networkAclId}) to match default acl(${defaultNetworkAclId})" )
+          }
+        }
+
         print( "Finding internet gateway for default vpc ${defaultVpcId}" )
         String internetGatewayId = describeInternetGateways( new DescribeInternetGatewaysRequest(
                 filters: [ new Filter( name: 'attachment.vpc-id', values: [ defaultVpcId ] ) ]

@@ -478,6 +478,10 @@ class TestCFTemplatesFull {
         ) ).with {
           Assert.assertEquals("Network ACL count", 1, networkAcls?.size()?:0 )
           networkAcls?.getAt(0)?.with {
+            N4j.print( "Got entries: ${entries}" )
+            Assert.assertNotNull('Network ACL has entries', entries )
+            Assert.assertEquals( 'Network ACL entry count', 9, entries.size() )
+
             N4j.print( "Got tags: ${tags}" )
             Assert.assertNotNull('Network ACL has tag', tags )
             Assert.assertEquals( 'Network ACL tag count', 4, tags.size() )
@@ -512,6 +516,33 @@ class TestCFTemplatesFull {
           }
         }
       }
+
+      null
+    }
+  }
+
+  /**
+   * Test for vpc network acls requiring vpc platform
+   */
+  @Test
+  void testVpcNetworkAclsTemplate( ) {
+    N4j.print('Checking for VPC support')
+    final boolean vpcAvailable = N4j.ec2.describeAccountAttributes().with {
+      accountAttributes.find { AccountAttribute accountAttribute ->
+        accountAttribute.attributeName == 'supported-platforms'
+      }?.attributeValues*.attributeValue.contains('VPC')
+    }
+    N4j.print("VPC supported: ${vpcAvailable}")
+    N4j.assumeThat(vpcAvailable, 'VPC is a supported platform')
+    stackCreateDelete('vpc_nacls', [], ['ImageId': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE]) { Stack stack ->
+      String result1 = stack?.outputs?.getAt(0)?.getOutputValue();
+      String result2 = stack?.outputs?.getAt(1)?.getOutputValue();
+
+      Assert.assertNotNull('Expected stack output Result1', result1 )
+      Assert.assertNotNull('Expected stack output Result2', result2 )
+
+      Assert.assertEquals('Expected stack output Result1', '{"result":"TEST0, PING204, SCTP204, PING103, TCP103, UDP103, SCTP103, TEST101"}', result1 )
+      Assert.assertEquals('Expected stack output Result2', '{"result":"TEST0, SCTP204, TCP103, UDP103, SCTP103, PING202, TEST101"}', result2 )
 
       null
     }
