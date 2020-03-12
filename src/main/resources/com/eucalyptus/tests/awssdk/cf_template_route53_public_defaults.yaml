@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Route53 public HostedZone
+
+Parameters:
+
+  Zone:
+    Description: The zone to create
+    Type: String
+    Default: example.com
+
+Resources:
+
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref Zone
+      HostedZoneConfig:
+        Comment: !Sub "Public zone for ${Zone}"
+      HostedZoneTags:
+        - Key: tag-1
+          Value: !Ref Zone
+        - Key: tag-2
+          Value: value-2
+        - Key: tag-3
+          Value: value-3
+        - Key: tag-4
+          Value: value-4
+        - Key: tag-5
+          Value: value-5
+
+  RecordSetIdRef:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Sub "name.${Zone}"
+      ResourceRecords:
+        - "10.20.30.41"
+        - "10.20.30.42"
+        - "10.20.30.43"
+        - "10.20.30.44"
+        - "10.20.30.45"
+        - "10.20.30.46"
+        - "10.20.30.47"
+        - "10.20.30.48"
+      TTL: 300
+      Type: A
+
+  RecordSetNameRef:
+    Type: AWS::Route53::RecordSet
+    DependsOn: HostedZone
+    Properties:
+      HostedZoneName: !Ref Zone
+      Name: !Sub "cname.${Zone}"
+      ResourceRecords:
+        - !Sub "name.${Zone}"
+      TTL: 300
+      Type: CNAME
+
+  RecordSetGroupIdRef:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      RecordSets:
+        - Name: !Sub "a1.${Zone}"
+          ResourceRecords:
+            - "10.20.30.41"
+          TTL: 600
+          Type: A
+        - Name: !Sub "a2.${Zone}"
+          ResourceRecords:
+            - "10.20.30.42"
+          TTL: 900
+          Type: A
+
+  RecordSetGroupNameRef:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: HostedZone
+    Properties:
+      HostedZoneName: !Ref Zone
+      RecordSets:
+        - Name: !Sub "a3.${Zone}"
+          Type: A
+          TTL: 300
+          ResourceRecords:
+            - "10.20.30.43"
+        - Name: !Sub "a4.${Zone}"
+          Type: A
+          AliasTarget:
+            DNSName: !Sub "a3.${Zone}"
+            EvaluateTargetHealth: no
+            HostedZoneId: !Ref HostedZone
+
+Outputs:
+
+  HostedZoneId:
+    Description: The identifier for the public hosted zone
+    Value: !Ref HostedZone
+
+  HostedZoneNameServers:
+    Description: The nameservers for the public hosted zone
+    Value: !Join [", ", !GetAtt HostedZone.NameServers]

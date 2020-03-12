@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Route53 public HostedZone
+
+Parameters:
+
+  Zone:
+    Description: The zone to create
+    Type: String
+    Default: example.com
+
+Resources:
+
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub "Public zone for ${Zone}"
+      Name: !Ref Zone
+
+  SOARecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Ref Zone
+      ResourceRecords:
+        - !Sub "ns1.${Zone}. hostmaster.${Zone}. 1 7200 900 1209600 86400"
+      TTL: 300
+      Type: SOA
+
+  NSRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Ref Zone
+      ResourceRecords:
+        - !Sub "ns1.${Zone}"
+        - !Sub "ns2.${Zone}"
+      TTL: 300
+      Type: NS
+
+  NSARecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    DependsOn: HostedZone
+    Properties:
+      HostedZoneName: !Ref Zone
+      RecordSets:
+        - Name: !Sub "ns1.${Zone}"
+          ResourceRecords:
+            - "10.20.30.41"
+          TTL: 300
+          Type: A
+        - Name: !Sub "ns2.${Zone}"
+          ResourceRecords:
+            - "10.20.30.42"
+          TTL: 300
+          Type: A
+
+Outputs:
+
+  HostedZoneId:
+    Description: The identifier for the public hosted zone
+    Value: !Ref HostedZone

@@ -32,6 +32,8 @@ import com.amazonaws.services.elasticloadbalancing.model.*;
 import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersRequest;
 import com.amazonaws.services.elasticloadbalancing.model.DescribeLoadBalancersResult;
 import com.amazonaws.services.identitymanagement.model.*;
+import com.amazonaws.services.route53.AmazonRoute53;
+import com.amazonaws.services.route53.AmazonRoute53Client;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
@@ -56,6 +58,7 @@ import org.junit.Assume;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -91,6 +94,7 @@ public class N4j {
     public static String CW_ENDPOINT = null;
     public static String S3_ENDPOINT = null;
     public static String SQS_ENDPOINT = null;
+    public static String ROUTE53_ENDPOINT = null;
     public static String TOKENS_ENDPOINT = null;
     public static String SECRET_KEY = null;
     public static String ACCESS_KEY = null;
@@ -123,6 +127,13 @@ public class N4j {
       TOKENS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "sts-url");
       SERVICES_ENDPOINT = getAttribute(LOCAL_INI_FILE, "bootstrap-url");
       PROPERTIES_ENDPOINT = getAttribute(LOCAL_INI_FILE, "properties-url");
+
+      // Get with default
+      ROUTE53_ENDPOINT = getAttribute(LOCAL_INI_FILE, "route53-url",
+          S3_ENDPOINT.replace("s3.","route53."));
+      SQS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "simplequeue-url",
+          S3_ENDPOINT.replace("s3.","simplequeue."));
+
       SECRET_KEY = getAttribute(LOCAL_INI_FILE, "secret-key");
       ACCESS_KEY = getAttribute(LOCAL_INI_FILE, "key-id");
       ACCOUNT_ID = getAttribute(LOCAL_INI_FILE,"account-id");
@@ -159,11 +170,6 @@ public class N4j {
         getCloudInfo();
         getConfigProperties(CLC_IP, USER, PASSWORD);
         print("Getting sqs info from " + LOCAL_INI_FILE);
-        SQS_ENDPOINT = getAttribute(LOCAL_INI_FILE, "simplequeue-url");
-        // In case we don't put the sqs endpoint in there, use another one
-        if (SQS_ENDPOINT == null) {
-          SQS_ENDPOINT = S3_ENDPOINT.replace("s3.","simplequeue.");
-        }
         sqs = getSqsClient(ACCESS_KEY, SECRET_KEY, SQS_ENDPOINT);
         cloudInfoAndSqsLoaded = true;
     }
@@ -494,7 +500,15 @@ public class N4j {
         return as;
     }
 
-      static AmazonSQS getSqsClient(String accessKey, String secretKey,
+    public static AmazonRoute53 getRoute53Client(AWSCredentialsProvider credentials,
+                                                 String endpoint) {
+      return AmazonRoute53Client.builder()
+          .withCredentials( credentials )
+          .withEndpointConfiguration( new EndpointConfiguration( endpoint, "eucalyptus" ) )
+          .build();
+    }
+
+    static AmazonSQS getSqsClient(String accessKey, String secretKey,
                                     String endpoint) {
         AWSCredentials creds = new BasicAWSCredentials(accessKey, secretKey);
         final AmazonSQS sqs = new AmazonSQSClient(creds);
@@ -598,7 +612,11 @@ public class N4j {
      * @throws IOException
      */
     public static String getAttribute(String credpath, String field) throws IOException {
-        Charset charset = Charset.forName("UTF-8");
+      return getAttribute(credpath, field, null);
+    }
+
+    public static String getAttribute(String credpath, String field, String defaultValue) throws IOException {
+        Charset charset = StandardCharsets.UTF_8;
         String result = null;
         try {
             List<String> lines = Files.readAllLines(Paths.get(credpath), charset);
@@ -611,7 +629,7 @@ public class N4j {
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
-        return result;
+        return Objects.toString(result, defaultValue);
     }
 
     public static void updateEndpoints(String endpoints, String ec2Endpoint, String s3Endpoint) throws IOException {
