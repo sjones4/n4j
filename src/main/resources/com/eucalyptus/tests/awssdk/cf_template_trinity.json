@@ -216,6 +216,27 @@
             "SourceSecurityGroupName" : {"Fn::GetAtt" : ["ElasticLoadBalancer", "SourceSecurityGroup.GroupName"]}
           } ]
       }
+    },
+
+    "HostedZone" : {
+      "Type" : "AWS::Route53::HostedZone",
+      "Properties" : {
+        "Name" : "trinity.eucalyptus.internal"
+      }
+    },
+
+    "RecordSet" : {
+      "Type" : "AWS::Route53::RecordSet",
+      "Properties" : {
+        "HostedZoneId" : {"Ref" : "HostedZone"},
+        "Name" : "elb.trinity.eucalyptus.internal",
+        "Type" : "A",
+        "AliasTarget" : {
+          "DNSName": {"Fn::GetAtt" : ["ElasticLoadBalancer", "DNSName"]},
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": {"Fn::GetAtt" : ["ElasticLoadBalancer", "CanonicalHostedZoneNameID"]}
+        }
+      }
     }
   },
 

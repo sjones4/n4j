@@ -315,6 +315,10 @@ class TestCFTemplatesFull {
       }
       Assert.assertNotNull('Expected response from load balancer', foundResponse )
 
+      N4j.print( 'Verifying route53 alias for elb' )
+      String balancerIpFromAlias = lookup( 'elb.trinity.eucalyptus.internal', dnsHosts )
+      Assert.assertEquals( 'ELB ip from alias', balancerIp, balancerIpFromAlias )
+
       N4j.print( 'Verifying load balancer cookie present' )
       String setCookieHeader = url.openConnection( ).getHeaderField( 'Set-Cookie' )
       N4j.print( "Set-Cookie: ${setCookieHeader}" )
