@@ -1,10 +1,10 @@
 package com.eucalyptus.tests.awssdk
 
+import com.amazonaws.AmazonServiceException
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.ec2.AmazonEC2
-import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
 import com.amazonaws.services.ec2.model.DeleteSecurityGroupRequest
@@ -20,6 +20,7 @@ import com.amazonaws.services.ec2.model.UserIdGroupPair
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancing
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.amazonaws.services.elasticloadbalancing.model.*
+import com.amazonaws.services.route53.AmazonRoute53
 import com.github.sjones4.youcan.youserv.YouServ
 import com.github.sjones4.youcan.youserv.YouServClient
 import com.github.sjones4.youcan.youserv.model.DescribeServicesRequest
@@ -53,12 +54,6 @@ class TestELBEC2Instance {
   void init( ) {
     initEndpoints( )
     this.credentials = new AWSStaticCredentialsProvider( new BasicAWSCredentials( ACCESS_KEY, SECRET_KEY ) )
-  }
-
-  private AmazonEC2 getEC2Client( final AWSCredentialsProvider credentials ) {
-    final AmazonEC2 ec2 = new AmazonEC2Client( credentials )
-    ec2.setEndpoint( EC2_ENDPOINT )
-    ec2
   }
 
   private AmazonElasticLoadBalancing getELBClient( final AWSCredentialsProvider credentials ) {
@@ -105,7 +100,7 @@ class TestELBEC2Instance {
 
   @Test
   void testLoadBalancedRequest( ) throws Exception {
-    final AmazonEC2 ec2 = getEC2Client( credentials )
+    final AmazonEC2 ec2 = N4j.getEc2Client( credentials, EC2_ENDPOINT )
 
     // Find an AZ to use
     final DescribeAvailabilityZonesResult azResult = ec2.describeAvailabilityZones()
@@ -119,6 +114,16 @@ class TestELBEC2Instance {
 
     final String namePrefix = UUID.randomUUID().toString().substring(0, 13) + "-"
     N4j.print( "Using resource prefix for test: " + namePrefix )
+
+    final AmazonRoute53 route53 = N4j.getRoute53Client( credentials, N4j.ROUTE53_ENDPOINT )
+    boolean route53Enabled = false
+    try {
+      route53.listHostedZones()
+      route53Enabled = true;
+      N4j.print( "Route53 enabled, will check hosted zone details for elb" );
+    } catch ( AmazonServiceException e ) {
+      N4j.print( "Error from route 53 service check (assuming not enabled): ${e}" )
+    }
 
     final AmazonElasticLoadBalancing elb = getELBClient( credentials )
     final List<Runnable> cleanupTasks = [] as List<Runnable>
@@ -159,6 +164,11 @@ class TestELBEC2Instance {
               Assert.assertTrue("Expected no vpc, but was: ${VPCId}", VPCId == null)
               Assert.assertTrue("Expected no subnets, but was: ${subnets}", subnets == null || subnets.isEmpty())
               Assert.assertTrue("Expected no (VPC) security groups, but was: ${securityGroups}", securityGroups == null || securityGroups.isEmpty())
+            }
+            if ( route53Enabled ) {
+              N4j.print("Checking canonical hosted zone ${canonicalHostedZoneName}/${canonicalHostedZoneNameID}");
+              Assert.assertNotNull("Expected CanonicalHostedZoneName", canonicalHostedZoneName )
+              Assert.assertNotNull("Expected canonicalHostedZoneNameID", canonicalHostedZoneNameID )
             }
             sourceSecurityGroup.with {
               ec2.with {
