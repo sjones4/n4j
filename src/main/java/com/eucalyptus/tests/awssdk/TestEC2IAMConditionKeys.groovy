@@ -12,6 +12,7 @@ import com.amazonaws.services.ec2.model.AttachVolumeRequest
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupEgressRequest
 import com.amazonaws.services.ec2.model.AuthorizeSecurityGroupIngressRequest
 import com.amazonaws.services.ec2.model.CreateDhcpOptionsRequest
+import com.amazonaws.services.ec2.model.CreateLaunchTemplateRequest
 import com.amazonaws.services.ec2.model.CreateNetworkAclEntryRequest
 import com.amazonaws.services.ec2.model.CreateNetworkAclRequest
 import com.amazonaws.services.ec2.model.CreateRouteRequest
@@ -24,6 +25,7 @@ import com.amazonaws.services.ec2.model.CreateVolumeRequest
 import com.amazonaws.services.ec2.model.CreateVpcRequest
 import com.amazonaws.services.ec2.model.DeleteDhcpOptionsRequest
 import com.amazonaws.services.ec2.model.DeleteInternetGatewayRequest
+import com.amazonaws.services.ec2.model.DeleteLaunchTemplateRequest
 import com.amazonaws.services.ec2.model.DeleteNetworkAclEntryRequest
 import com.amazonaws.services.ec2.model.DeleteNetworkAclRequest
 import com.amazonaws.services.ec2.model.DeleteRouteRequest
@@ -42,9 +44,17 @@ import com.amazonaws.services.ec2.model.DescribeVolumesRequest
 import com.amazonaws.services.ec2.model.DetachInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DetachVolumeRequest
 import com.amazonaws.services.ec2.model.Filter
+import com.amazonaws.services.ec2.model.InstanceNetworkInterfaceSpecification
 import com.amazonaws.services.ec2.model.IpPermission
+import com.amazonaws.services.ec2.model.LaunchTemplateBlockDeviceMappingRequest
+import com.amazonaws.services.ec2.model.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest
+import com.amazonaws.services.ec2.model.LaunchTemplatePlacementRequest
+import com.amazonaws.services.ec2.model.LaunchTemplateSpecification
+import com.amazonaws.services.ec2.model.LaunchTemplateTagSpecificationRequest
+import com.amazonaws.services.ec2.model.LaunchTemplatesMonitoringRequest
 import com.amazonaws.services.ec2.model.Placement
 import com.amazonaws.services.ec2.model.RebootInstancesRequest
+import com.amazonaws.services.ec2.model.RequestLaunchTemplateData
 import com.amazonaws.services.ec2.model.RevokeSecurityGroupEgressRequest
 import com.amazonaws.services.ec2.model.RevokeSecurityGroupIngressRequest
 import com.amazonaws.services.ec2.model.RunInstancesRequest
@@ -72,6 +82,7 @@ import static com.eucalyptus.tests.awssdk.N4j.IAM_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.TOKENS_ENDPOINT
 import static com.eucalyptus.tests.awssdk.N4j.assumeThat
 import static com.eucalyptus.tests.awssdk.N4j.createAccount
+import static com.eucalyptus.tests.awssdk.N4j.createSecurityGroup
 import static com.eucalyptus.tests.awssdk.N4j.createUser
 import static com.eucalyptus.tests.awssdk.N4j.deleteAccount
 import static com.eucalyptus.tests.awssdk.N4j.eucaUUID
@@ -182,6 +193,7 @@ class TestEC2IAMConditionKeys {
                   "Condition": {
                     "ArnEquals": {
                       "ec2:InstanceProfile": "arn:aws:iam::123456789012:instance-profile/profile-1",
+                      "ec2:LaunchTemplate": "arn:aws:ec2::123456789012:launch-template/lt-00000000",
                       "ec2:ParentSnapshot": "arn:aws:ec2::123456789012:snapshot/snap-00000000",
                       "ec2:ParentVolume": "arn:aws:ec2::123456789012:volume/vol-00000000",
                       "ec2:PlacementGroup": "arn:aws:ec2::123456789012:placement-group/group-1",
@@ -192,6 +204,7 @@ class TestEC2IAMConditionKeys {
                     "Bool": {
                       "ec2:EbsOptimized": "false",
                       "ec2:Encrypted": "false",
+                      "ec2:IsLaunchTemplateResource": "true",
                       "ec2:Public": "true"
                     },
                     "DateGreaterThan": {
@@ -262,6 +275,7 @@ class TestEC2IAMConditionKeys {
                   {
                       "Effect": "Allow",
                       "Action": [ 
+                          "ec2:DeleteLaunchTemplate",
                           "ec2:DeleteSecurityGroup", 
                           "ec2:DeleteSnapshot", 
                           "ec2:DeleteVolume" 
@@ -279,6 +293,7 @@ class TestEC2IAMConditionKeys {
       ) )
     }
 
+    String launchTemplatedId = null
     String securityGroupId = null
     String volumeId = null
     String snapshotId = null
@@ -334,6 +349,23 @@ class TestEC2IAMConditionKeys {
         print( "Deleting security group ${securityGroupId}" )
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
       }
+
+      print( 'Creating launch template for delete test' )
+      launchTemplatedId = createLaunchTemplate( new CreateLaunchTemplateRequest(
+          launchTemplateName: 'tagged-resource-delete-test',
+          launchTemplateData: new RequestLaunchTemplateData(
+              monitoring: new LaunchTemplatesMonitoringRequest(enabled: false)
+          )
+      ) ).with {
+        launchTemplate.launchTemplateId
+      }
+      print( "Created launch template: ${launchTemplatedId}" )
+      Assert.assertNotNull( "Expected launchTemplatedId", launchTemplatedId )
+      cleanupTasks.add{
+        print( "Deleting launch template ${launchTemplatedId}" )
+        deleteLaunchTemplate( new DeleteLaunchTemplateRequest( launchTemplateId: launchTemplatedId ) )
+      }
+
     }
 
     print("Waiting for snapshot ${snapshotId}")
@@ -344,6 +376,14 @@ class TestEC2IAMConditionKeys {
         .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
         .build( )
     userEc2.with {
+      try {
+        print( "Attempting delete of untagged launch template ${launchTemplatedId} as user" )
+        deleteLaunchTemplate( new DeleteLaunchTemplateRequest( launchTemplateId: launchTemplatedId ) )
+        Assert.fail( 'Expected launch template delete to fail' )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+      }
+
       try {
         print( "Attempting delete of untagged security group ${securityGroupId} as user" )
         deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
@@ -371,9 +411,9 @@ class TestEC2IAMConditionKeys {
     }
 
     accountEc2.with {
-      print( "Tagging security group ${securityGroupId}, volume ${volumeId}, and snapshot ${snapshotId} with delete=true" )
+      print( "Tagging launch template ${launchTemplatedId}, security group ${securityGroupId}, volume ${volumeId}, and snapshot ${snapshotId} with delete=true" )
       createTags( new CreateTagsRequest(
-          resources: [ securityGroupId, volumeId, snapshotId ],
+          resources: [ launchTemplatedId, securityGroupId, volumeId, snapshotId ],
           tags: [
               new Tag( key: 'delete', value: 'true' )
           ]
@@ -384,6 +424,9 @@ class TestEC2IAMConditionKeys {
     N4j.sleep( tagWaitSeconds )
 
     userEc2.with {
+      print( "Attempting delete of tagged launch template ${launchTemplatedId} as user" )
+      deleteLaunchTemplate( new DeleteLaunchTemplateRequest( launchTemplateId: launchTemplatedId ) )
+
       print( "Attempting delete of tagged security group ${securityGroupId} as user" )
       deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
 
@@ -3015,6 +3058,224 @@ class TestEC2IAMConditionKeys {
         print( "Got expected exception: ${e}" )
       }
       void
+    }
+  }
+
+  @Test
+  void testRunInstancesWithPermittedLaunchTemplateOnly( ) {
+    String launchTemplateId1 = null
+    String launchTemplateId2 = null
+    String securityGroupId2 = null
+    accountEc2.with {
+      // Find an image to use
+      String imageId = describeImages( new DescribeImagesRequest(
+          filters: [
+              new Filter( name: 'image-type', values: ['machine'] ),
+              new Filter( name: 'is-public', values: ['true'] ),
+              new Filter( name: 'root-device-type', values: ['instance-store'] ),
+          ]
+      ) ).with {
+        images?.getAt( 0 )?.imageId
+      }
+      assumeThat( imageId != null, "Public instance-store image not found" )
+      print( "Using image: ${imageId}" )
+
+      // Find an AZ to use
+      String availabilityZone = describeAvailabilityZones( ).with{
+        availabilityZones?.getAt( 0 )?.zoneName
+      }
+      print( "Using availability zone: ${availabilityZone}" )
+      Assert.assertNotNull( "Expected availability zone", availabilityZone )
+
+      // Create security groups to use
+      String securityGroupId = createSecurityGroup( new CreateSecurityGroupRequest(
+          groupName: 'run-instances-test-sg-1',
+          description: 'Security group for run instances with launch template iam key test'
+      ) ).with{
+        groupId
+      }
+      print( "Created security group for test: ${securityGroupId}" )
+      Assert.assertNotNull( "Expected security group id", securityGroupId )
+      cleanupTasks.add{
+        print( "Deleting security group ${securityGroupId}" )
+        deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId ) )
+      }
+
+      securityGroupId2 = createSecurityGroup( new CreateSecurityGroupRequest(
+          groupName: 'run-instances-test-sg-2',
+          description: 'Security group for run instances with launch template iam key test'
+      ) ).with{
+        groupId
+      }
+      print( "Created override security group for test: ${securityGroupId2}" )
+      Assert.assertNotNull( "Expected security group id", securityGroupId2 )
+      cleanupTasks.add{
+        print( "Deleting security group ${securityGroupId2}" )
+        deleteSecurityGroup( new DeleteSecurityGroupRequest( groupId: securityGroupId2 ) )
+      }
+
+      print( 'Creating launch templates for run instances test' )
+      Closure<String> templateCreate = { suffix ->
+        String ltId = createLaunchTemplate( new CreateLaunchTemplateRequest(
+            launchTemplateName: "run-instances-test-${suffix}",
+            launchTemplateData: new RequestLaunchTemplateData(
+                blockDeviceMappings: [
+                  new LaunchTemplateBlockDeviceMappingRequest(
+                      deviceName: '/dev/vdz',
+                      noDevice: ''
+                  )
+                ],
+                disableApiTermination: false,
+                instanceType: N4j.INSTANCE_TYPE,
+                imageId: imageId,
+                monitoring: new LaunchTemplatesMonitoringRequest(enabled: false),
+                placement: new LaunchTemplatePlacementRequest(availabilityZone: availabilityZone),
+                securityGroupIds: [ securityGroupId ],
+                tagSpecifications: [
+                    new LaunchTemplateTagSpecificationRequest(
+                        resourceType: 'instance',
+                        tags: [
+                            new Tag(key: 'tag-1', value: 'value-1')
+                        ]
+                    )
+                ]
+            )
+        ) ).with {
+          launchTemplate.launchTemplateId
+        }
+        print( "Created launch template: ${ltId}" )
+        Assert.assertNotNull( "Expected launchTemplatedId", ltId )
+        cleanupTasks.add{
+          print( "Deleting launch template ${ltId}" )
+          deleteLaunchTemplate( new DeleteLaunchTemplateRequest( launchTemplateId: ltId ) )
+        }
+
+        ltId
+      }
+      launchTemplateId1 = templateCreate('1')
+      launchTemplateId2 = templateCreate('2')
+    }
+
+    accountIam.with{
+      putUserPolicy( new PutUserPolicyRequest(
+          userName: this.user,
+          policyName: 'ec2-instance-launch-template',
+          policyDocument: """\
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:RunInstances",
+                        "Resource": "*",
+                        "Condition": {
+                            "ArnLike": {
+                              "ec2:LaunchTemplate": "arn:aws:ec2::${accountNumber}:launch-template/${launchTemplateId1}"
+                            },
+                            "Bool": {
+                               "ec2:IsLaunchTemplateResource": "true"
+                            }
+                        }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action": "ec2:CreateTags",
+                        "Resource": [
+                          "arn:aws:ec2::${accountNumber}:instance/*"
+                        ],
+                        "Condition": {
+                            "StringEquals": {
+                                "ec2:CreateAction": "RunInstances"
+                            }
+                        }
+                    }
+                ]
+            }
+          """.stripIndent( )
+      ) )
+    }
+
+    String instanceId = null
+    AmazonEC2 userEc2 = AmazonEC2Client.builder( )
+        .withCredentials( userCredentials )
+        .withEndpointConfiguration( new EndpointConfiguration( EC2_ENDPOINT, "eucalyptus" ) )
+        .build( )
+    userEc2.with {
+      try {
+        print( "Launching instance from template without permission (should fail)" )
+        runInstances( new RunInstancesRequest(
+            minCount: 1,
+            maxCount: 1,
+            launchTemplate: new LaunchTemplateSpecification( launchTemplateId: launchTemplateId2 )
+        ) ).with {
+          instanceId = reservation?.instances?.getAt(0)?.instanceId
+        }
+        print( "Launched instance: ${instanceId}" )
+        if ( instanceId ) cleanupTasks.add{
+          print( "Terminating instance ${instanceId}" )
+          accountEc2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
+        }
+        Assert.fail( "Expected run instances to fail due to launch template permission" )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+      }
+
+      try {
+        print( "Launching instance from template with request resource (should fail)" )
+        runInstances( new RunInstancesRequest(
+            minCount: 1,
+            maxCount: 1,
+            launchTemplate: new LaunchTemplateSpecification( launchTemplateId: launchTemplateId2 ),
+            securityGroupIds: [ securityGroupId2 ]
+        ) ).with {
+          instanceId = reservation?.instances?.getAt(0)?.instanceId
+        }
+        print( "Launched instance: ${instanceId}" )
+        if ( instanceId ) cleanupTasks.add{
+          print( "Terminating instance ${instanceId}" )
+          accountEc2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
+        }
+        Assert.fail( "Expected run instances to fail due to non launch template resource" )
+      } catch ( AmazonServiceException e ) {
+        print( "Got expected exception: ${e}" )
+      }
+
+      print( "Launching instance from template" )
+      runInstances( new RunInstancesRequest(
+          minCount: 1,
+          maxCount: 1,
+          launchTemplate: new LaunchTemplateSpecification( launchTemplateId: launchTemplateId1 )
+      ) ).with {
+        instanceId = reservation?.instances?.getAt(0)?.instanceId
+      }
+
+      print( "Launched instance: ${instanceId}" )
+      Assert.assertNotNull( "Expected instance identifier", instanceId )
+      cleanupTasks.add{
+        print( "Terminating instance ${instanceId}" )
+        accountEc2.terminateInstances( new TerminateInstancesRequest( instanceIds: [ instanceId ] ) )
+      }
+    }
+
+    // Wait until running
+    print( 'Waiting for instances to be running...' )
+    waitForInstances( accountEc2, TimeUnit.MINUTES.toMillis( 2 ) )
+
+    accountEc2.with {
+      print( "Describing instance ${instanceId} to check tags" )
+      describeInstances( new DescribeInstancesRequest(
+          instanceIds: [instanceId],
+          filters: [
+              new Filter( name: 'tag-value', values: [ 'value-1' ] )
+          ]
+      ) ).with {
+        reservations?.getAt( 0 )?.instances?.getAt( 0 )?.with { instance ->
+          print( "Instance: ${instance}")
+          print( "Instance tags: ${tags}")
+          Assert.assertNotNull( 'instance tags', tags )
+          Assert.assertEquals( 'instance tag count', tags.size(), 1 )
+        }
+      }
     }
   }
 
