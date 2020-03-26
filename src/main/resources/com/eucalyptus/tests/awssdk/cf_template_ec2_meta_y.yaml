@@ -51,23 +51,10 @@ Conditions:
 
 Resources:
 
-  Vpc:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: '10.20.30.0/24'
-
-  Subnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: '10.20.30.0/24'
-      MapPublicIpOnLaunch: on
-      VpcId: !Ref Vpc
-
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Metadata test security group
-      VpcId: !Ref Vpc
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '22'
@@ -146,14 +133,13 @@ Resources:
         InstanceType: !Ref InstanceType
         Monitoring:
           Enabled: !Ref Monitoring
-        NetworkInterfaces:
-          - AssociatePublicIpAddress: !Ref AssociatePublicIpAddress
-            DeleteOnTermination: on
-            Description: Primary network interface
-            DeviceIndex: 0
-            Groups:
-              - !GetAtt SecurityGroup.GroupId
-            SubnetId: !Ref Subnet
+        Placement:
+          AvailabilityZone:
+            Fn::Select:
+              - '0'
+              - Fn::GetAZs: !Ref AWS::Region
+        SecurityGroupIds:
+          - !GetAtt SecurityGroup.GroupId
         TagSpecifications:
           -  ResourceType: instance
              Tags:
