@@ -167,6 +167,16 @@ class TestCFTemplatesShort {
             },
             "IpProtocol": "tcp"
           }
+        },
+        "LaunchTemplate": {
+          "Type": "AWS::EC2::LaunchTemplate",
+          "Properties": {
+            "LaunchTemplateData": {
+              "SecurityGroupIds": [ {
+                "Fn::GetAtt": [ "SecurityGroup", "GroupId" ]
+              } ]
+            }
+          }
         }
       }
     }

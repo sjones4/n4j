@@ -166,6 +166,14 @@ class TestCFTemplatesFull {
   }
 
   /**
+   * Test for ec2 metadata with yaml template (no instances)
+   */
+  @Test
+  void testEc2MetadataYamlTemplate( ) {
+    stackCreateDelete( 'ec2_meta_y', ['CAPABILITY_IAM'], [ 'ImageId': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE ] )
+  }
+
+  /**
    * Test for ec2 cfn-signal
    */
   @Test

@@ -17,9 +17,11 @@ import com.amazonaws.services.ec2.model.CreateDefaultSubnetRequest
 import com.amazonaws.services.ec2.model.CreateDefaultVpcRequest
 import com.amazonaws.services.ec2.model.CreateEgressOnlyInternetGatewayRequest
 import com.amazonaws.services.ec2.model.CreateKeyPairRequest
+import com.amazonaws.services.ec2.model.CreateLaunchTemplateRequest
 import com.amazonaws.services.ec2.model.CreateSecurityGroupRequest
 import com.amazonaws.services.ec2.model.DeleteEgressOnlyInternetGatewayRequest
 import com.amazonaws.services.ec2.model.DeleteKeyPairRequest
+import com.amazonaws.services.ec2.model.DeleteLaunchTemplateRequest
 import com.amazonaws.services.ec2.model.DeleteSecurityGroupRequest
 import com.amazonaws.services.ec2.model.DeleteSubnetRequest
 import com.amazonaws.services.ec2.model.DeleteVpcRequest
@@ -59,12 +61,14 @@ import com.amazonaws.services.ec2.model.InternetGateway
 import com.amazonaws.services.ec2.model.InternetGatewayAttachment
 import com.amazonaws.services.ec2.model.IpPermission
 import com.amazonaws.services.ec2.model.IpRange
+import com.amazonaws.services.ec2.model.LaunchTemplatesMonitoringRequest
 import com.amazonaws.services.ec2.model.ModifyHostsRequest
 import com.amazonaws.services.ec2.model.PurchaseHostReservationRequest
 import com.amazonaws.services.ec2.model.PurchaseRequest
 import com.amazonaws.services.ec2.model.PurchaseScheduledInstancesRequest
 import com.amazonaws.services.ec2.model.ReleaseAddressRequest
 import com.amazonaws.services.ec2.model.ReleaseHostsRequest
+import com.amazonaws.services.ec2.model.RequestLaunchTemplateData
 import com.amazonaws.services.ec2.model.RevokeSecurityGroupIngressRequest
 import com.amazonaws.services.ec2.model.RunScheduledInstancesRequest
 import com.amazonaws.services.ec2.model.ScheduledInstanceRecurrenceRequest
@@ -245,6 +249,80 @@ class TestEC2Api {
           groupNames: [ name ]
       ) ).with {
         Assert.assertEquals( 'Groups by name', [ ], securityGroups.collect{ it.groupName } )
+      }
+    }
+  }
+
+  @Test
+  void testLaunchTemplateCreateDelete( ) {
+    N4j.print( "Testing launch template create/delete" )
+    ec2Client.with {
+      final String name = 'template'
+      N4j.print( "Creating launch template named ${name}" )
+      String launchTemplateId = createLaunchTemplate( new CreateLaunchTemplateRequest(
+          launchTemplateName: name,
+          launchTemplateData: new RequestLaunchTemplateData(
+              disableApiTermination: false,
+              monitoring: new LaunchTemplatesMonitoringRequest(enabled: false)
+          )
+      ) ).with {
+        launchTemplate.launchTemplateId
+      }
+      Assert.assertNotNull( 'Launch template id', launchTemplateId )
+      N4j.print( "Created launch template with id ${launchTemplateId}" )
+
+      N4j.print( "Describing launch templates named ${name}" )
+      describeLaunchTemplates( new DescribeLaunchTemplatesRequest(
+          launchTemplateNames: [ name ]
+      ) ).with {
+        Assert.assertEquals( 'Launch templates by name', [ name ], launchTemplates.collect{ it.launchTemplateName } )
+        Assert.assertEquals( 'Launch templates by id', [ launchTemplateId ], launchTemplates.collect{ it.launchTemplateId } )
+      }
+
+      N4j.print( "Describing launch templates named invalid" )
+      describeLaunchTemplates( new DescribeLaunchTemplatesRequest(
+          launchTemplateNames: [ 'invalid' ]
+      ) ).with {
+        Assert.assertEquals( 'Launch templates by name', [ ], launchTemplates.collect{ it.launchTemplateName } )
+      }
+
+      N4j.print( "Describing launch templates named ${name} (using filter)" )
+      describeLaunchTemplates( new DescribeLaunchTemplatesRequest(
+          filters: [
+              new Filter(name: 'launch-template-name', values: [name])
+          ]
+      ) ).with {
+        Assert.assertEquals( 'Launch templates by name', [ name ], launchTemplates.collect{ it.launchTemplateName } )
+        Assert.assertEquals( 'Launch templates by id', [ launchTemplateId ], launchTemplates.collect{ it.launchTemplateId } )
+      }
+
+      N4j.print( "Describing launch templates named invalid (using filter)" )
+      describeLaunchTemplates( new DescribeLaunchTemplatesRequest(
+          filters: [
+              new Filter(name: 'launch-template-name', values: ['invalid'])
+          ]
+      ) ).with {
+        Assert.assertEquals( 'Launch templates by name', [ ], launchTemplates.collect{ it.launchTemplateName } )
+      }
+
+      N4j.print( "Describing launch templates with id ${launchTemplateId}" )
+      describeLaunchTemplates( new DescribeLaunchTemplatesRequest(
+          launchTemplateIds: [ launchTemplateId ]
+      ) ).with {
+        Assert.assertEquals( 'Launch templates by name', [ name ], launchTemplates.collect{ it.launchTemplateName } )
+        Assert.assertEquals( 'Launch templates by id', [ launchTemplateId ], launchTemplates.collect{ it.launchTemplateId } )
+      }
+
+      N4j.print( "Deleting launch template named ${name}" )
+      deleteLaunchTemplate( new DeleteLaunchTemplateRequest(
+          launchTemplateName: name
+      ) )
+
+      N4j.print( "Describing launch templates named ${name} to verify deleted" )
+      describeLaunchTemplates( new DescribeLaunchTemplatesRequest(
+          launchTemplateNames: [ name ]
+      ) ).with {
+        Assert.assertEquals( 'Launch templates by name', [ ], launchTemplates.collect{ it.launchTemplateName } )
       }
     }
   }
@@ -872,14 +950,6 @@ class TestEC2Api {
               new Filter( name: 'instance-id', values: [ 'i-00000000000000000' ] )
           ],
           instanceIds: [ 'i-00000000000000000' ]
-      ))
-
-      describeLaunchTemplates(new DescribeLaunchTemplatesRequest(
-          filters: [
-              new Filter( name: 'launch-template-name', values: [ '*' ] )
-          ],
-          launchTemplateIds: [ 'lt-00000000000000000' ],
-          launchTemplateNames: [ 'LaunchTemplate1' ]
       ))
 
       describeLaunchTemplateVersions(new DescribeLaunchTemplateVersionsRequest(
