@@ -13,6 +13,7 @@ import org.junit.runners.Suite.SuiteClasses;
     AutoScalingShortSuite.class,
     CloudFormationShortSuite.class,
     CloudWatchSuite.class,
+    DnsSuite.class,
     Ec2ShortSuite.class,
     ElbShortSuite.class,
     IamSuite.class,
