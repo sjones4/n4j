@@ -111,31 +111,20 @@ class TestCFTemplatesFull {
     }
   }
 
-  private String clookup( String cname, Set<String> dnsServers ) {
-    final Hashtable<String,String> env = new Hashtable<>()
-    env.put( Context.INITIAL_CONTEXT_FACTORY, 'com.sun.jndi.dns.DnsContextFactory' )
-    env.put( Context.PROVIDER_URL, dnsServers.collect{ ip -> "dns://${ip}/" }.join( ' ' ) )
-    env.put( Context.AUTHORITATIVE, 'true' )
-    final DirContext ictx = new InitialDirContext( env )
-    try {
-      final Attributes attrs = ictx.getAttributes( cname, ['CNAME'] as String[] )
-      final String name = attrs.get('cname')?.get( )
-      return name
-    } finally {
-      ictx.close()
-    }
+  private String lookup( String name, Set<String> dnsServers ) {
+    lookup( name, 'A', dnsServers)
   }
 
-  private String lookup( String name, Set<String> dnsServers ) {
+  private String lookup( String name, String type, Set<String> dnsServers ) {
     final Hashtable<String,String> env = new Hashtable<>()
     env.put( Context.INITIAL_CONTEXT_FACTORY, 'com.sun.jndi.dns.DnsContextFactory' )
     env.put( Context.PROVIDER_URL, dnsServers.collect{ ip -> "dns://${ip}/" }.join( ' ' ) )
     env.put( Context.AUTHORITATIVE, 'true' )
     final DirContext ictx = new InitialDirContext( env )
     try {
-      final Attributes attrs = ictx.getAttributes( name, ['A'] as String[] )
-      final String ip = attrs.get('a')?.get( )
-      return ip
+      final Attributes attrs = ictx.getAttributes( name, [type.toUpperCase()] as String[] )
+      final String value = attrs.get(type.toLowerCase())?.get( )
+      return value
     } finally {
       ictx.close()
     }
@@ -594,7 +583,7 @@ class TestCFTemplatesFull {
         N4j.print( "Verifying hosted zone default records (soa/ns) : ${hostedZoneId}" )
         listResourceRecordSets(new ListResourceRecordSetsRequest(hostedZoneId: hostedZoneId)).with {
           Assert.assertNotNull('ResourceRecordSets', resourceRecordSets)
-          Assert.assertEquals('ResourceRecordSets count', 8, resourceRecordSets.size())
+          Assert.assertEquals('ResourceRecordSets count', 10, resourceRecordSets.size())
           resourceRecordSets.each { rrset ->
             if ('SOA'.equals(rrset.type)) {
               Assert.assertEquals('RRSET name', 'example.com.', rrset.name)
@@ -636,7 +625,7 @@ class TestCFTemplatesFull {
       Set<String> dnsHosts = getDnsHosts(getServicesClient(testAcctAdminCredentials))
       N4j.waitForIt('zone dns', { time ->
         try {
-          lookup('name.example.com', dnsHosts)
+          lookup('name.example.com', 'A', dnsHosts)
           return true
         } catch (Exception e) {
           return false;
@@ -650,7 +639,7 @@ class TestCFTemplatesFull {
           'a4.example.com': '10.20.30.43',
       ].forEach( { String name, String ip ->
         N4j.print( "Looking up name ${name}" )
-        String resolvedIp = lookup(name, dnsHosts)
+        String resolvedIp = lookup(name, 'A', dnsHosts)
         Assert.assertNotNull("Expected ip for ${name}", resolvedIp)
         Assert.assertEquals("Resolved ip for ${name}", ip, resolvedIp)
       } )
@@ -658,9 +647,18 @@ class TestCFTemplatesFull {
           'cname.example.com': 'name.example.com.',
       ].forEach( { String cname, String name ->
         N4j.print( "Looking up cname ${cname}" )
-        String resolvedName = clookup(cname, dnsHosts)
+        String resolvedName = lookup(cname, 'CNAME', dnsHosts)
         Assert.assertNotNull("Expected name for ${cname}", resolvedName)
         Assert.assertEquals("Resolved name for ${cname}", name, resolvedName)
+      } )
+      [
+          'txt.example.com': 'txtrecord',
+          'txtrec.subdomain.example.com': 'txtrec',
+      ].forEach( { String name, String value ->
+        N4j.print( "Looking up txt record ${name}" )
+        String resolvedTxt = lookup(name, 'TXT', dnsHosts)
+        Assert.assertNotNull("Expected txt for ${name}", resolvedTxt)
+        Assert.assertEquals("Resolved txt for ${name}", value, resolvedTxt)
       } )
 
       null
