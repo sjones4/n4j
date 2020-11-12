@@ -7,6 +7,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.ec2.model.AllocateAddressRequest
 import com.amazonaws.services.ec2.model.AllocateHostsRequest
 import com.amazonaws.services.ec2.model.AssignIpv6AddressesRequest
 import com.amazonaws.services.ec2.model.AssociateSubnetCidrBlockRequest
@@ -135,6 +136,36 @@ class TestEC2Api {
       describeAddresses( ).with {
         Assert.assertEquals( "Allocated address list", [ ], addresses?.collect{ it.publicIp } )
       }
+    }
+  }
+
+  @Test
+  void testElasticIpRecovery( ){
+    N4j.print( "Testing allocate, release and recover for an elastic ip" )
+    ec2Client.with {
+      String ip = allocateAddress( ).with {
+        publicIp
+      }
+      N4j.print( "Allocated elastic ip ${ip}" )
+
+      releaseAddress( new ReleaseAddressRequest(
+          publicIp: ip
+      ) )
+
+      N4j.print( "Released elastic ip ${ip}" )
+
+      String ip2 = allocateAddress( new AllocateAddressRequest( address: ip ) ).with {
+        publicIp
+      }
+      N4j.print( "Recovered elastic ip ${ip2}" )
+
+      releaseAddress( new ReleaseAddressRequest(
+          publicIp: ip2
+      ) )
+
+      N4j.print( "Released elastic ip ${ip2}" )
+
+      Assert.assertEquals( "Recovered expected ip", ip, ip2 )
     }
   }
 
