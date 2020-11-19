@@ -620,6 +620,17 @@ class TestRoute53Api {
                               evaluateTargetHealth: false
                           )
                       )
+                  ),
+                  new Change(
+                      action: 'CREATE',
+                      resourceRecordSet: new ResourceRecordSet(
+                          name: 'txt.example.com.',
+                          type: 'TXT',
+                          TTL: 600,
+                          resourceRecords: [
+                              new ResourceRecord(value: '"textcontent"')
+                          ]
+                      )
                   )
               ]
           )
@@ -689,6 +700,17 @@ class TestRoute53Api {
                               hostedZoneId: hostedZoneId,
                               evaluateTargetHealth: false
                           )
+                      )
+                  ),
+                  new Change(
+                      action: 'DELETE',
+                      resourceRecordSet: new ResourceRecordSet(
+                          name: 'txt.example.com.',
+                          type: 'TXT',
+                          TTL: 600,
+                          resourceRecords: [
+                              new ResourceRecord(value: '"textcontent"')
+                          ]
                       )
                   )
               ]

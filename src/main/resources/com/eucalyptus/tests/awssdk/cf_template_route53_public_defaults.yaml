@@ -90,6 +90,22 @@ Resources:
             DNSName: !Sub "a3.${Zone}"
             EvaluateTargetHealth: no
             HostedZoneId: !Ref HostedZone
+        - Name: !Sub "txt.${Zone}"
+          Type: TXT
+          TTL: 300
+          ResourceRecords:
+            - '"txtrecord"'
+
+  RecordSetTxt:
+    Type: AWS::Route53::RecordSet
+    DependsOn: HostedZone
+    Properties:
+      HostedZoneName: !Ref Zone
+      Name: !Sub "txtrec.subdomain.${Zone}"
+      ResourceRecords:
+        - '"txtrec"'
+      TTL: 300
+      Type: TXT
 
 Outputs:
 
