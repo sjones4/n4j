@@ -63,7 +63,7 @@
     "WebServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
-        "AvailabilityZones" : { "Fn::GetAZs" : ""},
+        "AvailabilityZones" : [ { "Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ] } ],
         "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
         "MinSize" : "1",
         "MaxSize" : "3",
@@ -176,7 +176,7 @@
           "Enabled" : true,
           "S3BucketName" : { "Ref" : "Bucket" }
         },
-        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "AvailabilityZones" : [ { "Fn::Select" : [ "0", { "Fn::GetAZs" : "" } ] } ],
         "CrossZone" : "true",
         "HealthCheck" : {
           "Target" : "HTTP:80/",
