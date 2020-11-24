@@ -78,11 +78,20 @@ class TestEC2EbsImageRegistration {
       N4j.print("Running instance to write image to volume")
       String userDataText = """\
           #!/bin/bash
-          while [ ! -e /dev/vdc ] ; do
-            echo "Waiting for /dev/vdc"
+          while true; do
+            DEVICE_PATTERN='^[sv]d[cdef]\$'
+            curl --fail http://169.254.169.254/latest/meta-data/block-device-mapping/ephemeral1 &>/dev/null
+            [ \${?} -eq 0 ] || DEVICE_PATTERN='^[sv]d[bcdef]\$'
+            DEVICE_NAME=\$(lsblk --list --noheadings | cut --delimiter=' ' --fields=1 --only-delimited | grep \${DEVICE_PATTERN} | sort -u | tail -1)
+            if [ -z "\${DEVICE_NAME}" ] ; then
+              echo "Waiting for volume device"
+            elif [ -e /dev/\${DEVICE_NAME} ] ; then
+              break
+            fi
             sleep 10
           done
-          curl ${imageLocation} | tar -xzOf - CentOS-7-x86_64-GenericCloud-1801-01.raw > /dev/vdc
+          echo "Writing to device /dev/\${DEVICE_NAME}"
+          curl ${imageLocation} | tar -xzOf - CentOS-7-x86_64-GenericCloud-1801-01.raw > /dev/\${DEVICE_NAME}
           """.stripIndent( ).trim( )
       String instanceId = ec2.runInstances(new RunInstancesRequest(
           minCount: 1,
