@@ -91,7 +91,7 @@ class TestEC2EbsImageRegistration {
             sleep 10
           done
           echo "Writing to device /dev/\${DEVICE_NAME}"
-          curl ${imageLocation} | tar -xzOf - CentOS-7-x86_64-GenericCloud-1801-01.raw > /dev/\${DEVICE_NAME}
+          curl -sS ${imageLocation} | tar -xzOf - CentOS-7-x86_64-GenericCloud-1801-01.raw | cat > /dev/\${DEVICE_NAME}
           """.stripIndent( ).trim( )
       String instanceId = ec2.runInstances(new RunInstancesRequest(
           minCount: 1,
