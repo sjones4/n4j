@@ -373,7 +373,7 @@ class LoadBalancerChurnLoadTest {
 
                   N4j.print("[${thread}] Resolving load balancer ${count}/${elbIterations} host ${balancerHost}")
                   String balancerIp = null
-                  (1..12).find {
+                  (1..24).find {
                     if (it > 1) sleep 5000
                     balancerIp = lookup(balancerHost, dnsHosts)
                   }
@@ -394,6 +394,9 @@ class LoadBalancerChurnLoadTest {
                         sleep 5000
                       } else if ( e.message.contains('Connection refused' ) ) { // retry
                         N4j.print("[${thread}] Connection refused, will retry in 5s accessing instance ${instanceId} via load balancer ${count}/${elbIterations} ${balancerUrl}")
+                        sleep 5000
+                      } else if ( e.message.contains('connect timed out' ) ) { // retry
+                        N4j.print("[${thread}] Connection timed out, will retry in 5s accessing instance ${instanceId} via load balancer ${count}/${elbIterations} ${balancerUrl}")
                         sleep 5000
                       } else {
                         throw e
