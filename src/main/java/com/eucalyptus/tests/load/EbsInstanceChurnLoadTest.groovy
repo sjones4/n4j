@@ -232,10 +232,9 @@ class EbsInstanceChurnLoadTest {
                 launchedCount.incrementAndGet( )
 
                 N4j.print("[${thread}] Waiting for instance ${count}/${iterations} ${instanceId} to be running")
-                N4j.waitForIt( "Instance launch", {
+                N4j.waitForIt( "Instance launch", { time ->
                   String instanceState = describeInstances( new DescribeInstancesRequest(
                       filters: [
-                          new Filter( name: 'instance-state-name', values: [ 'pending', 'running' ] ),
                           new Filter( name: 'instance-id', values: [ instanceId ] ),
                       ]
                   ) ).with {
@@ -254,12 +253,9 @@ class EbsInstanceChurnLoadTest {
                     true
                   } else if ( instanceState == 'pending' ) {
                     false
-                  } else if ( instanceState == null && iter < 5 ) {
+                  } else if ( instanceState == null && TimeUnit.MILLISECONDS.toMinutes(time) < 2 ) {
                     N4j.print( "[${thread}] Null instance state ${count}/${iterations} ${instanceId}, treating as pending" )
                     false
-                  } else if ( instanceState == null ) {
-                    N4j.print( "[${thread}] Null instance state ${count}/${iterations} ${instanceId}, treating as running (will attempt terminate)" )
-                    true
                   } else {
                     fail( "[${thread}] Unexpected instance ${count}/${iterations} ${instanceId} state ${instanceState}"  )
                   }
@@ -290,10 +286,9 @@ class EbsInstanceChurnLoadTest {
                 ) )
 
                 N4j.print( "[${thread}] Waiting for instance ${count}/${iterations} ${instanceId} to be terminated" )
-                N4j.waitForIt( "Instance terminate", {
+                N4j.waitForIt( "Instance terminate", { time ->
                   String instanceState = describeInstances( new DescribeInstancesRequest(
                       filters: [
-                          new Filter( name: 'instance-state-name', values: [ 'shutting-down', 'terminated' ] ),
                           new Filter( name: 'instance-id', values: [ instanceId ] ),
                       ]
                   ) ).with {
@@ -309,7 +304,24 @@ class EbsInstanceChurnLoadTest {
                   }
                   if ( instanceState == 'terminated' ) {
                     true
+                  } else if ( instanceState == 'stopped' ) {
+                    N4j.print( "[${thread}] Instance stopped ${count}/${iterations} ${instanceId} terminating"  )
+                    terminateInstances( new TerminateInstancesRequest(
+                        instanceIds: [ instanceId ]
+                    ) )
+                    true
                   } else if ( instanceState == 'shutting-down' ) {
+                    false
+                  } else if ( instanceState == 'running' && TimeUnit.MILLISECONDS.toMinutes(time) < 2 ) {
+                    false
+                  } else if ( instanceState == 'running' ) {
+                    N4j.print( "[${thread}] Instance in running state ${count}/${iterations} ${instanceId}, terminating again" )
+                    terminateInstances( new TerminateInstancesRequest(
+                        instanceIds: [ instanceId ]
+                    ) )
+                    false
+                  } else if ( instanceState == null && TimeUnit.MILLISECONDS.toMinutes(time) < 2 ) {
+                    N4j.print( "[${thread}] Null instance state ${count}/${iterations} ${instanceId}, treating as shutting-down" )
                     false
                   } else if ( instanceState == null ) {
                     N4j.print( "[${thread}] Null instance state ${count}/${iterations} ${instanceId}, treating as terminated" )
@@ -329,10 +341,21 @@ class EbsInstanceChurnLoadTest {
                   describeSnapshots( new DescribeSnapshotsRequest( snapshotIds: [snapshotId] ) ).with {
                     'completed' == snapshots?.getAt(0)?.state
                   }
-                }, TimeUnit.MINUTES.toMillis(20) )
+                }, TimeUnit.MINUTES.toMillis(30) )
 
-                N4j.print("[${thread}] Deleting volume ${volumeId} ${count}/${iterations}")
-                deleteVolume(new DeleteVolumeRequest(volumeId: volumeId))
+                (1..5).find { attemptNumber ->
+                  N4j.print( "[${thread}] Deleting volume ${volumeId} attempt ${attemptNumber} ${count}/${iterations}" )
+                  try {
+                    deleteVolume( new DeleteVolumeRequest( volumeId: volumeId ) )
+                    true
+                  } catch ( AmazonServiceException e ) {
+                    if ( attemptNumber == 5 ) throw e
+                    N4j.print( "${e.serviceName}/${e.errorCode}: ${e.errorMessage}" )
+                    N4j.print( "[${thread}] Sleeping before retry of delete volume ${volumeId} attempt ${attemptNumber} ${count}/${iterations}" )
+                    N4j.sleep( 2 )
+                    false
+                  }
+                }
 
                 N4j.print( "[${thread}] Registering image for snapshot ${snapshotId} ${count}/${iterations}" )
                 lastRegisteredImageId = registerImage( new RegisterImageRequest(
