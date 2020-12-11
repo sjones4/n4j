@@ -41,6 +41,7 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 import javax.naming.Context
+import javax.naming.NameNotFoundException
 import javax.naming.directory.Attributes
 import javax.naming.directory.DirContext
 import javax.naming.directory.InitialDirContext
@@ -122,9 +123,11 @@ class TestCFTemplatesFull {
     env.put( Context.AUTHORITATIVE, 'true' )
     final DirContext ictx = new InitialDirContext( env )
     try {
-      final Attributes attrs = ictx.getAttributes( name, [type.toUpperCase()] as String[] )
-      final String value = attrs.get(type.toLowerCase())?.get( )
+      final Attributes attrs = ictx.getAttributes(name, [type.toUpperCase()] as String[])
+      final String value = attrs.get(type.toLowerCase())?.get()
       return value
+    } catch (NameNotFoundException ex) {
+      return null
     } finally {
       ictx.close()
     }
