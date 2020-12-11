@@ -9,6 +9,7 @@ import com.amazonaws.services.cloudformation.model.CreateStackRequest
 import com.amazonaws.services.cloudformation.model.DeleteStackRequest
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest
 import com.eucalyptus.tests.awssdk.N4j
+import com.github.sjones4.youcan.youprop.model.ModifyPropertyValueRequest
 import org.junit.AfterClass
 import org.junit.Assert
 import org.junit.BeforeClass
@@ -273,6 +274,14 @@ class StackChurnLoadTest {
     try {
       final int threads = 20
       final int stacks  = 25
+
+      N4j.print( "Increasing limit for vpc security groups" )
+      N4j.getPropertiesClient(cloudAdminCredentials).with {
+        modifyPropertyValue( new ModifyPropertyValueRequest(  )
+            .withName( "cloud.vpc.securitygroupspervpc" )
+            .withValue( "10000" ) );
+      }
+
       N4j.print( "Creating ${stacks} stacks in ${threads} threads" )
       final AtomicInteger successCount = new AtomicInteger(0)
       final CountDownLatch latch = new CountDownLatch( threads )
