@@ -3,10 +3,13 @@ package com.eucalyptus.tests.awssdk;
 import static com.eucalyptus.tests.awssdk.N4j.S3_ENDPOINT;
 import static com.eucalyptus.tests.awssdk.N4j.assertThat;
 import static com.eucalyptus.tests.awssdk.N4j.eucaUUID;
+import static com.eucalyptus.tests.awssdk.N4j.getCloudInfo;
 import static com.eucalyptus.tests.awssdk.N4j.initS3ClientWithNewAccount;
 import static com.eucalyptus.tests.awssdk.N4j.print;
 import static com.eucalyptus.tests.awssdk.N4j.testInfo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -35,9 +38,13 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.BucketAccelerateConfiguration;
 import com.amazonaws.services.s3.model.BucketLoggingConfiguration;
+import com.amazonaws.services.s3.model.BucketNotificationConfiguration;
+import com.amazonaws.services.s3.model.BucketReplicationConfiguration;
 import com.amazonaws.services.s3.model.BucketTaggingConfiguration;
 import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
+import com.amazonaws.services.s3.model.BucketWebsiteConfiguration;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.Grant;
@@ -80,6 +87,7 @@ public class S3BucketTests {
   public static void init() throws Exception {
     print("### PRE SUITE SETUP - " + S3BucketTests.class.getSimpleName());
     System.setProperty("sun.net.http.allowRestrictedHeaders", "true"); // enable host header override for cname test
+    getCloudInfo();
     try {
       account = S3BucketTests.class.getSimpleName().toLowerCase();
       s3 = initS3ClientWithNewAccount(account, "admin");
@@ -192,28 +200,53 @@ public class S3BucketTests {
 
     boolean error;
 
-    error = false;
-    try {
+    if ( N4j.isAtLeastEucalyptusVersion("5.1.0") ) {
       print(account + ": Fetching bucket notification configuration for " + bucketName);
-      s3.getBucketNotificationConfiguration(bucketName);
-    } catch (AmazonServiceException ase) {
-      verifyException(ase);
-      error = true;
-    } finally {
-      assertTrue("Expected to receive a 501 NotImplemented error but did not", error);
-    }
+      BucketNotificationConfiguration notificationConfiguration = s3.getBucketNotificationConfiguration(bucketName);
+      assertNotNull("Notification configuration for " + bucketName, notificationConfiguration);
 
-    error = false;
-    try {
-      print(account + ": Fetching bucket website configuration for " + bucketName);
-      s3.getBucketWebsiteConfiguration(bucketName);
-    } catch (AmazonServiceException ase) {
-      verifyException(ase);
-      error = true;
-    } finally {
-      assertTrue("Expected to receive a 501 NotImplemented error but did not", error);
-    }
+      print(account + ": Fetching bucket accelerate configuration for " + bucketName);
+      BucketAccelerateConfiguration accelerateConfiguration = s3.getBucketAccelerateConfiguration(bucketName);
+      assertNotNull("Accelerate configuration for " + bucketName, accelerateConfiguration);
 
+      try {
+        print(account + ": Fetching bucket replication configuration for " + bucketName);
+        BucketReplicationConfiguration replicationConfiguration = s3.getBucketReplicationConfiguration(bucketName);
+        assertNull("Replication configuration for " + bucketName, replicationConfiguration);
+      } catch ( AmazonServiceException e ) {
+        assertEquals("Replication error", "ReplicationConfigurationNotFoundError", e.getErrorCode());
+      }
+
+      try {
+        print(account + ": Fetching bucket website configuration for " + bucketName);
+        BucketWebsiteConfiguration websiteConfiguration = s3.getBucketWebsiteConfiguration(bucketName);
+        assertNull("Website configuration for " + bucketName, websiteConfiguration);
+      } catch ( AmazonServiceException e ) {
+        assertEquals("Website error", "NoSuchWebsiteConfiguration", e.getErrorCode());
+      }
+    } else { // 501 NotImplemented expected
+      error = false;
+      try {
+        print(account + ": Fetching bucket notification configuration for " + bucketName);
+        s3.getBucketNotificationConfiguration(bucketName);
+      } catch (AmazonServiceException ase) {
+        verifyException(ase);
+        error = true;
+      } finally {
+        assertTrue("Expected to receive a 501 NotImplemented error but did not", error);
+      }
+
+      error = false;
+      try {
+        print(account + ": Fetching bucket website configuration for " + bucketName);
+        s3.getBucketWebsiteConfiguration(bucketName);
+      } catch (AmazonServiceException ase) {
+        verifyException(ase);
+        error = true;
+      } finally {
+        assertTrue("Expected to receive a 501 NotImplemented error but did not", error);
+      }
+    }
   }
 
   /**
