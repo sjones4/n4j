@@ -13,6 +13,7 @@ import com.amazonaws.services.ec2.model.DescribeImagesRequest
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.Filter
 import com.amazonaws.services.ec2.model.IpPermission
+import com.amazonaws.services.ec2.model.IpRange
 import com.amazonaws.services.ec2.model.Placement
 import com.amazonaws.services.ec2.model.RunInstancesRequest
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest
@@ -160,6 +161,21 @@ class TestELBEC2Instance {
               Assert.assertTrue("Expected vpc ${vpcId}, but was: ${VPCId}", VPCId == vpcId)
               Assert.assertTrue("Expected one subnet, but was: ${subnets}", subnets != null && subnets.size()==1)
               Assert.assertTrue("Expected one (VPC) security group, but was: ${securityGroups}", securityGroups != null && securityGroups.size()==1)
+              ec2.with {
+                String groupId = securityGroups.get(0)
+                N4j.print("Ensuring port open in elb security group: ${groupId}")
+                authorizeSecurityGroupIngress( new AuthorizeSecurityGroupIngressRequest(
+                        groupId: groupId,
+                        ipPermissions: [
+                                new IpPermission(
+                                        ipProtocol: 'tcp',
+                                        fromPort: 80,
+                                        toPort: 80,
+                                        ipv4Ranges: [new IpRange(cidrIp: '0.0.0.0/0')]
+                                )
+                        ]
+                ))
+              }
             } else {
               Assert.assertTrue("Expected no vpc, but was: ${VPCId}", VPCId == null)
               Assert.assertTrue("Expected no subnets, but was: ${subnets}", subnets == null || subnets.isEmpty())
