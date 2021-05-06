@@ -201,13 +201,18 @@ class TestELBEC2EBSInstance {
                       toPort: 22,
                       ipRanges: [ '0.0.0.0/0' ]
                   ),
-                  new IpPermission(
-                      ipProtocol: 'tcp',
-                      fromPort: 9999,
-                      toPort: 9999,
-                      ipRanges: [ '0.0.0.0/0' ]
-                  ),
               ]
+          ))
+          authorizeSecurityGroupIngress( new AuthorizeSecurityGroupIngressRequest(
+                  groupId: instanceGroupId,
+                  ipPermissions: [
+                          new IpPermission(
+                                  ipProtocol: 'tcp',
+                                  fromPort: 9999,
+                                  toPort: 9999,
+                                  ipRanges: [ '0.0.0.0/0' ]
+                          ),
+                  ]
           ))
 
           String userDataText = '''       
