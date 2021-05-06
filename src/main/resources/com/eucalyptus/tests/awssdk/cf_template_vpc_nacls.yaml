@@ -635,6 +635,7 @@ Resources:
                COND_DATA="${!COND_DATA}, TEST101"
                COND_REASON="complete"
           runcmd:
+           - while ! ip link show eth1 ; do sleep 15 ; done
            - ip link set dev eth1 up
            - ip address add 10.13.202.202/24 dev eth1
            - ip route add 10.13.128.0/17 via 10.13.202.1 dev eth1 src 10.13.202.202
@@ -716,6 +717,7 @@ Resources:
                COND_DATA="${!COND_DATA}, TEST101"
                COND_REASON="complete"
           runcmd:
+           - while ! ip link show eth1 ; do sleep 15 ; done
            - ip link set dev eth1 up
            - ip address add 10.13.204.204/24 dev eth1
            - ip route add 10.13.128.0/17 via 10.13.204.1 dev eth1 src 10.13.204.204
