@@ -282,22 +282,26 @@ class TestELBEC2Instance {
                 String groupId = securityGroups.get(0)
                 N4j.print("Ensuring ports open in elb security group: ${groupId}")
                 authorizeSecurityGroupIngress( new AuthorizeSecurityGroupIngressRequest(
-                        groupId: groupId,
-                        ipPermissions: [
-                                new IpPermission(
-                                        ipProtocol: 'tcp',
-                                        fromPort: 80,
-                                        toPort: 80,
-                                        ipv4Ranges: [new IpRange(cidrIp: '0.0.0.0/0')]
-                                ),
-                                new IpPermission(
-                                        ipProtocol: 'tcp',
-                                        fromPort: 443,
-                                        toPort: 443,
-                                        ipv4Ranges: [new IpRange(cidrIp: '0.0.0.0/0')]
-                                )
-
-                        ]
+                    groupId: groupId,
+                    ipPermissions: [
+                        new IpPermission(
+                            ipProtocol: 'tcp',
+                            fromPort: 80,
+                            toPort: 80,
+                            ipv4Ranges: [new IpRange(cidrIp: '0.0.0.0/0')]
+                        )
+                    ]
+                ))
+                authorizeSecurityGroupIngress( new AuthorizeSecurityGroupIngressRequest(
+                    groupId: groupId,
+                    ipPermissions: [
+                        new IpPermission(
+                            ipProtocol: 'tcp',
+                            fromPort: 443,
+                            toPort: 443,
+                            ipv4Ranges: [new IpRange(cidrIp: '0.0.0.0/0')]
+                        )
+                    ]
                 ))
               }
             } else {
@@ -389,13 +393,18 @@ class TestELBEC2Instance {
                       fromPort: 22,
                       toPort: 22,
                       ipRanges: [ '0.0.0.0/0' ]
-                  ),
+                  )
+              ]
+          ))
+          authorizeSecurityGroupIngress( new AuthorizeSecurityGroupIngressRequest(
+              groupId: instanceGroupId,
+              ipPermissions: [
                   new IpPermission(
                       ipProtocol: 'tcp',
                       fromPort: 9999,
                       toPort: 9999,
                       ipRanges: [ '0.0.0.0/0' ]
-                  ),
+                  )
               ]
           ))
 
