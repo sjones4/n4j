@@ -1,0 +1,242 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Load balancer with auto scaled instance template
+
+Parameters:
+
+  ElbAccountId:
+    Description: Elastic load balancing v2 account id for the region
+    Type: String
+
+  InstanceType:
+    Description: Instance type for autoscaled target instances
+    Type: String
+    Default: t2.micro
+
+  ImageId:
+    Description: Identifier of the centos/rhel image for autoscaled target instances
+    Type: String
+
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+
+Conditions:
+
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref KeyName
+      - ''
+
+Resources:
+
+  Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Bucket
+      PolicyDocument:
+        Version: 2008-10-17
+        Statement:
+          - Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${Bucket}/logs/AWSLogs/${AWS::AccountId}/*"
+            Principal:
+              AWS: !Ref ElbAccountId
+            Action: s3:PutObject
+
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: n4j.eucalyptuscloud.net
+      HostedZoneConfig:
+        Comment: !Sub "Public zone for n4j.eucalyptuscloud.net"
+
+  AliasRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Sub "elb.n4j.eucalyptuscloud.net"
+      AliasTarget:
+        DNSName: !GetAtt LoadBalancer.DNSName
+        EvaluateTargetHealth: no
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+      Type: A
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: "10.13.0.0/16"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: "10.13.101.0/24"
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  Route:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttach
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroupLoadBalancer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Load balancer security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+      VpcId: !Ref Vpc
+
+  SecurityGroupInstance:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Load balancer target instance security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: '0.0.0.0/0'
+      VpcId: !Ref Vpc
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref KeyName
+        - !Ref AWS::NoValue
+      SecurityGroups:
+        - !GetAtt SecurityGroupInstance.GroupId
+      UserData:
+        Fn::Base64: !Sub |
+          #!/usr/bin/python -tt
+          import SimpleHTTPServer, BaseHTTPServer
+
+          class StaticHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+            def do_GET(self):
+              self.send_response(200)
+              self.send_header("Content-Type", "text/plain; charset=utf-8")
+              self.end_headers()
+              self.wfile.write("Hello");
+              self.wfile.close();
+
+          BaseHTTPServer.HTTPServer( ("", 80), StaticHandler ).serve_forever( )
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref Subnet
+      DesiredCapacity: 1
+      HealthCheckGracePeriod: 30
+      HealthCheckType: ELB
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: 0
+      MaxSize: 1
+      TargetGroupARNs:
+        - !Ref TargetGroup
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: yes
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 30
+      Port: 80
+      Protocol: HTTP
+      TargetType: instance
+      VpcId: !Ref Vpc
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: true
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: 30
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: 10
+        - Key: access_logs.s3.enabled
+          Value: true
+        - Key: access_logs.s3.bucket
+          Value: !Ref Bucket
+        - Key: access_logs.s3.prefix
+          Value: logs
+      SecurityGroups:
+        - !GetAtt SecurityGroupLoadBalancer.GroupId
+      Subnets:
+        - !Ref Subnet
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+
+  LoadBalancerArn:
+    Description: The arn of the created ELB
+    Value: !Ref LoadBalancer
+
+  TargetGroupArn:
+    Description: The ARN of the created target group
+    Value: !Ref TargetGroup
+
+  DNSName:
+    Description: The Route53 DNS alias for the ELB
+    Value: elb.n4j.eucalyptuscloud.net
+
+  BucketName:
+    Description: The name of the access log bucket
+    Value: !Ref Bucket
