@@ -16,6 +16,7 @@ import org.junit.runners.Suite.SuiteClasses;
     DnsSuite.class,
     Ec2ShortSuite.class,
     ElbShortSuite.class,
+    Elbv2ShortSuite.class,
     IamSuite.class,
     Route53Suite.class,
     ServicesSuite.class,
