@@ -1,0 +1,189 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Load balancer with static instance template
+
+Parameters:
+
+  InstanceType:
+    Description: Instance type for the target instance
+    Type: String
+    Default: t2.micro
+
+  ImageId:
+    Description: Identifier of the centos/rhel image for the target instance
+    Type: String
+
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+
+Conditions:
+
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref KeyName
+      - ''
+
+Resources:
+
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: "10.13.0.0/16"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: "10.13.101.0/24"
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+
+  Route:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttach
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref Subnet
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroupLoadBalancer:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Load balancer security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+      VpcId: !Ref Vpc
+
+  SecurityGroupInstance:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Load balancer target instance security group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: '0.0.0.0/0'
+      VpcId: !Ref Vpc
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref KeyName
+        - !Ref AWS::NoValue
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref Subnet
+          GroupSet:
+            - !Ref SecurityGroupInstance
+      Tags:
+        - Key: a
+          Value: 1
+        - Key: b
+          Value: 2
+        - Key: c
+          Value: 3
+      UserData:
+        Fn::Base64: !Sub |
+          #!/usr/bin/python -tt
+          import SimpleHTTPServer, BaseHTTPServer
+
+          class StaticHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+            def do_GET(self):
+              self.send_response(200)
+              self.send_header("Content-Type", "text/plain; charset=utf-8")
+              self.end_headers()
+              self.wfile.write("Hello");
+              self.wfile.close();
+
+          BaseHTTPServer.HTTPServer( ("", 80), StaticHandler ).serve_forever( )
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      Targets:
+        - Id: !Ref Instance
+      TargetType: instance
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: a
+          Value: 1
+        - Key: b
+          Value: 2
+        - Key: c
+          Value: 3
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !GetAtt SecurityGroupLoadBalancer.GroupId
+      Subnets:
+        - !Ref Subnet
+      Tags:
+        - Key: a
+          Value: 1
+        - Key: b
+          Value: 2
+        - Key: c
+          Value: 3
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+
+  LoadBalancerArn:
+    Description: The ARN of the created load balancer
+    Value: !Ref LoadBalancer
+
+  TargetGroupArn:
+    Description: The ARN of the created target group
+    Value: !Ref TargetGroup
+
+  DNSName:
+    Description: The DNSName for the ELB
+    Value: !GetAtt LoadBalancer.DNSName

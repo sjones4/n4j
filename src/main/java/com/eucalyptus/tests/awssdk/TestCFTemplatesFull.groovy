@@ -371,6 +371,142 @@ class TestCFTemplatesFull {
     }
   }
 
+  private void assumeElbv2Available( ) {
+    N4j.print( 'Checking for ELBv2 support' )
+    N4j.assumeThat( N4j.isAtLeastEucalyptusVersion('6.0.0'), 'ELBv2 available' )
+    N4j.print( 'Checking for VPC support' )
+    final boolean vpcAvailable = N4j.ec2.describeAccountAttributes( ).with {
+      accountAttributes.find{ AccountAttribute accountAttribute ->
+        accountAttribute.attributeName == 'supported-platforms'
+      }?.attributeValues*.attributeValue.contains( 'VPC' )
+    }
+    N4j.print( "VPC supported: ${vpcAvailable}" )
+    N4j.assumeThat( vpcAvailable, 'VPC is a supported platform' )
+  }
+
+  /**
+   * Test for ELBv2 with single instance target
+   */
+  @Test
+  void testElbv2Template( ) {
+    assumeElbv2Available( )
+    stackCreateDelete( 'elbv2', [ ], [ 'ImageId': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE ] ) { Stack stack ->
+
+      String lbArn = stack?.outputs?.getAt( 0 )?.outputValue
+      Assert.assertNotNull( 'stack load balancer arn output', lbArn )
+
+      String tgArn = stack?.outputs?.getAt( 1 )?.outputValue
+      Assert.assertNotNull( 'stack target group arn output', tgArn )
+
+      String elbDnsName = stack?.outputs?.getAt( 2 )?.outputValue
+      Assert.assertNotNull( 'stack dns name output', elbDnsName )
+
+      URL url = new URL( "http://${elbDnsName}/" )
+      String balancerHost = url.host
+
+      N4j.print( "Resolving load balancer host ${balancerHost}" )
+      Set<String> dnsHosts = getDnsHosts(getServicesClient(testAcctAdminCredentials))
+      String balancerIp = null
+      ( 1..60 ).find {
+        if ( it > 1 ) sleep 5000
+        balancerIp = lookup(balancerHost, dnsHosts)
+      }
+      Assert.assertNotNull('Expected ip for load balancer', balancerIp)
+      url = new URL( "http://${elbDnsName}/".replace( balancerHost, balancerIp ) )
+      N4j.print( "Resolved load balancer host ${balancerHost} to ${balancerIp}, url is ${url}" )
+
+      Object foundResponse = ( 1..60 ).find{
+        if ( it > 1 ) N4j.sleep 5
+        N4j.print( "Attempting request via elb ${it}" )
+        try {
+          String balancerResponse =
+                  url.getText( connectTimeout: 1000, readTimeout: 1000, useCaches: false, allowUserInteraction: false )
+          Assert.assertTrue(
+                  "Expected balancer response Hello, but was: ${balancerResponse}",
+                  'Hello' == balancerResponse)
+          balancerResponse
+        } catch ( e ) {
+          N4j.print( e.toString( ) )
+          null
+        }
+      }
+      Assert.assertNotNull('Expected response from load balancer', foundResponse )
+      N4j.print( "Got expected response from load balancer" )
+
+      null
+    }
+  }
+
+  /**
+   * Test for ELBv2 with AutoScaling registered target
+   */
+  @Test
+  void testElbv2AutoScalingTemplate( ) {
+    assumeElbv2Available( )
+    String elbAccountId = getServicesClient(testAcctAdminCredentials).with{
+      describeServices(new DescribeServicesRequest(
+              filters: [ new Filter( name: 'service-type', values: ['loadbalancingv2'] ) ]
+      ) ).with {
+        serviceStatuses?.getAt(0)?.serviceAccounts?.getAt(0)?.number
+      }
+    };
+    Assert.assertNotNull('Elastic load balancing v2 account', elbAccountId )
+    stackCreateDelete( 'elbv2_autoscaling', [ ], [ 'ImageId': N4j.IMAGE_ID, 'InstanceType': N4j.INSTANCE_TYPE, 'ElbAccountId': elbAccountId ] ) { Stack stack ->
+
+
+      String lbArn = stack?.outputs?.getAt( 0 )?.outputValue
+      Assert.assertNotNull( 'stack load balancer arn output', lbArn )
+
+      String tgArn = stack?.outputs?.getAt( 1 )?.outputValue
+      Assert.assertNotNull( 'stack target group arn output', tgArn )
+
+      String elbDnsName = stack?.outputs?.getAt( 2 )?.outputValue
+      Assert.assertNotNull( 'stack dns name output', elbDnsName )
+
+      String bucketName = stack?.outputs?.getAt( 3 )?.outputValue
+      Assert.assertNotNull( 'stack bucket name output', bucketName )
+
+      URL url = new URL( "http://${elbDnsName}/" )
+      String balancerHost = url.host
+
+      N4j.print( "Resolving load balancer host ${balancerHost}" )
+      Set<String> dnsHosts = getDnsHosts(getServicesClient(testAcctAdminCredentials))
+      String balancerIp = null
+      ( 1..60 ).find {
+        if ( it > 1 ) sleep 5000
+        balancerIp = lookup(balancerHost, dnsHosts)
+      }
+      Assert.assertNotNull('Expected ip for load balancer', balancerIp)
+      url = new URL( "http://${elbDnsName}/".replace( balancerHost, balancerIp ) )
+      N4j.print( "Resolved load balancer host ${balancerHost} to ${balancerIp}, url is ${url}" )
+
+      Object foundResponse = ( 1..60 ).find{
+        if ( it > 1 ) N4j.sleep 5
+        N4j.print( "Attempting request via elb ${it}" )
+        try {
+          String balancerResponse =
+                  url.getText( connectTimeout: 1000, readTimeout: 1000, useCaches: false, allowUserInteraction: false )
+          Assert.assertTrue(
+                  "Expected balancer response Hello, but was: ${balancerResponse}",
+                  'Hello' == balancerResponse)
+          balancerResponse
+        } catch ( e ) {
+          N4j.print( e.toString( ) )
+          null
+        }
+      }
+      Assert.assertNotNull('Expected response from load balancer', foundResponse )
+      N4j.print( "Got expected response from load balancer" )
+
+      N4j.print( 'Verifying load balancer cookie present' )
+      String setCookieHeader = url.openConnection( ).getHeaderField( 'Set-Cookie' )
+      N4j.print( "Set-Cookie: ${setCookieHeader}" )
+      Assert.assertNotNull('Expected cookie header', setCookieHeader )
+
+      null
+    }
+  }
+
   /**
    * Test for vpc metadata (no instances so good with any network mode)
    */
